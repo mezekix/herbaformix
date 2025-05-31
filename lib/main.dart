@@ -1,16 +1,18 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-
 import 'app.dart';
-import 'features/auth/providers/auth_provider.dart';
 import 'firebase_options.dart';
+import 'features/auth/providers/auth_provider.dart';
 import 'services/auth_service.dart';
-import 'services/firestore_service.dart'; // FirestoreService'i import et
+import 'services/firestore_service.dart';
+import 'features/products/providers/product_provider.dart'; // ProductProvider'ı import et
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyAppInitializer());
 }
 
@@ -20,26 +22,28 @@ class MyAppInitializer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authService = AuthService();
-    final firestoreService =
-        FirestoreService(); // FirestoreService örneği oluştur
+    final firestoreService = FirestoreService();
 
     return MultiProvider(
       providers: [
-        // AuthService'i doğrudan AuthProvider'a geçiyoruz, bu yüzden burada provide etmeye gerek yok.
-        // Ancak FirestoreService'i birden fazla provider veya widget kullanabilir, bu yüzden provide edelim.
-        Provider<AuthService>(create: (_) => authService),
+        Provider<AuthService>(
+          create: (_) => authService,
+        ),
         Provider<FirestoreService>(
-          // FirestoreService'i provide et
           create: (_) => firestoreService,
         ),
         ChangeNotifierProvider<AuthProvider>(
           create: (context) => AuthProvider(
-            context.read<AuthService>(), // AuthService'i context'ten oku
-            context
-                .read<FirestoreService>(), // FirestoreService'i context'ten oku
+            context.read<AuthService>(),
+            context.read<FirestoreService>(),
           ),
         ),
-        // Diğer provider'lar buraya eklenebilir
+        // ProductProvider'ı ekle. FirestoreService'i context'ten okuyacak.
+        ChangeNotifierProvider<ProductProvider>(
+          create: (context) => ProductProvider(
+            context.read<FirestoreService>(),
+          ),
+        ),
       ],
       child: const App(),
     );

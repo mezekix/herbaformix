@@ -2,27 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../features/auth/screens/login_screen.dart';
+import '../features/auth/screens/splash_screen.dart';
+import '../features/home/screens/home_screen.dart';
+import '../features/profile/screens/profile_screen.dart';
+import '../features/products/screens/product_list_screen.dart'; // Ürünler ekranını import et
 // Diğer ekranlar eklenecek...
-// import '../features/products/screens/product_list_screen.dart';
-// import '../features/orders/screens/order_list_screen.dart';
-// import '../features/customers/screens/customer_list_screen.dart';
 
 import '../features/auth/providers/auth_provider.dart';
-// Ekranları import edeceğiz (henüz oluşturulmadılar)
-import '../features/auth/screens/login_screen.dart'; // Yönlendirme için bir splash ekran
-import '../features/profile/screens/profile_screen.dart';
 
 class AppRouter {
-  final AuthProvider authProvider; // AuthProvider'ı alacağız
+  final AuthProvider authProvider;
 
   AppRouter(this.authProvider);
 
   late final GoRouter router = GoRouter(
-    debugLogDiagnostics: true, // Geliştirme sırasında logları görmek için
-    refreshListenable: authProvider, // Auth durumu değiştiğinde router'ı yenile
-    initialLocation: SplashScreen.routeName, // Başlangıç rotası
+    debugLogDiagnostics: true,
+    refreshListenable: authProvider,
+    initialLocation: SplashScreen.routeName,
 
     routes: <RouteBase>[
+      // ... (SplashScreen ve LoginScreen rotaları aynı kalacak) ...
       GoRoute(
         path: SplashScreen.routeName,
         builder: (BuildContext context, GoRouterState state) {
@@ -38,99 +38,57 @@ class AppRouter {
       GoRoute(
         path: HomeScreen.routeName,
         builder: (BuildContext context, GoRouterState state) {
-          return const HomeScreen(); // Örnek bir ana sayfa
+          return const HomeScreen();
         },
-        // Diğer alt rotalar (örneğin /home/profile) buraya eklenebilir
         routes: <RouteBase>[
-          GoRoute(
-            path: 'profile', // /home/profile
-            name: ProfileScreen.routeName, // İsimlendirilmiş rota
+           GoRoute(
+            path: 'profile',
+            name: ProfileScreen.routeName,
             builder: (context, state) => const ProfileScreen(),
           ),
-          // TODO: Ürünler, Siparişler, Müşteriler için rotalar eklenecek
-        ],
+           // Ürünler ekranı için yeni rota
+           GoRoute(
+            path: 'products', // /home/products gibi erişim için ama biz direkt /products yapacağız.
+            name: ProductListScreen.routeName.substring(1), // Baştaki / olmadan isim
+            builder: (context, state) => const ProductListScreen(),
+           ),
+        ]
       ),
-      // TODO: Ürünler, Siparişler, Müşteriler için ana rotalar eklenecek
-      // GoRoute(
-      //   path: ProductListScreen.routeName,
-      //   builder: (context, state) => const ProductListScreen(),
-      // ),
+      // Ürünler için ana rota (/products)
+       GoRoute(
+        path: ProductListScreen.routeName, // /products
+        builder: (context, state) => const ProductListScreen(),
+      ),
+      // TODO: Müşteriler ve Siparişler için rotalar eklenecek
     ],
     redirect: (BuildContext context, GoRouterState state) {
-      final bool loggedIn = authProvider.status == AuthStatus.authenticated;
-      final bool loggingIn = state.matchedLocation == LoginScreen.routeName;
-      final bool splicing = state.matchedLocation == SplashScreen.routeName;
+      // ... (redirect mantığı aynı kalacak) ...
+       final bool loggedIn = authProvider.status == AuthStatus.authenticated;
+       final bool loggingIn = state.matchedLocation == LoginScreen.routeName;
+       final bool splicing = state.matchedLocation == SplashScreen.routeName;
 
-      if (splicing) {
-        // Eğer splash ekranındaysa, auth durumuna göre yönlendir
-        if (authProvider.status == AuthStatus.uninitialized ||
-            authProvider.status == AuthStatus.authenticating) {
-          return null; // Splash ekranında kal, authProvider durumu belirleyecek
-        }
-        return loggedIn ? HomeScreen.routeName : LoginScreen.routeName;
-      }
+       print("Redirect: loggedIn=$loggedIn, loggingIn=$loggingIn, splicing=$splicing, location=${state.matchedLocation}");
 
-      if (!loggedIn && !loggingIn) {
-        // Giriş yapmamış ve giriş sayfasında değilse
-        return LoginScreen.routeName; // Giriş sayfasına yönlendir
-      }
-      if (loggedIn && loggingIn) {
-        // Giriş yapmış ve hala giriş sayfasındaysa
-        return HomeScreen.routeName; // Ana sayfaya yönlendir
-      }
+       // Eğer Splash'teyse ve auth durumu belirsizse bekle
+       if (splicing && (authProvider.status == AuthStatus.uninitialized || authProvider.status == AuthStatus.authenticating)) {
+         return null;
+       }
+       // Eğer Splash'teyse ve auth durumu belliyse yönlendir
+       if (splicing) {
+         return loggedIn ? HomeScreen.routeName : LoginScreen.routeName;
+       }
 
-      return null; // Başka bir yönlendirme gerekmiyorsa null döndür
+       // Eğer giriş yapmamışsa ve giriş sayfasında değilse, giriş sayfasına yolla
+       if (!loggedIn && !loggingIn) {
+         return LoginScreen.routeName;
+       }
+       // Eğer giriş yapmışsa ve giriş sayfasındaysa, ana sayfaya yolla
+       if (loggedIn && loggingIn) {
+         return HomeScreen.routeName;
+       }
+
+       return null;
     },
   );
 }
-
-// Örnek Ekranlar (Bunları kendi dosyalarına taşıyacağız)
-
-class SplashScreen extends StatelessWidget {
-  // Bu dosyada geçici olarak tanımlıyoruz
-  static const String routeName = '/splash';
-  const SplashScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // AuthProvider'ın durumuna göre yönlendirme zaten redirect'te yapılıyor
-    // Kullanıcıya yükleniyor gibi bir ekran gösterebilirsiniz.
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  // Bu dosyada geçici olarak tanımlıyoruz
-  static const String routeName = '/home';
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('HerbaForm Ana Sayfa'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await authProvider.signOut();
-              // Yönlendirme redirect tarafından otomatik yapılacak
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              context.goNamed(ProfileScreen.routeName); // Profil sayfasına git
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Text(
-          'Hoş geldiniz, ${authProvider.firebaseUser?.email ?? 'Kullanıcı'}!',
-        ),
-      ),
-    );
-  }
-}
+// SplashScreen ve HomeScreen tanımlamaları kendi dosyalarına taşındı varsayılıyor.

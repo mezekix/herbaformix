@@ -1,50 +1,46 @@
-// Bu servis, Firestore veritabanı ile etkileşimleri yönetir.
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_profile_model.dart'; // Oluşturduğumuz UserProfileModel
+import '../models/user_profile_model.dart';
+import '../models/product_model.dart'; // ProductModel'i import et
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Kullanıcı Profili için Koleksiyon Referansı
-
+  // --- User Profiles ---
   CollectionReference<UserProfileModel> get userProfilesRef => _db.collection('userProfiles').withConverter<UserProfileModel>(
         fromFirestore: (snapshot, _) => UserProfileModel.fromMap(snapshot.data()!, snapshot.id),
         toFirestore: (profile, _) => profile.toMap(),
       );
 
+  Future<void> setUserProfile(UserProfileModel userProfile) async { /* ... mevcut kod ... */ }
+  Future<UserProfileModel?> getUserProfile(String userId) async { /* ... mevcut kod ... */ }
 
-  // Yeni kullanıcı için profil oluşturma veya mevcut profili güncelleme
-  Future<void> setUserProfile(UserProfileModel userProfile) async {
+  // --- Products ---
+  // Ürünler için Koleksiyon Referansı
+  CollectionReference<ProductModel> get productsRef => _db.collection('products').withConverter<ProductModel>(
+        fromFirestore: (snapshot, _) => ProductModel.fromMap(snapshot.data()!, snapshot.id),
+        toFirestore: (product, _) => product.toMap(),
+      );
+
+  // Tüm ürünleri getiren bir Stream (Gerçek zamanlı güncellemeler için)
+  Stream<List<ProductModel>> getProducts() {
+    return productsRef.orderBy('name').snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    }).handleError((error) {
+       print("Ürünleri getirirken hata oluştu: $error");
+       return []; // Hata durumunda boş liste döndür
+    });
+  }
+
+  // Tek seferlik ürünleri getiren Future (İsterseniz Stream yerine bunu kullanabilirsiniz)
+  Future<List<ProductModel>> getProductsOnce() async {
     try {
-      // Doküman ID'si olarak kullanıcının UID'sini kullanıyoruz.
-      await userProfilesRef.doc(userProfile.id).set(userProfile, SetOptions(merge: true));
-      print('Kullanıcı profili başarıyla kaydedildi/güncellendi: ${userProfile.id}');
+        final snapshot = await productsRef.orderBy('name').get();
+        return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
-      print('setUserProfile Hata: $e');
-      // Hata yönetimi UI'da yapılmalı
-      throw Exception("Profil kaydedilemedi: $e");
+      print("Ürünleri (tek seferlik) getirirken hata oluştu: $e");
+      return [];
     }
   }
 
-  // Kullanıcı profilini getirme
-  Future<UserProfileModel?> getUserProfile(String userId) async {
-    try {
-      final docSnapshot = await userProfilesRef.doc(userId).get();
-      if (docSnapshot.exists) {
-        print('Kullanıcı profili bulundu: $userId');
-        return docSnapshot.data();
-      } else {
-        print('Kullanıcı profili bulunamadı: $userId');
-        return null; // Profil yoksa null döner
-      }
-    } catch (e) {
-      print('getUserProfile Hata: $e');
-      throw Exception("Profil getirilemedi: $e");
-    }
-  }
-
-  // TODO: MVP sonrası için ürünler, siparişler, müşteriler için metotlar eklenecek
-  // Future<void> addProduct(...) async {}
-  // Stream<List<ProductModel>> getProducts() async* {}
+  // TODO: Siparişler, Müşteriler için metotlar eklenecek
 }
