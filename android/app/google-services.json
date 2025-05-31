@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "433193562880",
+    "project_id": "herbaformix",
+    "storage_bucket": "herbaformix.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433193562880:android:ecf17521acef5d7c50b9e5",
+        "android_client_info": {
+          "package_name": "com.mze.herbaformix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
