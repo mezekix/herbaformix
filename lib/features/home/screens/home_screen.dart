@@ -6,22 +6,21 @@ import '../../profile/screens/profile_screen.dart';
 import '../../products/screens/product_list_screen.dart';
 import '../../customers/screens/customer_list_screen.dart';
 import '../../orders/screens/order_list_screen.dart';
-import '../../customers/screens/add_edit_customer_screen.dart'; // Hızlı erişim için
-import '../../orders/screens/add_edit_order_screen.dart'; // Hızlı erişim için
+import '../../customers/screens/add_edit_customer_screen.dart';
+import '../../orders/screens/add_edit_order_screen.dart';
 import '../../../core/app_colors.dart';
 import '../../../models/user_profile_model.dart';
 import '../../orders/providers/order_provider.dart';
 import '../../customers/providers/customer_provider.dart';
-import '../../../widgets/app_drawer.dart'; // Drawer'ı import et
+import '../../../widgets/app_drawer.dart'; // AppDrawer'ı import et
 
 class HomeScreen extends StatelessWidget {
   static const String routeName = '/home';
   const HomeScreen({super.key});
 
   Widget _buildDashboardCard(BuildContext context, {required IconData icon, required String title, required String value, Color? iconColor, VoidCallback? onTap}) {
+    // ... (Bu fonksiyon aynı kalacak) ...
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -31,11 +30,11 @@ class HomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 36, color: iconColor ?? Theme.of(context).colorScheme.primary),
+              Icon(icon, size: 36, color: iconColor ?? AppColors.primary),
               const SizedBox(height: 10),
-              Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w500)),
+              Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.textSecondary)),
               const SizedBox(height: 4),
-              Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -48,26 +47,33 @@ class HomeScreen extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
     final customerProvider = Provider.of<CustomerProvider>(context);
-
     final UserProfileModel? userProfile = authProvider.userProfile;
     final monthlyVPTarget = userProfile?.monthlyVPTarget ?? 0;
     final vpEarnedThisMonth = orderProvider.totalVpEarnedThisMonth;
     final vpProgress = monthlyVPTarget > 0 ? (vpEarnedThisMonth / monthlyVPTarget) : 0.0;
 
     return Scaffold(
-      drawer: const AppDrawer(), // Drawer eklendi
+      drawer: const AppDrawer(), // Drawer'ı Scaffold'a ekle
       appBar: AppBar(
         title: const Text('HerbaForm Panel'),
+        // AppBar'ın actions'ları aynı kalabilir veya Drawer'a taşınabilir.
+        // Şimdilik burada bırakalım.
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
             tooltip: 'Profilim',
             onPressed: () {
-              // ProfileScreen.routeName 'profile' olmalı (alt rota ismi)
-              context.goNamed(ProfileScreen.routeName); 
+              context.goNamed(ProfileScreen.routeName);
             },
           ),
-          // Çıkış yap butonu Drawer'a taşındığı için buradan kaldırıldı.
+          // Çıkış yap butonu Drawer'a taşındığı için buradan kaldırılabilir.
+          // IconButton(
+          //   icon: const Icon(Icons.exit_to_app),
+          //   tooltip: 'Çıkış Yap',
+          //   onPressed: () async {
+          //     await authProvider.signOut();
+          //   },
+          // ),
         ],
       ),
       body: SingleChildScrollView(
@@ -75,61 +81,11 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Text(
-              'Merhaba, ${userProfile?.name ?? authProvider.firebaseUser?.email?.split('@')[0] ?? 'Kullanıcı'}!',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
+            // ... (Dashboard içeriği aynı kalacak) ...
+            Text('Merhaba, ${userProfile?.name ?? authProvider.firebaseUser?.email?.split('@')[0] ?? 'Kullanıcı'}!', style: Theme.of(context).textTheme.headlineSmall, textAlign: TextAlign.center,),
             const SizedBox(height: 24),
-
-            // VP Hedef Kartı
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Bu Ayki VP Hedefiniz',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${vpEarnedThisMonth.toStringAsFixed(2)} VP',
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          '/ ${monthlyVPTarget.toStringAsFixed(0)} VP',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    LinearProgressIndicator(
-                      value: vpProgress > 1.0 ? 1.0 : vpProgress,
-                      minHeight: 10,
-                      backgroundColor: Colors.grey[300],
-                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.secondary), // Temadan ikincil renk
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                     const SizedBox(height: 8),
-                    Text(
-                      '%${(vpProgress * 100).toStringAsFixed(1)} Tamamlandı',
-                      textAlign: TextAlign.end,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            Card(child: Padding(padding: const EdgeInsets.all(20.0), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Bu Ayki VP Hedefiniz', style: Theme.of(context).textTheme.titleLarge,), const SizedBox(height: 8), Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('${vpEarnedThisMonth.toStringAsFixed(2)} VP', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: AppColors.primary),), Text('/ ${monthlyVPTarget.toStringAsFixed(0)} VP', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.textSecondary),),],), const SizedBox(height: 12), LinearProgressIndicator(value: vpProgress > 1.0 ? 1.0 : vpProgress, minHeight: 10, backgroundColor: Colors.grey[300], valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary), borderRadius: BorderRadius.circular(5),), const SizedBox(height: 8), Text('%${(vpProgress * 100).toStringAsFixed(1)} Tamamlandı', textAlign: TextAlign.end, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),),],),),),
             const SizedBox(height: 20),
-
-            // Grid Kartlar
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -137,38 +93,10 @@ class HomeScreen extends StatelessWidget {
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               children: [
-                _buildDashboardCard(
-                  context,
-                  icon: Icons.people_alt_outlined,
-                  title: 'Toplam Müşteri',
-                  value: customerProvider.isLoading ? '...' : customerProvider.customersCount.toString(),
-                  onTap: () => context.goNamed(CustomerListScreen.routeName.substring(1)), // 'customers'
-                  iconColor: AppColors.laguna,
-                ),
-                _buildDashboardCard(
-                  context,
-                  icon: Icons.pending_actions_outlined,
-                  title: 'Bekleyen Sipariş',
-                  value: orderProvider.isLoading ? '...' : orderProvider.pendingOrdersCount.toString(),
-                  onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)), // 'orders'
-                  iconColor: AppColors.mango,
-                ),
-                _buildDashboardCard(
-                  context,
-                  icon: Icons.shopping_bag_outlined,
-                  title: 'Ürünler',
-                  value: 'Kataloğu Gör',
-                  onTap: () => context.goNamed(ProductListScreen.routeName.substring(1)), // 'products'
-                  iconColor: AppColors.blueberry,
-                ),
-                 _buildDashboardCard(
-                  context,
-                  icon: Icons.receipt_long_outlined,
-                  title: 'Tüm Siparişler',
-                  value: 'Listeyi Gör',
-                  onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)), // 'orders'
-                  iconColor: AppColors.lake,
-                ),
+                _buildDashboardCard(context, icon: Icons.people_alt_outlined, title: 'Toplam Müşteri', value: customerProvider.isLoading ? '...' : customerProvider.customersCount.toString(), onTap: () => context.goNamed(CustomerListScreen.routeName.substring(1)), iconColor: AppColors.laguna,),
+                _buildDashboardCard(context, icon: Icons.pending_actions_outlined, title: 'Bekleyen Sipariş', value: orderProvider.isLoading ? '...' : orderProvider.pendingOrdersCount.toString(), onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)), iconColor: AppColors.mango,),
+                _buildDashboardCard(context, icon: Icons.shopping_bag_outlined, title: 'Ürünler', value: 'Kataloğu Gör', onTap: () => context.goNamed(ProductListScreen.routeName.substring(1)), iconColor: AppColors.blueberry,),
+                _buildDashboardCard(context, icon: Icons.receipt_long_outlined, title: 'Tüm Siparişler', value: 'Listeyi Gör', onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)), iconColor: AppColors.lake,),
               ],
             ),
              const SizedBox(height: 24),
@@ -176,23 +104,12 @@ class HomeScreen extends StatelessWidget {
               "Hızlı Erişim",
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
+                
             ),
             const SizedBox(height: 12),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.add_shopping_cart),
-              label: const Text('Yeni Sipariş Oluştur'),
-              onPressed: () => context.goNamed(AddEditOrderScreen.routeName), // 'add-edit-order'
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
-            ),
+            ElevatedButton.icon(icon: const Icon(Icons.add_shopping_cart), label: const Text('Yeni Sipariş Oluştur'), onPressed: () => context.goNamed(AddEditOrderScreen.routeName), style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: AppColors.textOnPrimary,),),
             const SizedBox(height: 10),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-              label: const Text('Yeni Müşteri Ekle'),
-              onPressed: () => context.goNamed(AddEditCustomerScreen.routeName), // 'add-edit-customer'
-            ),
+            OutlinedButton.icon(icon: const Icon(Icons.person_add_alt_1_outlined), label: const Text('Yeni Müşteri Ekle'), onPressed: () => context.goNamed(AddEditCustomerScreen.routeName),),
           ],
         ),
       ),
