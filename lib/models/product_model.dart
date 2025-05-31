@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class ProductModel {
   final String id; // Firestore doküman ID'si
   final String name; // Ürün Adı

@@ -1,0 +1,430 @@
+import 'package:flutter/material.dart';
+import 'package:herbaformix/services/firestore_service.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+
+import '../../../models/order_model.dart';
+import '../../../models/order_item_model.dart';
+import '../../../models/customer_model.dart';
+import '../../../models/product_model.dart';
+import '../providers/order_provider.dart';
+import '../../customers/providers/customer_provider.dart';
+import '../../products/providers/product_provider.dart';
+import '../../auth/providers/auth_provider.dart';
+
+class AddEditOrderScreen extends StatefulWidget {
+  static const String routeName = 'add-edit-order';
+  final OrderModel? order;
+
+  const AddEditOrderScreen({super.key, this.order});
+
+  @override
+  State<AddEditOrderScreen> createState() => _AddEditOrderScreenState();
+}
+
+class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
+  final _formKey = GlobalKey<FormState>();
+  bool get _isEditing => widget.order != null;
+  bool _isLoading = false;
+
+  // Form alanları için state'ler
+  CustomerModel? _selectedCustomer;
+  List<OrderItemModel> _orderItems = [];
+  DateTime _selectedDate = DateTime.now();
+  OrderStatus _selectedStatus = OrderStatus.pending;
+  final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _shippingAddressController = TextEditingController();
+
+  // Geçici ürün seçimi için
+  ProductModel? _productToSearch;
+  int _quantity = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing && widget.order != null) {
+      final order = widget.order!;
+      // Müşteriyi CustomerProvider'dan bulmaya çalış (ID ile eşleştir)
+      // Bu kısım daha iyi yönetilebilir, şimdilik basit tutalım
+      final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
+      _selectedCustomer = customerProvider.customers.firstWhere((c) => c.id == order.customerId, orElse: () => CustomerModel(id: order.customerId, userId: order.userId, name: order.customerName));
+
+      _orderItems = List.from(order.items); // Kopyasını al
+      _selectedDate = order.orderDate.toDate();
+      _selectedStatus = order.status;
+      _notesController.text = order.notes ?? '';
+      _shippingAddressController.text = order.shippingAddress ?? '';
+    }
+  }
+
+  void _addOrUpdateOrderItem(ProductModel product, int quantity) {
+    if (quantity <= 0) return;
+
+    final existingItemIndex = _orderItems.indexWhere((item) => item.productId == product.id);
+
+    setState(() {
+      if (existingItemIndex >= 0) { // Ürün zaten listede varsa, adedini güncelle
+        _orderItems[existingItemIndex] = OrderItemModel(
+          productId: product.id,
+          productName: product.name,
+          quantity: _orderItems[existingItemIndex].quantity + quantity, // Adedi artır
+          unitPrice: product.price ?? 0.0, // Gerçek fiyatı al
+          unitVp: product.vp,
+        );
+      } else { // Yeni ürün ekle
+        _orderItems.add(OrderItemModel(
+          productId: product.id,
+          productName: product.name,
+          quantity: quantity,
+          unitPrice: product.price ?? 0.0,
+          unitVp: product.vp,
+        ));
+      }
+    });
+  }
+
+  void _removeOrderItem(int index) {
+    setState(() {
+      _orderItems.removeAt(index);
+    });
+  }
+
+  double get _calculateTotalAmount => _orderItems.fold(0, (sum, item) => sum + item.totalPrice);
+  double get _calculateTotalVp => _orderItems.fold(0, (sum, item) => sum + item.totalVp);
+
+  Future<void> _saveOrder() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen bir müşteri seçin.')));
+      return;
+    }
+    if (_orderItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen siparişe en az bir ürün ekleyin.')));
+      return;
+    }
+
+    setState(() { _isLoading = true; });
+
+    final orderProvider = Provider.of<OrderProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.firebaseUser?.uid;
+
+    if (currentUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kullanıcı bulunamadı.')));
+      setState(() { _isLoading = false; });
+      return;
+    }
+
+    final orderData = OrderModel(
+      id: _isEditing ? widget.order!.id : '',
+      userId: currentUserId,
+      customerId: _selectedCustomer!.id,
+      customerName: _selectedCustomer!.name,
+      items: _orderItems,
+      orderDate: Timestamp.fromDate(_selectedDate),
+      status: _selectedStatus,
+      totalAmount: _calculateTotalAmount,
+      totalVpEarned: _calculateTotalVp,
+      notes: _notesController.text.trim(),
+      shippingAddress: _shippingAddressController.text.trim(),
+    );
+
+    bool success;
+    if (_isEditing) {
+      // FirestoreService'de updateOrder'ı direkt kullanmak yerine OrderProvider üzerinden bir metot çağırabiliriz.
+      // Şimdilik direkt FirestoreService.updateOrder'ı çağıralım (OrderProvider'da da benzer bir metot var)
+      try {
+        await Provider.of<FirestoreService>(context, listen:false).updateOrder(currentUserId, orderData);
+        success = true;
+      } catch (e) {
+        success = false;
+        print("Sipariş güncellenirken hata: $e");
+      }
+
+    } else {
+      success = await orderProvider.addOrder(orderData);
+    }
+
+    if (mounted) {
+      setState(() { _isLoading = false; });
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sipariş başarıyla ${_isEditing ? "güncellendi" : "oluşturuldu"}!')));
+        context.pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sipariş ${_isEditing ? "güncellenirken" : "oluşturulurken"} hata oluştu.')));
+      }
+    }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    final customerProvider = Provider.of<CustomerProvider>(context);
+    final productProvider = Provider.of<ProductProvider>(context);
+    // final orderProvider = Provider.of<OrderProvider>(context, listen: false); // Bu satır burada gerekli değil, onPressed içinde çağrılacak.
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_isEditing ? 'Siparişi Görüntüle/Düzenle' : 'Yeni Sipariş Oluştur'),
+        actions: [
+          if (_isEditing && widget.order != null) // Silme butonu sadece düzenleme modunda
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () async {
+                // Silme işlemi (genelde status 'cancelled' yapılır)
+                final orderProvider = Provider.of<OrderProvider>(context, listen: false); // OrderProvider'ı burada al
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text("Siparişi İptal Et"),
+                    content: const Text("Bu siparişi iptal etmek istediğinizden emin misiniz?"),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text("Hayır")),
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text("Evet, İptal Et"))
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  await orderProvider.updateOrderStatus(widget.order!.id, OrderStatus.cancelled);
+                  if (mounted) context.pop();
+                }
+              },
+            )
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Müşteri Seçimi
+                    DropdownButtonFormField<CustomerModel>(
+                      value: _selectedCustomer,
+                      hint: const Text('Müşteri Seçin*'),
+                      decoration: const InputDecoration(border: OutlineInputBorder(), prefixIcon: Icon(Icons.person_search_outlined)),
+                      items: customerProvider.customers.map((customer) {
+                        return DropdownMenuItem<CustomerModel>(
+                          value: customer,
+                          child: Text(customer.name),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCustomer = value;
+                        });
+                      },
+                      validator: (value) => value == null ? 'Lütfen bir müşteri seçin.' : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Ürün Ekleme Bölümü
+                    _buildProductSelection(context, productProvider),
+                    const SizedBox(height: 16),
+
+                    // Sipariş Edilen Ürünler Listesi
+                    _buildOrderItemsList(),
+                    const SizedBox(height: 16),
+
+                    // Toplam Tutar ve VP
+                    Text('Toplam Tutar: ${_calculateTotalAmount.toStringAsFixed(2)} TL', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Kazanılan VP: ${_calculateTotalVp.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 20),
+
+                    // Sipariş Tarihi
+                    ListTile(
+                      leading: const Icon(Icons.calendar_today_outlined),
+                      title: Text('Sipariş Tarihi: ${DateFormat('dd.MM.yyyy').format(_selectedDate)}'),
+                      trailing: const Icon(Icons.edit_outlined),
+                      onTap: () async {
+                        final pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now().add(const Duration(days: 365)), // Gelecek bir yıla kadar
+                        );
+                        if (pickedDate != null && pickedDate != _selectedDate) {
+                          setState(() {
+                            _selectedDate = pickedDate;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Sipariş Durumu (Sadece düzenleme modunda anlamlı olabilir veya varsayılan)
+                     if (_isEditing)
+                        DropdownButtonFormField<OrderStatus>(
+                        value: _selectedStatus,
+                        decoration: const InputDecoration(labelText: 'Sipariş Durumu', border: OutlineInputBorder(), prefixIcon: Icon(Icons.delivery_dining_outlined)),
+                        items: OrderStatus.values.map((status) {
+                            return DropdownMenuItem<OrderStatus>(
+                            value: status,
+                            child: Text(status.toString().split('.').last), // Enum ismini göster
+                            );
+                        }).toList(),
+                        onChanged: (value) {
+                            if (value != null) {
+                            setState(() { _selectedStatus = value; });
+                            }
+                        },
+                        ),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _shippingAddressController,
+                      decoration: const InputDecoration(labelText: 'Teslimat Adresi (Opsiyonel)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.local_shipping_outlined)),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(labelText: 'Sipariş Notları (Opsiyonel)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.note_add_outlined)),
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton.icon(
+                      icon: Icon(_isEditing ? Icons.save_alt_outlined : Icons.add_shopping_cart_outlined),
+                      label: Text(_isEditing ? 'Siparişi Güncelle' : 'Siparişi Oluştur'),
+                      onPressed: _saveOrder,
+                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), textStyle: const TextStyle(fontSize: 16)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildProductSelection(BuildContext context, ProductProvider productProvider) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Ürün Ekle", style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<ProductModel>(
+              value: _productToSearch,
+              hint: const Text('Ürün Seçin'),
+              isExpanded: true,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+              items: productProvider.products.map((product) {
+                return DropdownMenuItem<ProductModel>(
+                  value: product,
+                  child: Text("${product.name} (${product.vp} VP)"),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _productToSearch = value;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    initialValue: _quantity.toString(), // Düzeltildi: Controller yerine initialValue
+                    decoration: const InputDecoration(labelText: 'Adet', border: OutlineInputBorder()),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      final newQuantity = int.tryParse(value);
+                      if (newQuantity != null && newQuantity >=1) {
+                         _quantity = newQuantity;
+                      } else if (value.isEmpty) {
+                        _quantity = 1; // Boşsa veya geçersizse 1 yap
+                      }
+                      // Kullanıcı geçersiz bir şey girerse TextFormField'un kendi validasyonu da devreye girebilir.
+                      // Veya setState ile anlık güncelleme yapılabilir. Şimdilik _quantity'yi güncelliyoruz.
+                    },
+                     validator: (value) { // Adet için validator
+                      if (value == null || value.isEmpty) {
+                        return 'Adet girin';
+                      }
+                      final n = int.tryParse(value);
+                      if (n == null) {
+                        return 'Geçerli sayı girin';
+                      }
+                      if (n < 1) {
+                        return 'Adet en az 1 olmalı';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: () {
+                    // Adet TextFormField'unun validasyonunu tetikle
+                    // Bu kısım _formKey.currentState!.validate() ile genel form validasyonunda zaten kontrol ediliyor.
+                    // Ancak burada spesifik olarak adet için bir kontrol daha yapılabilir veya UI güncellenebilir.
+                    // Şimdilik _addOrUpdateOrderItem içindeki quantity > 0 kontrolüne güveniyoruz.
+                    if (_productToSearch != null && _quantity > 0) {
+                      _addOrUpdateOrderItem(_productToSearch!, _quantity);
+                      setState(() { // Seçimi sıfırla
+                        _productToSearch = null;
+                        _quantity = 1;
+                        // Adet TextFormField'unu sıfırlamak için bir controller gerekebilir veya Key ile resetlenebilir.
+                        // Şimdilik sadece _quantity state'ini sıfırlıyoruz.
+                      });
+                    } else {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen bir ürün seçin ve geçerli bir adet girin.')));
+                    }
+                  },
+                  child: const Text('Ekle'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderItemsList() {
+    if (_orderItems.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.0),
+        child: Center(child: Text('Siparişe henüz ürün eklenmedi.')),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Text("Sipariş Kalemleri:", style: Theme.of(context).textTheme.titleMedium),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(), // İç içe kaydırmayı önle
+          itemCount: _orderItems.length,
+          itemBuilder: (context, index) {
+            final item = _orderItems[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                title: Text(item.productName),
+                subtitle: Text('Adet: ${item.quantity} x ${item.unitPrice.toStringAsFixed(2)} TL = ${item.totalPrice.toStringAsFixed(2)} TL\nVP: ${item.quantity} x ${item.unitVp.toStringAsFixed(2)} = ${item.totalVp.toStringAsFixed(2)} VP'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                  onPressed: () => _removeOrderItem(index),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+

@@ -4,7 +4,6 @@ description: "A new Flutter project."
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-
 version: 1.0.0+1
 
 environment:
@@ -17,22 +16,16 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  cloud_firestore: ^5.6.8
+  firebase_auth: ^5.5.4
+  firebase_core: ^3.13.1
   flutter:
     sdk: flutter
-  firebase_core: ^3.13.1  # En son sürümü kontrol edin
-  firebase_auth: ^5.5.4 # En son sürümü kontrol edin
-  cloud_firestore: ^5.6.8 # En son sürümü kontrol edin
-  go_router: ^15.1.2     # En son sürümü kontrol edin
+  go_router: ^15.1.2
+  intl: ^0.20.2
   provider: ^6.1.2
 
-
 dev_dependencies:
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
