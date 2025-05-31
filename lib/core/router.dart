@@ -128,7 +128,7 @@ class HomeScreen extends StatelessWidget {
       ),
       body: Center(
         child: Text(
-          'Hoş geldiniz, ${authProvider.user?.email ?? 'Kullanıcı'}!',
+          'Hoş geldiniz, ${authProvider.firebaseUser?.email ?? 'Kullanıcı'}!',
         ),
       ),
     );

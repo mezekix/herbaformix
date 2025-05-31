@@ -41,10 +41,10 @@ class HomeScreen extends StatelessWidget {
               'Hoş Geldiniz!',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            if (authProvider.user?.email != null)
+            if (authProvider.firebaseUser?.email != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
-                child: Text(authProvider.user!.email!),
+                child: Text(authProvider.firebaseUser!.email!),
               ),
             const SizedBox(height: 20),
             ElevatedButton(
