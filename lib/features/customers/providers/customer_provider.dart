@@ -1,23 +1,22 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../../../models/customer_model.dart';
 import '../../../services/firestore_service.dart';
-import '../../auth/providers/auth_provider.dart'; // Mevcut kullanıcı ID'sini almak için
+import '../../auth/providers/auth_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Timestamp için
 
 class CustomerProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
-  final AuthProvider _authProvider; // AuthProvider'ı ekle
+  final AuthProvider _authProvider;
 
   List<CustomerModel> _customers = [];
   bool _isLoading = false;
   StreamSubscription<List<CustomerModel>>? _customersSubscription;
-  String? _currentUserId; // Dinlenecek kullanıcı ID'si
+  String? _currentUserId;
 
   CustomerProvider(this._firestoreService, this._authProvider) {
-    // AuthProvider'dan kullanıcı ID'sini dinle
     _currentUserId = _authProvider.firebaseUser?.uid;
-    _authProvider.addListener(_authListener); // AuthProvider'daki değişiklikleri dinle
+    _authProvider.addListener(_authListener);
     if (_currentUserId != null) {
       fetchCustomers(_currentUserId!);
     }
@@ -27,12 +26,12 @@ class CustomerProvider with ChangeNotifier {
     final newUserId = _authProvider.firebaseUser?.uid;
     if (newUserId != _currentUserId) {
       _currentUserId = newUserId;
-      _customersSubscription?.cancel(); // Eski dinleyiciyi iptal et
-      _customers = []; // Müşteri listesini temizle
+      _customersSubscription?.cancel();
+      _customers = [];
       if (_currentUserId != null) {
         fetchCustomers(_currentUserId!);
       } else {
-        _isLoading = false; // Kullanıcı yoksa yüklemeyi durdur
+        _isLoading = false;
         notifyListeners();
       }
     }
@@ -41,9 +40,11 @@ class CustomerProvider with ChangeNotifier {
   List<CustomerModel> get customers => _customers;
   bool get isLoading => _isLoading;
 
+  // Müşteri sayısını döndüren getter
+  int get customersCount => _customers.length;
+
   void fetchCustomers(String userId) {
     if (userId.isEmpty) {
-        print("CustomerProvider: Kullanıcı ID'si boş, müşteri çekilemiyor.");
         _customers = [];
         _isLoading = false;
         notifyListeners();
@@ -56,10 +57,9 @@ class CustomerProvider with ChangeNotifier {
     _customersSubscription = _firestoreService.getCustomers(userId).listen((customersData) {
       _customers = customersData;
       _isLoading = false;
-      print("CustomerProvider: ${customersData.length} müşteri yüklendi (kullanıcı: $userId).");
       notifyListeners();
     }, onError: (error) {
-      print("CustomerProvider Hata (kullanıcı: $userId): $error");
+      print("CustomerProvider Hata (fetchCustomers): $error");
       _isLoading = false;
       _customers = [];
       notifyListeners();
@@ -71,9 +71,8 @@ class CustomerProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      // CustomerModel'in userId alanının doğru olduğundan emin olalım.
       final customerToAdd = CustomerModel(
-        id: '', // Firestore kendi ID'sini atayacak
+        id: '', // Firestore ID'yi kendi verecek
         userId: _currentUserId!,
         name: customer.name,
         phone: customer.phone,
@@ -83,11 +82,11 @@ class CustomerProvider with ChangeNotifier {
         createdAt: customer.createdAt ?? Timestamp.now(),
       );
       await _firestoreService.addCustomer(_currentUserId!, customerToAdd);
-      // fetchCustomers stream'i dinlediği için liste otomatik güncellenecektir.
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
+      print("CustomerProvider Hata (addCustomer): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -95,7 +94,7 @@ class CustomerProvider with ChangeNotifier {
   }
 
   Future<bool> updateCustomer(CustomerModel customer) async {
-    if (_currentUserId == null) return false;
+    if (_currentUserId == null || customer.userId != _currentUserId) return false;
     _isLoading = true;
     notifyListeners();
     try {
@@ -104,6 +103,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
+      print("CustomerProvider Hata (updateCustomer): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -120,6 +120,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
+      print("CustomerProvider Hata (deleteCustomer): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -129,7 +130,7 @@ class CustomerProvider with ChangeNotifier {
   @override
   void dispose() {
     _customersSubscription?.cancel();
-    _authProvider.removeListener(_authListener); // Dinleyiciyi kaldır
+    _authProvider.removeListener(_authListener);
     super.dispose();
   }
 }
