@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart'; // GoRouter import'u
 import 'package:provider/provider.dart';
 
 import '../providers/product_provider.dart';
+import './product_detail_screen.dart'; // ProductDetailScreen'i import et
 
 class ProductListScreen extends StatelessWidget {
-  static const String routeName = '/products';
+  static const String routeName =
+      '/products'; // Ana rota olarak kalabilir veya '/home/products' için 'products'
   const ProductListScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ProductProvider'ı dinle (listen: true olacak şekilde)
     final productProvider = Provider.of<ProductProvider>(context);
     final products = productProvider.products;
 
@@ -18,42 +20,53 @@ class ProductListScreen extends StatelessWidget {
       body: productProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : products.isEmpty
-          ? const Center(
-              child: Text(
-                'Gösterilecek ürün bulunamadı.\n(Firestore\'a ürün eklediniz mi?)',
-                textAlign: TextAlign.center,
-              ),
-            )
+          ? const Center(/* ... (Boş liste mesajı) ... */)
           : ListView.builder(
               itemCount: products.length,
               itemBuilder: (context, index) {
                 final product = products[index];
                 return Card(
                   margin: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
+                    horizontal: 12.0,
                     vertical: 6.0,
-                  ),
+                  ), // Temadan alabilir
                   child: ListTile(
-                    leading: CircleAvatar(
-                      // Ürün görseli varsa göster, yoksa baş harf
-                      backgroundImage: product.imageUrl != null
-                          ? NetworkImage(product.imageUrl!)
-                          : null,
-                      child: product.imageUrl == null
-                          ? Text(
-                              product.name.isNotEmpty ? product.name[0] : '?',
-                            )
-                          : null,
+                    leading: Hero(
+                      // Animasyonlu geçiş için
+                      tag: 'productImage_${product.id}',
+                      child: CircleAvatar(
+                        backgroundImage:
+                            product.imageUrl != null &&
+                                product.imageUrl!.isNotEmpty
+                            ? NetworkImage(product.imageUrl!)
+                            : null,
+                        backgroundColor: Colors.grey[200],
+                        child:
+                            product.imageUrl == null ||
+                                product.imageUrl!.isEmpty
+                            ? Text(
+                                product.name.isNotEmpty
+                                    ? product.name[0].toUpperCase()
+                                    : '?',
+                              )
+                            : null,
+                      ),
                     ),
-                    title: Text(product.name),
+                    title: Text(
+                      product.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     subtitle: Text(
                       'VP: ${product.vp.toStringAsFixed(2)}${product.price != null ? ' | Fiyat: ${product.price!.toStringAsFixed(2)} TL' : ''}',
                     ),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
-                      // TODO: Ürün detay ekranına gitme veya siparişe ekleme fonksiyonu eklenebilir.
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('${product.name} seçildi.')),
+                      // ProductDetailScreen'e product nesnesini extra olarak göndererek git
+                      context.goNamed(
+                        ProductDetailScreen.routeName, // 'product-detail'
+                        extra: product,
+                        // Eğer rota '/home/products/:productId' şeklinde olsaydı:
+                        // pathParameters: {'productId': product.id},
                       );
                     },
                   ),
