@@ -226,7 +226,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             SlideTransition(
                               position: _slideAnimation, // Metin için kaydırma animasyonu
                               child: const Text(
-                                'Welcome to herbalife nutrition',
+                                'live your best life',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 24,

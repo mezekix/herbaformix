@@ -12,9 +12,7 @@ class ProductDetailScreen extends StatelessWidget {
   Widget _buildDetailSection(
     BuildContext context,
     String title,
-    String? content, {
-    bool isHtml = false,
-  }) {
+    String? content) {
     if (content == null || content.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -45,6 +43,8 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
+  // _buildListSection is kept in case you need it for other list data in the future.
+  // If not, you can remove it.
   Widget _buildListSection(
     BuildContext context,
     String title,
@@ -151,7 +151,7 @@ class ProductDetailScreen extends StatelessWidget {
                     )
                   : Container(
                       // Resim yoksa varsayılan bir arka plan
-                      color: AppColors.secondary.withOpacity(0.8),
+                      color: AppColors.secondary.withAlpha(100),
                       child: const Icon(
                         Icons.shopping_bag,
                         size: 100,
@@ -195,10 +195,11 @@ class ProductDetailScreen extends StatelessWidget {
                           ),
                       ],
                     ),
-                    if (product.sku != null && product.sku!.isNotEmpty) ...[
+                    // Updated to use stockNo
+                    if (product.stockNo != null && product.stockNo!.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'SKU: ${product.sku}',
+                        'Stok No: ${product.stockNo}', // Changed from SKU
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -218,22 +219,31 @@ class ProductDetailScreen extends StatelessWidget {
                 ),
               ),
               const Divider(height: 1, thickness: 1),
+              // Updated to use overview
               _buildDetailSection(
                 context,
-                'Açıklama',
-                product.description ?? product.shortDescription,
+                'Genel Bakış', // Changed title from "Açıklama" to "Genel Bakış" (Overview)
+                product.overview, // Changed from product.description ?? product.shortDescription
+              ),
+              // Section for Features
+              _buildDetailSection(
+                context,
+                'Özellikler', // Title for Features
+                product.features,
+              ),
+              // Section for Ingredients
+              _buildDetailSection(
+                context,
+                'İçindekiler', // Title for Ingredients
+                product.ingredients,
               ),
               _buildDetailSection(
                 context,
                 'Kullanım Bilgisi',
                 product.usageInfo,
               ),
-              _buildListSection(context, 'Temel Faydaları', product.benefits),
-              _buildListSection(
-                context,
-                'Ana İçerikler',
-                product.keyIngredients,
-              ),
+              // Removed _buildListSection for product.benefits
+              // Removed _buildListSection for product.keyIngredients
 
               // Siparişe Ekle Butonu (Opsiyonel)
               Padding(

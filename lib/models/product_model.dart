@@ -3,29 +3,27 @@ class ProductModel {
   final String name;
   final double vp;
   final double? price;
-  final String? sku;
+  final String? stockNo; // Changed from sku
   final String? category;
   final String? imageUrl;
-  // YENİ ALANLAR:
-  final String? description; // Ürün açıklaması
-  final String? usageInfo; // Kullanım bilgisi
-  final List<String>? benefits; // Faydaları (liste olarak)
-  final List<String>? keyIngredients; // Ana içerikler (liste olarak)
-  final String? shortDescription; // Kısa açıklama veya slogan
+  // UPDATED AND NEW FIELDS:
+  final String? overview; // Replaces description and shortDescription
+  final String? usageInfo;
+  final String? features; // New field (String)
+  final String? ingredients; // New field (String)
 
   ProductModel({
     required this.id,
     required this.name,
     required this.vp,
     this.price,
-    this.sku,
+    this.stockNo,
     this.category,
     this.imageUrl,
-    this.description,
+    this.overview,
     this.usageInfo,
-    this.benefits,
-    this.keyIngredients,
-    this.shortDescription,
+    this.features,
+    this.ingredients,
   });
 
   factory ProductModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -34,18 +32,13 @@ class ProductModel {
       name: map['name'] ?? 'İsim Yok',
       vp: (map['vp'] ?? 0.0).toDouble(),
       price: (map['price'] as num?)?.toDouble(),
-      sku: map['sku'] as String?,
+      stockNo: map['stockNo'] as String?, // Changed from sku
       category: map['category'] as String?,
       imageUrl: map['imageUrl'] as String?,
-      description: map['description'] as String?,
+      overview: map['overview'] as String?, // Mapped from overview
       usageInfo: map['usageInfo'] as String?,
-      benefits: map['benefits'] != null
-          ? List<String>.from(map['benefits'])
-          : null,
-      keyIngredients: map['keyIngredients'] != null
-          ? List<String>.from(map['keyIngredients'])
-          : null,
-      shortDescription: map['shortDescription'] as String?,
+      features: map['features'] as String?, // Mapped from features
+      ingredients: map['ingredients'] as String?, // Mapped from ingredients
     );
   }
 
@@ -54,14 +47,13 @@ class ProductModel {
       'name': name,
       'vp': vp,
       'price': price,
-      'sku': sku,
+      'stockNo': stockNo, // Changed from sku
       'category': category,
       'imageUrl': imageUrl,
-      'description': description,
+      'overview': overview,
       'usageInfo': usageInfo,
-      'benefits': benefits,
-      'keyIngredients': keyIngredients,
-      'shortDescription': shortDescription,
+      'features': features,
+      'ingredients': ingredients,
     };
   }
 }
