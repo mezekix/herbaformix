@@ -30,7 +30,7 @@ class HomeScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 36, color: iconColor ?? AppColors.primary),
+              Icon(icon, size: 48, color: iconColor ?? AppColors.primary),
               const SizedBox(height: 10),
               Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.textSecondary)),
               const SizedBox(height: 4),
@@ -95,8 +95,8 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildDashboardCard(context, icon: Icons.people_alt_outlined, title: 'Toplam Müşteri', value: customerProvider.isLoading ? '...' : customerProvider.customersCount.toString(), onTap: () => context.goNamed(CustomerListScreen.routeName.substring(1)), iconColor: AppColors.laguna,),
                 _buildDashboardCard(context, icon: Icons.pending_actions_outlined, title: 'Bekleyen Sipariş', value: orderProvider.isLoading ? '...' : orderProvider.pendingOrdersCount.toString(), onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)), iconColor: AppColors.mango,),
-                _buildDashboardCard(context, icon: Icons.shopping_bag_outlined, title: 'Ürünler', value: 'Kataloğu Gör', onTap: () => context.goNamed(ProductListScreen.routeName.substring(1)), iconColor: AppColors.blueberry,),
-                _buildDashboardCard(context, icon: Icons.receipt_long_outlined, title: 'Tüm Siparişler', value: 'Listeyi Gör', onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)), iconColor: AppColors.lake,),
+                _buildDashboardCard(context, icon: Icons.shopping_bag_outlined, title: 'Ürünler', value: '', onTap: () => context.goNamed(ProductListScreen.routeName.substring(1)), iconColor: AppColors.garden,),
+                _buildDashboardCard(context, icon: Icons.receipt_long_outlined, title: 'Tüm Siparişler', value: '', onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)), iconColor: AppColors.aqua,),
               ],
             ),
              const SizedBox(height: 24),
