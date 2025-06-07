@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/customer_provider.dart';
 import './add_edit_customer_screen.dart'; // Yeni ekranı import et
+import './customer_detail_screen.dart'; // Yeni ekranı import et
 
 class CustomerListScreen extends StatelessWidget {
   static const String routeName = '/customers';
@@ -65,14 +67,29 @@ class CustomerListScreen extends StatelessWidget {
                         context,
                       ).colorScheme.primaryContainer,
                       child: Text(
-                        customer.name.isNotEmpty
-                            ? customer.name[0].toUpperCase()
+                        customer.firstName.isNotEmpty
+                            ? customer.firstName[0].toUpperCase()
                             : '?',
                       ),
                     ),
-                    title: Text(customer.name),
-                    subtitle: Text(
-                      customer.phone ?? customer.email ?? 'Detay yok',
+                    title: Text(
+                      '${customer.firstName} ${customer.lastName}'.trim(),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          customer.phoneNumber ??
+                              customer.email ??
+                              'İletişim bilgisi yok',
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'İlk Temas: ${DateFormat('dd.MM.yyyy').format(customer.firstContactDate.toDate())}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -102,7 +119,7 @@ class CustomerListScreen extends StatelessWidget {
                               builder: (ctx) => AlertDialog(
                                 title: const Text('Müşteriyi Sil'),
                                 content: Text(
-                                  '"${customer.name}" adlı müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+                                  '"${customer.firstName} ${customer.lastName}" adlı müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
                                 ),
                                 actions: [
                                   TextButton(
@@ -131,9 +148,11 @@ class CustomerListScreen extends StatelessWidget {
                       ],
                     ),
                     onTap: () {
-                      // TODO: Müşteri detay ekranı veya hızlı işlem menüsü
+                      // Müşteriye tıklandığında artık düzenleme ekranına değil,
+                      // yeni oluşturduğumuz Müşteri Detay Ekranı'na yönlendiriyoruz.
+                      // Müşteri verisini `extra` parametresi ile gönderiyoruz.
                       context.goNamed(
-                        AddEditCustomerScreen.routeName,
+                        CustomerDetailScreen.routeName,
                         extra: customer,
                       );
                     },

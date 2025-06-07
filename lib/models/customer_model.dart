@@ -2,51 +2,57 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CustomerModel {
   final String id; // Firestore doküman ID'si
-  final String userId; // Bu müşterinin hangi distribütöre ait olduğu (Auth User ID)
-  String name;
-  String? phone;
-  String? email;
-  String? address;
-  String? notes; // Müşteri hakkında özel notlar
-  Timestamp? createdAt; // Müşterinin ne zaman eklendiği
-  Timestamp? lastContactedAt; // Son iletişim tarihi (Opsiyonel)
+  String firstName; // Müşteri adı
+  String lastName; // Müşteri soyadı
+  String phoneNumber; // Telefon numarası
+  String? email; // E-posta adresi, opsiyonel
+  String? address; // Adres, opsiyonel
+  Timestamp firstContactDate; // İlk temas tarihi
+  String
+  consultantId; // Bu müşteriden sorumlu danışmanın users koleksiyonundaki ID'si
+  bool isActive; // Müşteri aktif mi, takibi devam ediyor mu?
+  String? notes; // Müşteriyle ilgili genel notlar
 
   CustomerModel({
     required this.id,
-    required this.userId,
-    required this.name,
-    this.phone,
+    required this.firstName,
+    required this.lastName,
+    required this.phoneNumber,
     this.email,
     this.address,
+    required this.firstContactDate,
+    required this.consultantId,
+    this.isActive = true,
     this.notes,
-    this.createdAt,
-    this.lastContactedAt,
   });
 
   factory CustomerModel.fromMap(Map<String, dynamic> map, String documentId) {
     return CustomerModel(
       id: documentId,
-      userId: map['userId'] ?? '',
-      name: map['name'] ?? 'İsim Yok',
-      phone: map['phone'] as String?,
+      firstName: map['firstName'] ?? '',
+      lastName: map['lastName'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? '',
       email: map['email'] as String?,
       address: map['address'] as String?,
+      firstContactDate:
+          map['firstContactDate'] as Timestamp? ?? Timestamp.now(),
+      consultantId: map['consultantId'] ?? '',
+      isActive: map['isActive'] ?? true,
       notes: map['notes'] as String?,
-      createdAt: map['createdAt'] as Timestamp?,
-      lastContactedAt: map['lastContactedAt'] as Timestamp?,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'userId': userId,
-      'name': name,
-      'phone': phone,
+      'firstName': firstName,
+      'lastName': lastName,
+      'phoneNumber': phoneNumber,
       'email': email,
       'address': address,
+      'firstContactDate': firstContactDate,
+      'consultantId': consultantId,
+      'isActive': isActive,
       'notes': notes,
-      'createdAt': createdAt ?? FieldValue.serverTimestamp(), // Eğer null ise sunucu zamanını kullan
-      'lastContactedAt': lastContactedAt,
     };
   }
 }

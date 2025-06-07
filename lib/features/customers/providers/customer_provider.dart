@@ -1,9 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
 import '../../../models/customer_model.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Timestamp için
 
 class CustomerProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
@@ -45,25 +46,30 @@ class CustomerProvider with ChangeNotifier {
 
   void fetchCustomers(String userId) {
     if (userId.isEmpty) {
-        _customers = [];
-        _isLoading = false;
-        notifyListeners();
-        return;
+      _customers = [];
+      _isLoading = false;
+      notifyListeners();
+      return;
     }
     _isLoading = true;
     notifyListeners();
 
     _customersSubscription?.cancel();
-    _customersSubscription = _firestoreService.getCustomers(userId).listen((customersData) {
-      _customers = customersData;
-      _isLoading = false;
-      notifyListeners();
-    }, onError: (error) {
-      print("CustomerProvider Hata (fetchCustomers): $error");
-      _isLoading = false;
-      _customers = [];
-      notifyListeners();
-    });
+    _customersSubscription = _firestoreService
+        .getCustomers(userId)
+        .listen(
+          (customersData) {
+            _customers = customersData;
+            _isLoading = false;
+            notifyListeners();
+          },
+          onError: (error) {
+            print("CustomerProvider Hata (fetchCustomers): $error");
+            _isLoading = false;
+            _customers = [];
+            notifyListeners();
+          },
+        );
   }
 
   Future<bool> addCustomer(CustomerModel customer) async {
@@ -73,13 +79,15 @@ class CustomerProvider with ChangeNotifier {
     try {
       final customerToAdd = CustomerModel(
         id: '', // Firestore ID'yi kendi verecek
-        userId: _currentUserId!,
-        name: customer.name,
-        phone: customer.phone,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        phoneNumber: customer.phoneNumber,
         email: customer.email,
         address: customer.address,
+        firstContactDate: customer.firstContactDate,
+        consultantId: _currentUserId!, // Sağlayıcıdaki güncel kullanıcıyı ata
+        isActive: customer.isActive,
         notes: customer.notes,
-        createdAt: customer.createdAt ?? Timestamp.now(),
       );
       await _firestoreService.addCustomer(_currentUserId!, customerToAdd);
       _isLoading = false;
@@ -94,7 +102,8 @@ class CustomerProvider with ChangeNotifier {
   }
 
   Future<bool> updateCustomer(CustomerModel customer) async {
-    if (_currentUserId == null || customer.userId != _currentUserId) return false;
+    if (_currentUserId == null || customer.consultantId != _currentUserId)
+      return false;
     _isLoading = true;
     notifyListeners();
     try {
@@ -124,6 +133,38 @@ class CustomerProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Belirtilen ID'ye sahip müşteriyi getirir.
+  /// Önce lokalde yüklü olan listede arar. Bulamazsa, doğrudan
+  /// veritabanından bu tek müşteriyi çekmeyi dener.
+  /// Bu, provider'lar arası zamanlama sorunlarını (race condition) çözer.
+  Future<CustomerModel?> getCustomerById(String customerId) async {
+    if (_currentUserId == null) return null;
+
+    // 1. Önce lokalde, hafızadaki listede ara.
+    try {
+      final customer = _customers.firstWhere((c) => c.id == customerId);
+      return customer;
+    } catch (e) {
+      // Lokal listede bulunamadı, bu beklenen bir durum olabilir.
+      // Şimdi veritabanından çekmeyi deneyeceğiz.
+      print(
+        "Müşteri lokalde bulunamadı ($customerId), veritabanından çekiliyor...",
+      );
+    }
+
+    // 2. Lokal listede yoksa, doğrudan Firestore'dan çek.
+    try {
+      final customer = await _firestoreService.getCustomer(
+        _currentUserId!,
+        customerId,
+      );
+      return customer;
+    } catch (e) {
+      print("CustomerProvider Hata (getCustomerById): $e");
+      return null;
     }
   }
 

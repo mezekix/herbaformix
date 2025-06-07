@@ -1,18 +1,18 @@
-import 'package:flutter/material.dart';
-import 'package:herbaformix/services/firestore_service.dart';
-import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:herbaformix/services/firestore_service.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
-import '../../../models/order_model.dart';
-import '../../../models/order_item_model.dart';
 import '../../../models/customer_model.dart';
+import '../../../models/order_item_model.dart';
+import '../../../models/order_model.dart';
 import '../../../models/product_model.dart';
-import '../providers/order_provider.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../customers/providers/customer_provider.dart';
 import '../../products/providers/product_provider.dart';
-import '../../auth/providers/auth_provider.dart';
+import '../providers/order_provider.dart';
 
 class AddEditOrderScreen extends StatefulWidget {
   static const String routeName = 'add-edit-order';
@@ -35,7 +35,8 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
   DateTime _selectedDate = DateTime.now();
   OrderStatus _selectedStatus = OrderStatus.pending;
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _shippingAddressController = TextEditingController();
+  final TextEditingController _shippingAddressController =
+      TextEditingController();
 
   // Geçici ürün seçimi için
   ProductModel? _productToSearch;
@@ -47,9 +48,32 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
     if (_isEditing && widget.order != null) {
       final order = widget.order!;
       // Müşteriyi CustomerProvider'dan bulmaya çalış (ID ile eşleştir)
-      // Bu kısım daha iyi yönetilebilir, şimdilik basit tutalım
-      final customerProvider = Provider.of<CustomerProvider>(context, listen: false);
-      _selectedCustomer = customerProvider.customers.firstWhere((c) => c.id == order.customerId, orElse: () => CustomerModel(id: order.customerId, userId: order.userId, name: order.customerName));
+      final customerProvider = Provider.of<CustomerProvider>(
+        context,
+        listen: false,
+      );
+      try {
+        _selectedCustomer = customerProvider.customers.firstWhere(
+          (c) => c.id == order.customerId,
+        );
+      } catch (e) {
+        // Eğer müşteri listede bulunamazsa, sipariş verilerinden bir tane oluştur.
+        // Bu durum, müşteri silinmişse veya liste güncel değilse olabilir.
+        final names = order.customerName.split(' ');
+        final firstName = names.isNotEmpty ? names.first : order.customerName;
+        final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+        _selectedCustomer = CustomerModel(
+          id: order.customerId,
+          firstName: firstName,
+          lastName: lastName,
+          phoneNumber: '', // Siparişte bu bilgi yok
+          firstContactDate:
+              order.orderDate, // Sipariş tarihini ilk temas kabul edebiliriz
+          consultantId: order.userId,
+          isActive: true, // Varsayılan olarak aktif
+          notes: 'Müşteri bilgisi siparişten otomatik oluşturuldu.',
+        );
+      }
 
       _orderItems = List.from(order.items); // Kopyasını al
       _selectedDate = order.orderDate.toDate();
@@ -62,25 +86,32 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
   void _addOrUpdateOrderItem(ProductModel product, int quantity) {
     if (quantity <= 0) return;
 
-    final existingItemIndex = _orderItems.indexWhere((item) => item.productId == product.id);
+    final existingItemIndex = _orderItems.indexWhere(
+      (item) => item.productId == product.id,
+    );
 
     setState(() {
-      if (existingItemIndex >= 0) { // Ürün zaten listede varsa, adedini güncelle
+      if (existingItemIndex >= 0) {
+        // Ürün zaten listede varsa, adedini güncelle
         _orderItems[existingItemIndex] = OrderItemModel(
           productId: product.id,
           productName: product.name,
-          quantity: _orderItems[existingItemIndex].quantity + quantity, // Adedi artır
+          quantity:
+              _orderItems[existingItemIndex].quantity + quantity, // Adedi artır
           unitPrice: product.price ?? 0.0, // Gerçek fiyatı al
           unitVp: product.vp,
         );
-      } else { // Yeni ürün ekle
-        _orderItems.add(OrderItemModel(
-          productId: product.id,
-          productName: product.name,
-          quantity: quantity,
-          unitPrice: product.price ?? 0.0,
-          unitVp: product.vp,
-        ));
+      } else {
+        // Yeni ürün ekle
+        _orderItems.add(
+          OrderItemModel(
+            productId: product.id,
+            productName: product.name,
+            quantity: quantity,
+            unitPrice: product.price ?? 0.0,
+            unitVp: product.vp,
+          ),
+        );
       }
     });
   }
@@ -91,29 +122,43 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
     });
   }
 
-  double get _calculateTotalAmount => _orderItems.fold(0, (sum, item) => sum + item.totalPrice);
-  double get _calculateTotalVp => _orderItems.fold(0, (sum, item) => sum + item.totalVp);
+  double get _calculateTotalAmount =>
+      _orderItems.fold(0, (sum, item) => sum + item.totalPrice);
+  double get _calculateTotalVp =>
+      _orderItems.fold(0, (sum, item) => sum + item.totalVp);
 
   Future<void> _saveOrder() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCustomer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen bir müşteri seçin.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lütfen bir müşteri seçin.')),
+      );
       return;
     }
     if (_orderItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen siparişe en az bir ürün ekleyin.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen siparişe en az bir ürün ekleyin.'),
+        ),
+      );
       return;
     }
 
-    setState(() { _isLoading = true; });
+    setState(() {
+      _isLoading = true;
+    });
 
     final orderProvider = Provider.of<OrderProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUserId = authProvider.firebaseUser?.uid;
 
     if (currentUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kullanıcı bulunamadı.')));
-      setState(() { _isLoading = false; });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Kullanıcı bulunamadı.')));
+      setState(() {
+        _isLoading = false;
+      });
       return;
     }
 
@@ -121,7 +166,9 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
       id: _isEditing ? widget.order!.id : '',
       userId: currentUserId,
       customerId: _selectedCustomer!.id,
-      customerName: _selectedCustomer!.name,
+      customerName:
+          '${_selectedCustomer!.firstName} ${_selectedCustomer!.lastName}'
+              .trim(),
       items: _orderItems,
       orderDate: Timestamp.fromDate(_selectedDate),
       status: _selectedStatus,
@@ -136,28 +183,43 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
       // FirestoreService'de updateOrder'ı direkt kullanmak yerine OrderProvider üzerinden bir metot çağırabiliriz.
       // Şimdilik direkt FirestoreService.updateOrder'ı çağıralım (OrderProvider'da da benzer bir metot var)
       try {
-        await Provider.of<FirestoreService>(context, listen:false).updateOrder(currentUserId, orderData);
+        await Provider.of<FirestoreService>(
+          context,
+          listen: false,
+        ).updateOrder(currentUserId, orderData);
         success = true;
       } catch (e) {
         success = false;
         print("Sipariş güncellenirken hata: $e");
       }
-
     } else {
       success = await orderProvider.addOrder(orderData);
     }
 
     if (mounted) {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sipariş başarıyla ${_isEditing ? "güncellendi" : "oluşturuldu"}!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Sipariş başarıyla ${_isEditing ? "güncellendi" : "oluşturuldu"}!',
+            ),
+          ),
+        );
         context.pop();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sipariş ${_isEditing ? "güncellenirken" : "oluşturulurken"} hata oluştu.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Sipariş ${_isEditing ? "güncellenirken" : "oluşturulurken"} hata oluştu.',
+            ),
+          ),
+        );
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -167,31 +229,48 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Siparişi Görüntüle/Düzenle' : 'Yeni Sipariş Oluştur'),
+        title: Text(
+          _isEditing ? 'Siparişi Görüntüle/Düzenle' : 'Yeni Sipariş Oluştur',
+        ),
         actions: [
-          if (_isEditing && widget.order != null) // Silme butonu sadece düzenleme modunda
+          if (_isEditing &&
+              widget.order != null) // Silme butonu sadece düzenleme modunda
             IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
                 // Silme işlemi (genelde status 'cancelled' yapılır)
-                final orderProvider = Provider.of<OrderProvider>(context, listen: false); // OrderProvider'ı burada al
+                final orderProvider = Provider.of<OrderProvider>(
+                  context,
+                  listen: false,
+                ); // OrderProvider'ı burada al
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text("Siparişi İptal Et"),
-                    content: const Text("Bu siparişi iptal etmek istediğinizden emin misiniz?"),
+                    content: const Text(
+                      "Bu siparişi iptal etmek istediğinizden emin misiniz?",
+                    ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text("Hayır")),
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text("Evet, İptal Et"))
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text("Hayır"),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text("Evet, İptal Et"),
+                      ),
                     ],
                   ),
                 );
                 if (confirmed == true) {
-                  await orderProvider.updateOrderStatus(widget.order!.id, OrderStatus.cancelled);
+                  await orderProvider.updateOrderStatus(
+                    widget.order!.id,
+                    OrderStatus.cancelled,
+                  );
                   if (mounted) context.pop();
                 }
               },
-            )
+            ),
         ],
       ),
       body: _isLoading
@@ -207,11 +286,16 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                     DropdownButtonFormField<CustomerModel>(
                       value: _selectedCustomer,
                       hint: const Text('Müşteri Seçin*'),
-                      decoration: const InputDecoration(border: OutlineInputBorder(), prefixIcon: Icon(Icons.person_search_outlined)),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person_search_outlined),
+                      ),
                       items: customerProvider.customers.map((customer) {
                         return DropdownMenuItem<CustomerModel>(
                           value: customer,
-                          child: Text(customer.name),
+                          child: Text(
+                            '${customer.firstName} ${customer.lastName}'.trim(),
+                          ),
                         );
                       }).toList(),
                       onChanged: (value) {
@@ -219,7 +303,8 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                           _selectedCustomer = value;
                         });
                       },
-                      validator: (value) => value == null ? 'Lütfen bir müşteri seçin.' : null,
+                      validator: (value) =>
+                          value == null ? 'Lütfen bir müşteri seçin.' : null,
                     ),
                     const SizedBox(height: 16),
 
@@ -232,21 +317,31 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                     const SizedBox(height: 16),
 
                     // Toplam Tutar ve VP
-                    Text('Toplam Tutar: ${_calculateTotalAmount.toStringAsFixed(2)} TL', style: Theme.of(context).textTheme.titleMedium),
-                    Text('Kazanılan VP: ${_calculateTotalVp.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      'Toplam Tutar: ${_calculateTotalAmount.toStringAsFixed(2)} TL',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      'Kazanılan VP: ${_calculateTotalVp.toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 20),
 
                     // Sipariş Tarihi
                     ListTile(
                       leading: const Icon(Icons.calendar_today_outlined),
-                      title: Text('Sipariş Tarihi: ${DateFormat('dd.MM.yyyy').format(_selectedDate)}'),
+                      title: Text(
+                        'Sipariş Tarihi: ${DateFormat('dd.MM.yyyy').format(_selectedDate)}',
+                      ),
                       trailing: const Icon(Icons.edit_outlined),
                       onTap: () async {
                         final pickedDate = await showDatePicker(
                           context: context,
                           initialDate: _selectedDate,
                           firstDate: DateTime(2000),
-                          lastDate: DateTime.now().add(const Duration(days: 365)), // Gelecek bir yıla kadar
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ), // Gelecek bir yıla kadar
                         );
                         if (pickedDate != null && pickedDate != _selectedDate) {
                           setState(() {
@@ -258,41 +353,66 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                     const SizedBox(height: 10),
 
                     // Sipariş Durumu (Sadece düzenleme modunda anlamlı olabilir veya varsayılan)
-                     if (_isEditing)
-                        DropdownButtonFormField<OrderStatus>(
+                    if (_isEditing)
+                      DropdownButtonFormField<OrderStatus>(
                         value: _selectedStatus,
-                        decoration: const InputDecoration(labelText: 'Sipariş Durumu', border: OutlineInputBorder(), prefixIcon: Icon(Icons.delivery_dining_outlined)),
+                        decoration: const InputDecoration(
+                          labelText: 'Sipariş Durumu',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.delivery_dining_outlined),
+                        ),
                         items: OrderStatus.values.map((status) {
-                            return DropdownMenuItem<OrderStatus>(
+                          return DropdownMenuItem<OrderStatus>(
                             value: status,
-                            child: Text(status.toString().split('.').last), // Enum ismini göster
-                            );
+                            child: Text(
+                              status.toString().split('.').last,
+                            ), // Enum ismini göster
+                          );
                         }).toList(),
                         onChanged: (value) {
-                            if (value != null) {
-                            setState(() { _selectedStatus = value; });
-                            }
+                          if (value != null) {
+                            setState(() {
+                              _selectedStatus = value;
+                            });
+                          }
                         },
-                        ),
+                      ),
                     const SizedBox(height: 16),
 
                     TextFormField(
                       controller: _shippingAddressController,
-                      decoration: const InputDecoration(labelText: 'Teslimat Adresi (Opsiyonel)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.local_shipping_outlined)),
+                      decoration: const InputDecoration(
+                        labelText: 'Teslimat Adresi (Opsiyonel)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.local_shipping_outlined),
+                      ),
                       maxLines: 2,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _notesController,
-                      decoration: const InputDecoration(labelText: 'Sipariş Notları (Opsiyonel)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.note_add_outlined)),
+                      decoration: const InputDecoration(
+                        labelText: 'Sipariş Notları (Opsiyonel)',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.note_add_outlined),
+                      ),
                       maxLines: 3,
                     ),
                     const SizedBox(height: 30),
                     ElevatedButton.icon(
-                      icon: Icon(_isEditing ? Icons.save_alt_outlined : Icons.add_shopping_cart_outlined),
-                      label: Text(_isEditing ? 'Siparişi Güncelle' : 'Siparişi Oluştur'),
+                      icon: Icon(
+                        _isEditing
+                            ? Icons.save_alt_outlined
+                            : Icons.add_shopping_cart_outlined,
+                      ),
+                      label: Text(
+                        _isEditing ? 'Siparişi Güncelle' : 'Siparişi Oluştur',
+                      ),
                       onPressed: _saveOrder,
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), textStyle: const TextStyle(fontSize: 16)),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        textStyle: const TextStyle(fontSize: 16),
+                      ),
                     ),
                   ],
                 ),
@@ -301,7 +421,10 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
     );
   }
 
-  Widget _buildProductSelection(BuildContext context, ProductProvider productProvider) {
+  Widget _buildProductSelection(
+    BuildContext context,
+    ProductProvider productProvider,
+  ) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -333,20 +456,25 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
               children: [
                 Expanded(
                   child: TextFormField(
-                    initialValue: _quantity.toString(), // Düzeltildi: Controller yerine initialValue
-                    decoration: const InputDecoration(labelText: 'Adet', border: OutlineInputBorder()),
+                    initialValue: _quantity
+                        .toString(), // Düzeltildi: Controller yerine initialValue
+                    decoration: const InputDecoration(
+                      labelText: 'Adet',
+                      border: OutlineInputBorder(),
+                    ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
                       final newQuantity = int.tryParse(value);
-                      if (newQuantity != null && newQuantity >=1) {
-                         _quantity = newQuantity;
+                      if (newQuantity != null && newQuantity >= 1) {
+                        _quantity = newQuantity;
                       } else if (value.isEmpty) {
                         _quantity = 1; // Boşsa veya geçersizse 1 yap
                       }
                       // Kullanıcı geçersiz bir şey girerse TextFormField'un kendi validasyonu da devreye girebilir.
                       // Veya setState ile anlık güncelleme yapılabilir. Şimdilik _quantity'yi güncelliyoruz.
                     },
-                     validator: (value) { // Adet için validator
+                    validator: (value) {
+                      // Adet için validator
                       if (value == null || value.isEmpty) {
                         return 'Adet girin';
                       }
@@ -370,14 +498,21 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                     // Şimdilik _addOrUpdateOrderItem içindeki quantity > 0 kontrolüne güveniyoruz.
                     if (_productToSearch != null && _quantity > 0) {
                       _addOrUpdateOrderItem(_productToSearch!, _quantity);
-                      setState(() { // Seçimi sıfırla
+                      setState(() {
+                        // Seçimi sıfırla
                         _productToSearch = null;
                         _quantity = 1;
                         // Adet TextFormField'unu sıfırlamak için bir controller gerekebilir veya Key ile resetlenebilir.
                         // Şimdilik sadece _quantity state'ini sıfırlıyoruz.
                       });
                     } else {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lütfen bir ürün seçin ve geçerli bir adet girin.')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Lütfen bir ürün seçin ve geçerli bir adet girin.',
+                          ),
+                        ),
+                      );
                     }
                   },
                   child: const Text('Ekle'),
@@ -402,11 +537,15 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Text("Sipariş Kalemleri:", style: Theme.of(context).textTheme.titleMedium),
+          child: Text(
+            "Sipariş Kalemleri:",
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         ),
         ListView.builder(
           shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(), // İç içe kaydırmayı önle
+          physics:
+              const NeverScrollableScrollPhysics(), // İç içe kaydırmayı önle
           itemCount: _orderItems.length,
           itemBuilder: (context, index) {
             final item = _orderItems[index];
@@ -414,9 +553,14 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
                 title: Text(item.productName),
-                subtitle: Text('Adet: ${item.quantity} x ${item.unitPrice.toStringAsFixed(2)} TL = ${item.totalPrice.toStringAsFixed(2)} TL\nVP: ${item.quantity} x ${item.unitVp.toStringAsFixed(2)} = ${item.totalVp.toStringAsFixed(2)} VP'),
+                subtitle: Text(
+                  'Adet: ${item.quantity} x ${item.unitPrice.toStringAsFixed(2)} TL = ${item.totalPrice.toStringAsFixed(2)} TL\nVP: ${item.quantity} x ${item.unitVp.toStringAsFixed(2)} = ${item.totalVp.toStringAsFixed(2)} VP',
+                ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+                  icon: const Icon(
+                    Icons.remove_circle_outline,
+                    color: Colors.red,
+                  ),
                   onPressed: () => _removeOrderItem(index),
                 ),
               ),
@@ -427,4 +571,3 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
     );
   }
 }
-
