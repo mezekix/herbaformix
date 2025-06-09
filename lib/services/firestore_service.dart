@@ -196,10 +196,12 @@ class FirestoreService {
   /// Belirli bir müşteriye ait tüm planlanmış görevleri getirir.
   /// Bu, müşteri detay sayfasındaki "Takip Planı" bölümü için kullanılacak.
   Stream<List<ScheduledFollowUpModel>> getScheduledFollowUpsForCustomer(
+    String userId,
     String customerId,
   ) {
     return scheduledFollowUpsRef()
         .where('customerId', isEqualTo: customerId)
+        .where('consultantId', isEqualTo: userId)
         .orderBy('dueDate')
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());

@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:herbaformix/services/firestore_service.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -41,6 +40,24 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
   // Geçici ürün seçimi için
   ProductModel? _productToSearch;
   int _quantity = 1;
+
+  // Çeviri için helper metot
+  String _getStatusText(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'Beklemede';
+      case OrderStatus.processing:
+        return 'Hazırlanıyor';
+      case OrderStatus.shipped:
+        return 'Kargolandı';
+      case OrderStatus.delivered:
+        return 'Teslim Edildi';
+      case OrderStatus.cancelled:
+        return 'İptal Edildi';
+      default:
+        return 'Bilinmiyor';
+    }
+  }
 
   @override
   void initState() {
@@ -180,18 +197,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
 
     bool success;
     if (_isEditing) {
-      // FirestoreService'de updateOrder'ı direkt kullanmak yerine OrderProvider üzerinden bir metot çağırabiliriz.
-      // Şimdilik direkt FirestoreService.updateOrder'ı çağıralım (OrderProvider'da da benzer bir metot var)
-      try {
-        await Provider.of<FirestoreService>(
-          context,
-          listen: false,
-        ).updateOrder(currentUserId, orderData);
-        success = true;
-      } catch (e) {
-        success = false;
-        print("Sipariş güncellenirken hata: $e");
-      }
+      success = await orderProvider.updateOrder(orderData);
     } else {
       success = await orderProvider.addOrder(orderData);
     }
@@ -365,7 +371,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                           return DropdownMenuItem<OrderStatus>(
                             value: status,
                             child: Text(
-                              status.toString().split('.').last,
+                              _getStatusText(status),
                             ), // Enum ismini göster
                           );
                         }).toList(),

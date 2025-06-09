@@ -25,12 +25,13 @@ class FollowUpProvider with ChangeNotifier {
   List<FollowUpModel> get followUps => _followUps;
 
   /// Planlanmış takip görüşmelerinin listesi.
-  StreamSubscription<List<ScheduledFollowUpModel>>? _scheduledFollowUpsSubscription;
+  StreamSubscription<List<ScheduledFollowUpModel>>?
+  _scheduledFollowUpsSubscription;
   List<ScheduledFollowUpModel> _scheduledFollowUps = [];
   List<ScheduledFollowUpModel> get scheduledFollowUps => _scheduledFollowUps;
-  
+
   /// Sadece tamamlanmamış planlanmış takipleri döndüren bir getter.
-  List<ScheduledFollowUpModel> get pendingScheduledFollowUps => 
+  List<ScheduledFollowUpModel> get pendingScheduledFollowUps =>
       _scheduledFollowUps.where((sf) => !sf.isCompleted).toList();
 
   /// Verilerin yüklenip yüklenmediğini belirten bayrak.
@@ -79,27 +80,42 @@ class FollowUpProvider with ChangeNotifier {
 
   /// Firestore'dan gelen anlık PLANLANMIŞ takip verilerini dinler.
   void _listenToScheduledFollowUps() {
+    if (_userId.isEmpty) {
+      print(
+        "FollowUpProvider Hata: Kullanıcı ID'si boş olduğu için planlanmış takipler dinlenemiyor.",
+      );
+      _isLoading = false;
+      _scheduledFollowUps = [];
+      notifyListeners();
+      return;
+    }
     _isLoading = true;
     notifyListeners();
 
     _scheduledFollowUpsSubscription?.cancel();
     _scheduledFollowUpsSubscription = _firestoreService
-        .getScheduledFollowUpsForCustomer(_customerId)
-        .listen((scheduledData) {
-          _scheduledFollowUps = scheduledData;
-          _isLoading = false;
-          notifyListeners();
-        }, onError: (error) {
-          print("FollowUpProvider Hata (listenToScheduledFollowUps): $error");
-          _isLoading = false;
-          _scheduledFollowUps = [];
-          notifyListeners();
-        });
+        .getScheduledFollowUpsForCustomer(_userId, _customerId)
+        .listen(
+          (scheduledData) {
+            _scheduledFollowUps = scheduledData;
+            _isLoading = false;
+            notifyListeners();
+          },
+          onError: (error) {
+            print("FollowUpProvider Hata (listenToScheduledFollowUps): $error");
+            _isLoading = false;
+            _scheduledFollowUps = [];
+            notifyListeners();
+          },
+        );
   }
 
   /// Yeni bir takip görüşmesi ekler.
   /// Opsiyonel olarak, bu görüşmenin tamamladığı planlanmış görevin ID'sini alır.
-  Future<bool> addFollowUp(FollowUpModel followUp, {String? completedScheduledFollowUpId}) async {
+  Future<bool> addFollowUp(
+    FollowUpModel followUp, {
+    String? completedScheduledFollowUpId,
+  }) async {
     if (_userId.isEmpty) return false;
     _isLoading = true;
     notifyListeners();
@@ -108,10 +124,13 @@ class FollowUpProvider with ChangeNotifier {
       await _firestoreService.addFollowUp(_userId, _customerId, followUp);
 
       // Eğer bu ekleme, planlanmış bir görevi tamamlıyorsa, o görevi güncelle.
-      if (completedScheduledFollowUpId != null && completedScheduledFollowUpId.isNotEmpty) {
-        await _firestoreService.markScheduledFollowUpAsCompleted(completedScheduledFollowUpId);
+      if (completedScheduledFollowUpId != null &&
+          completedScheduledFollowUpId.isNotEmpty) {
+        await _firestoreService.markScheduledFollowUpAsCompleted(
+          completedScheduledFollowUpId,
+        );
       }
-      
+
       _isLoading = false;
       notifyListeners();
       return true;

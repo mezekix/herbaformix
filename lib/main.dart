@@ -51,27 +51,17 @@ class MyAppInitializer extends StatelessWidget {
             context.read<AuthProvider>(),
           ),
         ),
-        ChangeNotifierProxyProvider<CustomerProvider, OrderProvider>(
+        ChangeNotifierProvider<OrderProvider>(
           create: (context) => OrderProvider(
             context.read<FirestoreService>(),
             context.read<AuthProvider>(),
             context.read<CustomerProvider>(),
           ),
-          update: (context, customerProvider, previousOrderProvider) =>
-              OrderProvider(
-                context.read<FirestoreService>(),
-                context.read<AuthProvider>(),
-                customerProvider,
-              ),
         ),
-        ChangeNotifierProxyProvider<AuthProvider, HomeProvider>(
+        ChangeNotifierProvider<HomeProvider>(
           create: (context) => HomeProvider(
             context.read<FirestoreService>(),
             context.read<AuthProvider>(),
-          ),
-          update: (context, authProvider, previousHomeProvider) => HomeProvider(
-            context.read<FirestoreService>(),
-            authProvider, // Her zaman en güncel AuthProvider'ı kullan.
           ),
         ),
       ],

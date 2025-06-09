@@ -18,6 +18,21 @@ service cloud.firestore {
       // allow write: if ... ; 
     }
 
+    // scheduled_follow_ups koleksiyonu için yeni kurallar
+    match /scheduled_follow_ups/{followUpId} {
+      // Bir kullanıcının bu koleksiyonda bir dökümanı okumasına veya silmesine,
+      // sadece dökümandaki 'consultantId' alanı kendi kullanıcı ID'si ise izin ver.
+      allow read, delete: if request.auth != null && resource.data.consultantId == request.auth.uid;
+      
+      // Bir kullanıcının bu koleksiyona yeni bir döküman eklemesine,
+      // sadece oluşturulacak dökümandaki 'consultantId' alanı kendi kullanıcı ID'si ise izin ver.
+      allow create: if request.auth != null && request.resource.data.consultantId == request.auth.uid;
+
+      // Bir kullanıcının dökümanı güncellemesine (örn: isCompleted = true yapmak),
+      // sadece dökümandaki 'consultantId' alanı kendi kullanıcı ID'si ise izin ver.
+      allow update: if request.auth != null && resource.data.consultantId == request.auth.uid;
+    }
+
     // --- KULLANICIYA ÖZEL VERİLER ---
 
     // Bir kullanıcının kendi dokümanı altındaki tüm alt koleksiyonlar için geçerli olacak kural.

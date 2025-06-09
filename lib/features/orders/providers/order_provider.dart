@@ -150,53 +150,74 @@ class OrderProvider with ChangeNotifier {
     }
   }
 
-  /// Bir siparişin durumunu günceller.
-  /// Eğer durum "Teslim Edildi" olarak ayarlanırsa, müşteri için otomatik takip planı oluşturur.
-  Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
+  /// Mevcut bir siparişin tüm verilerini günceller.
+  /// Eğer bu güncelleme sırasında siparişin durumu 'Teslim Edildi' olarak değiştiyse,
+  /// otomatik takip planını oluşturur.
+  Future<bool> updateOrder(OrderModel order) async {
     if (_currentUserId == null) return false;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Önce veritabanını güncelle.
+      await _firestoreService.updateOrder(_currentUserId!, order);
+
+      // --- OTOMATİK TAKİP OLUŞTURMA MANTIĞI ---
+      // Eğer yeni durum "Teslim Edildi" ise, planı oluştur.
+      if (order.status == OrderStatus.delivered) {
+        print(
+          "Sipariş 'Teslim Edildi' olarak güncellendi. Takip planı oluşturuluyor...",
+        );
+
+        final CustomerModel? customer = await _customerProvider.getCustomerById(
+          order.customerId,
+        );
+
+        if (customer != null) {
+          print(
+            "'${customer.firstName}' için takip planı oluşturma metodu çağrılıyor.",
+          );
+          await _createStandardFollowUpSchedule(customer);
+        } else {
+          print(
+            "HATA: Takip planı oluşturulamadı çünkü müşteri ID'si (${order.customerId}) bulunamadı.",
+          );
+        }
+      }
+
+      _isLoading = false;
+      notifyListeners(); // isLoading durumu için
+      return true;
+    } catch (e) {
+      print("OrderProvider Hata (updateOrder): $e");
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Sadece bir siparişin durumunu günceller. (Bu metot başka yerlerde kullanılabilir, o yüzden kalmalı)
+  Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
     final orderIndex = _orders.indexWhere((o) => o.id == orderId);
     if (orderIndex != -1) {
-      OrderModel updatedOrder = _orders[orderIndex];
-      updatedOrder.status = newStatus;
-
-      try {
-        await _firestoreService.updateOrder(_currentUserId!, updatedOrder);
-
-        // --- GÜNCELLENMİŞ OTOMATİK TAKİP OLUŞTURMA MANTIĞI ---
-        if (newStatus == OrderStatus.delivered) {
-          print(
-            "Sipariş 'Teslim Edildi' olarak işaretlendi. Takip planı oluşturuluyor...",
-          );
-
-          // Sağlamlaştırılmış metodu kullanarak müşteriyi getir.
-          final CustomerModel? customer = await _customerProvider
-              .getCustomerById(updatedOrder.customerId);
-
-          // Eğer müşteri bulunduysa, takip planını oluştur.
-          if (customer != null) {
-            print(
-              "'${customer.firstName}' için takip planı oluşturma metodu çağrılıyor.",
-            );
-            await _createStandardFollowUpSchedule(customer);
-          } else {
-            print(
-              "HATA: Takip planı oluşturulamadı çünkü müşteri ID'si (${updatedOrder.customerId}) bulunamadı.",
-            );
-          }
-        }
-
-        notifyListeners();
-        return true;
-      } catch (e) {
-        print("OrderProvider Hata (updateOrderStatus): $e");
-        return false;
-      }
+      OrderModel orderToUpdate = _orders[orderIndex];
+      orderToUpdate.status = newStatus;
+      // Artık tüm güncelleme mantığı updateOrder'da olduğu için onu çağırıyoruz.
+      return await updateOrder(orderToUpdate);
     }
     return false;
   }
 
   /// Standart bir takip planı oluşturup veritabanına ekler.
   Future<void> _createStandardFollowUpSchedule(CustomerModel customer) async {
+    // Güvenlik kontrolü: Müşterinin danışman ID'si var mı ve mevcut kullanıcıyla eşleşiyor mu?
+    if (customer.consultantId.isEmpty ||
+        customer.consultantId != _currentUserId) {
+      print(
+        "HATA: Otomatik takip planı oluşturulamıyor. Müşteri kaydındaki danışman ID'si ('${customer.consultantId}') mevcut kullanıcı ID'siyle ('$_currentUserId') eşleşmiyor veya boştur.",
+      );
+      return; // ID'ler eşleşmiyorsa veya boşsa işlemi durdur.
+    }
     final now = DateTime.now();
     final scheduleDays = [1, 3, 7, 15, 30]; // Takip edilecek günler.
 

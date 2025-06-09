@@ -81,7 +81,6 @@ class CustomerListScreen extends StatelessWidget {
                       children: [
                         Text(
                           customer.phoneNumber ??
-                              customer.email ??
                               'İletişim bilgisi yok',
                         ),
                         const SizedBox(height: 2),

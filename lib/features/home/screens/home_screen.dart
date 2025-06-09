@@ -70,7 +70,7 @@ class HomeScreen extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
     final customerProvider = Provider.of<CustomerProvider>(context);
-    final homeProvider = context.read<HomeProvider>();
+
     final UserProfileModel? userProfile = authProvider.userProfile;
     final monthlyVPTarget = userProfile?.monthlyVPTarget ?? 0;
     final vpEarnedThisMonth = orderProvider.totalVpEarnedThisMonth;

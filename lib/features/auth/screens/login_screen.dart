@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../providers/auth_provider.dart'; // AuthProvider
 // import 'package:go_router/go_router.dart'; // Gerekirse yönlendirme için
 
@@ -31,13 +32,16 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text.trim(),
     );
 
-    if (mounted) { // Widget ağaçta hala mevcutsa
+    if (mounted) {
+      // Widget ağaçta hala mevcutsa
       setState(() {
         _isLoading = false;
       });
       if (!success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Giriş başarısız. E-posta veya şifre hatalı.')),
+          const SnackBar(
+            content: Text('Giriş başarısız. E-posta veya şifre hatalı.'),
+          ),
         );
       }
       // Başarılı giriş durumunda go_router'ın redirect'i otomatik olarak ana sayfaya yönlendirecek.
@@ -45,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _register() async {
-     if (!_formKey.currentState!.validate()) {
+    if (!_formKey.currentState!.validate()) {
       return;
     }
     setState(() {
@@ -53,29 +57,31 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.signUp( // signUp metodunu çağırıyoruz
+    final success = await authProvider.signUp(
+      // signUp metodunu çağırıyoruz
       _emailController.text.trim(),
       _passwordController.text.trim(),
     );
 
-     if (mounted) {
+    if (mounted) {
       setState(() {
         _isLoading = false;
       });
       if (success) {
-         ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Kayıt başarılı! Lütfen giriş yapın.')),
         );
         // Kayıt sonrası otomatik giriş yaptırmak yerine login ekranında kalabilir veya
         // direkt ana sayfaya yönlendirme de yapılabilir (AuthProvider'daki değişikliğe göre)
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kayıt başarısız. Lütfen tekrar deneyin.')),
+          const SnackBar(
+            content: Text('Kayıt başarısız. Lütfen tekrar deneyin.'),
+          ),
         );
       }
     }
   }
-
 
   @override
   void dispose() {
@@ -96,13 +102,21 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Text('HerbaForm', style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  'HerbaForm',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 30),
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'E-posta'),
+                  decoration: const InputDecoration(
+                    labelText: 'E-posta',
+                    prefixIcon: Icon(Icons.email),
+                  ),
                   validator: (value) {
-                    if (value == null || value.isEmpty || !value.contains('@')) {
+                    if (value == null ||
+                        value.isEmpty ||
+                        !value.contains('@')) {
                       return 'Geçerli bir e-posta girin.';
                     }
                     return null;
@@ -112,7 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Şifre'),
+                  decoration: const InputDecoration(
+                    labelText: 'Şifre',
+                    prefixIcon: Icon(Icons.lock),
+                  ),
                   obscureText: true,
                   validator: (value) {
                     if (value == null || value.isEmpty || value.length < 6) {
@@ -129,11 +146,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       ElevatedButton(
                         onPressed: _login,
-                        style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 36)),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 36),
+                        ),
                         child: const Text('Giriş Yap'),
                       ),
                       const SizedBox(height: 10),
-                       TextButton( // Kayıt ol butonu
+                      TextButton(
+                        // Kayıt ol butonu
                         onPressed: _register,
                         child: const Text('Hesabın yok mu? Kayıt Ol'),
                       ),
