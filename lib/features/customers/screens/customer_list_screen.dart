@@ -80,8 +80,9 @@ class CustomerListScreen extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          customer.phoneNumber ??
-                              'İletişim bilgisi yok',
+                          customer.phoneNumber.isNotEmpty
+                              ? customer.phoneNumber
+                              : 'İletişim bilgisi yok',
                         ),
                         const SizedBox(height: 2),
                         Text(

@@ -63,7 +63,7 @@ class HomeProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            print("HomeProvider Hata (listenToUpcomingFollowUps): $error");
+            debugPrint("HomeProvider Hata (listenToUpcomingFollowUps): $error");
             _isLoading = false;
             _upcomingFollowUps = [];
             notifyListeners();

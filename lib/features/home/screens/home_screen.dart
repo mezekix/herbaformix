@@ -14,6 +14,8 @@ import '../../customers/screens/customer_list_screen.dart';
 import '../../orders/providers/order_provider.dart';
 import '../../orders/screens/add_edit_order_screen.dart';
 import '../../orders/screens/order_list_screen.dart';
+import '../../products/providers/product_provider.dart';
+import '../../products/screens/add_edit_product_screen.dart';
 import '../../products/screens/product_list_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../providers/home_provider.dart'; // Yeni provider'ımız
@@ -26,36 +28,49 @@ class HomeScreen extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required String title,
+    String? subtitle,
     required String value,
     Color? iconColor,
     VoidCallback? onTap,
   }) {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(12.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 40, color: iconColor ?? AppColors.primary),
+              Icon(icon, size: 36, color: iconColor ?? AppColors.primary),
               const SizedBox(height: 8),
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+                style: Theme.of(context).textTheme.titleMedium,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
+              if (subtitle != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0),
+                  child: Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              const Spacer(),
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -70,6 +85,7 @@ class HomeScreen extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
     final orderProvider = Provider.of<OrderProvider>(context);
     final customerProvider = Provider.of<CustomerProvider>(context);
+    final productProvider = Provider.of<ProductProvider>(context);
 
     final UserProfileModel? userProfile = authProvider.userProfile;
     final monthlyVPTarget = userProfile?.monthlyVPTarget ?? 0;
@@ -115,7 +131,7 @@ class HomeScreen extends StatelessWidget {
                   style: Theme.of(context).textTheme.headlineSmall,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20.0),
@@ -166,13 +182,14 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1.1,
                   children: [
                     _buildDashboardCard(
                       context,
@@ -202,7 +219,9 @@ class HomeScreen extends StatelessWidget {
                       context,
                       icon: Icons.shopping_bag_outlined,
                       title: 'Ürünler',
-                      value: '',
+                      value: productProvider.isLoading
+                          ? '...'
+                          : productProvider.products.length.toString(),
                       onTap: () => context.goNamed(
                         ProductListScreen.routeName.substring(1),
                       ),
@@ -212,7 +231,9 @@ class HomeScreen extends StatelessWidget {
                       context,
                       icon: Icons.receipt_long_outlined,
                       title: 'Tüm Siparişler',
-                      value: '',
+                      value: orderProvider.isLoading
+                          ? '...'
+                          : orderProvider.orders.length.toString(),
                       onTap: () => context.goNamed(
                         OrderListScreen.routeName.substring(1),
                       ),
@@ -220,36 +241,27 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 _buildUpcomingFollowUps(context, homeProvider),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Text(
                   "Hızlı Erişim",
                   style: Theme.of(context).textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add_shopping_cart),
-                  label: const Text('Yeni Sipariş Oluştur'),
-                  onPressed: () =>
-                      context.goNamed(AddEditOrderScreen.routeName),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.textOnPrimary,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: const Text('Yeni Müşteri Ekle'),
-                  onPressed: () =>
-                      context.goNamed(AddEditCustomerScreen.routeName),
-                ),
+                _buildQuickAccessButtons(context),
               ],
             ),
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          _showQuickAddMenu(context);
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Hızlı Ekle'),
       ),
     );
   }
@@ -317,7 +329,7 @@ class HomeScreen extends StatelessWidget {
                       } catch (e) {
                         // Müşteri listede bulunamazsa (veri tutarsızlığı gibi nadir bir durumda)
                         // bir hata mesajı gösterilebilir veya hiçbir şey yapılmayabilir.
-                        print(
+                        debugPrint(
                           "Navigasyon hatası: Müşteri bulunamadı. ID: ${task.customerId}",
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -335,6 +347,103 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildQuickAccessButtons(BuildContext context) {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      alignment: WrapAlignment.center,
+      children: [
+        _buildQuickAccessButton(
+          context,
+          icon: Icons.person_add,
+          label: 'Müşteri Ekle',
+          onPressed: () {
+            context.goNamed(AddEditCustomerScreen.routeName);
+          },
+        ),
+        _buildQuickAccessButton(
+          context,
+          icon: Icons.shopping_cart,
+          label: 'Sipariş Oluştur',
+          onPressed: () {
+            context.goNamed(AddEditOrderScreen.routeName);
+          },
+        ),
+        _buildQuickAccessButton(
+          context,
+          icon: Icons.people,
+          label: 'Müşterilerim',
+          onPressed: () {
+            context.goNamed(CustomerListScreen.routeName.substring(1));
+          },
+        ),
+        _buildQuickAccessButton(
+          context,
+          icon: Icons.receipt,
+          label: 'Siparişlerim',
+          onPressed: () {
+            context.goNamed(OrderListScreen.routeName.substring(1));
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickAccessButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      icon: Icon(icon),
+      label: Text(label),
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  void _showQuickAddMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.person_add),
+                title: const Text('Yeni Müşteri Ekle'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.goNamed(AddEditCustomerScreen.routeName);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.shopping_cart_checkout),
+                title: const Text('Yeni Sipariş Oluştur'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.goNamed(AddEditOrderScreen.routeName);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.add_shopping_cart),
+                title: const Text('Yeni Ürün Ekle'),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.goNamed(AddEditProductScreen.routeName);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

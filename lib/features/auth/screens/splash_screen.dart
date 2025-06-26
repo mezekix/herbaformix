@@ -1,13 +1,14 @@
-import 'package:flutter/material.dart';
 import 'dart:async'; // Timer için gerekli
-import 'package:go_router/go_router.dart'; // go_router için gerekli
-import 'package:provider/provider.dart'; // Provider için gerekli
 import 'dart:math'; // Random konumlandırma için gerekli
 
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart'; // go_router için gerekli
+import 'package:provider/provider.dart'; // Provider için gerekli
+
+import '../../auth/providers/auth_provider.dart';
+import '../../auth/screens/login_screen.dart';
 // Kendi uygulama yapınıza göre bu import'ları düzenleyin
 import '../../home/screens/home_screen.dart';
-import '../../auth/screens/login_screen.dart';
-import '../../auth/providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   static const String routeName = '/splash';
@@ -17,11 +18,15 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller; // Tüm animasyonları kontrol eden ana kontrolcü
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController
+  _controller; // Tüm animasyonları kontrol eden ana kontrolcü
   late Animation<double> _fadeAnimation; // Ana logo için soluklaşma animasyonu
-  late Animation<double> _scaleAnimation; // Ana logo için ölçeklendirme animasyonu
-  late Animation<Offset> _slideAnimation; // Metin için yukarı kaydırma animasyonu
+  late Animation<double>
+  _scaleAnimation; // Ana logo için ölçeklendirme animasyonu
+  late Animation<Offset>
+  _slideAnimation; // Metin için yukarı kaydırma animasyonu
 
   // Arka plan resmi 1 için ölçeklendirme animasyonu
   late Animation<double> _bgImage1Scale;
@@ -63,7 +68,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _bgImage1Scale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeOut), // İlk %40'ta yumuşak büyüsün
+        curve: const Interval(
+          0.0,
+          0.4,
+          curve: Curves.easeOut,
+        ), // İlk %40'ta yumuşak büyüsün
       ),
     );
 
@@ -71,7 +80,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _bgImage2Scale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.1, 0.5, curve: Curves.easeOut), // Biraz gecikmeli olarak %10-%50 arasında yumuşak büyüsün
+        curve: const Interval(
+          0.1,
+          0.5,
+          curve: Curves.easeOut,
+        ), // Biraz gecikmeli olarak %10-%50 arasında yumuşak büyüsün
       ),
     );
 
@@ -79,7 +92,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.4, 0.9, curve: Curves.easeOut), // %40-%80 arasında belirsin
+        curve: const Interval(
+          0.4,
+          0.9,
+          curve: Curves.easeOut,
+        ), // %40-%80 arasında belirsin
       ),
     );
 
@@ -87,17 +104,26 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.4, 0.9, curve: Curves.easeOut), // %40-%90 arasında yumuşak büyüsün
+        curve: const Interval(
+          0.4,
+          0.9,
+          curve: Curves.easeOut,
+        ), // %40-%90 arasında yumuşak büyüsün
       ),
     );
 
     // Metin için yukarı kaydırma (slide-in-up) animasyonu (bounce kaldırıldı)
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.7, 1.0, curve: Curves.easeOut), // %70-%100 arasında yumuşak kaydırılsın
-      ),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(
+              0.7,
+              1.0,
+              curve: Curves.easeOut,
+            ), // %70-%100 arasında yumuşak kaydırılsın
+          ),
+        );
 
     // Animasyonları başlat
     _controller.forward();
@@ -107,8 +133,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       if (status == AnimationStatus.completed) {
         // Animasyon bittikten 1 saniye sonra navigasyon yap
         Future.delayed(const Duration(seconds: 1), () {
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
-          final bool isLoggedIn = authProvider.status == AuthStatus.authenticated;
+          if (!mounted) return; // Widget ağaçta hala var mı kontrol et
+          final authProvider = Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          );
+          final bool isLoggedIn =
+              authProvider.status == AuthStatus.authenticated;
 
           if (isLoggedIn) {
             context.go(HomeScreen.routeName);
@@ -134,7 +165,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           // Arka plan gradyanı - Daha yumuşak pastel renkler kullanıldı
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFFA5D6A7), Color(0xFFE1BEE7)], // Pastel yeşil ve lavanta tonları
+              colors: [
+                Color(0xFFA5D6A7),
+                Color(0xFFE1BEE7),
+              ], // Pastel yeşil ve lavanta tonları
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -142,16 +176,20 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
-              child: Stack( // Katmanlar halinde elemanları yerleştirmek için Stack kullanıldı
+              child: Stack(
+                // Katmanlar halinde elemanları yerleştirmek için Stack kullanıldı
                 children: [
                   // Arka plan resmi 1 (Ekranın üst yarısı)
                   Align(
                     alignment: _bgImage1Alignment,
-                    child: ScaleTransition( // Sadece ölçeklendirme animasyonu kullanıldı
+                    child: ScaleTransition(
+                      // Sadece ölçeklendirme animasyonu kullanıldı
                       scale: _bgImage1Scale,
                       child: Image.asset(
                         'assets/f1.png', // Uzantı .png
-                        width: MediaQuery.of(context).size.width * 0.30, // Daha küçük boyut (%25)
+                        width:
+                            MediaQuery.of(context).size.width *
+                            0.30, // Daha küçük boyut (%25)
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
@@ -172,11 +210,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   // Arka plan resmi 2 (Ekranın alt yarısı)
                   Align(
                     alignment: _bgImage2Alignment,
-                    child: ScaleTransition( // Sadece ölçeklendirme animasyonu kullanıldı
+                    child: ScaleTransition(
+                      // Sadece ölçeklendirme animasyonu kullanıldı
                       scale: _bgImage2Scale,
                       child: Image.asset(
                         'assets/f2.png', // Uzantı .png
-                        width: MediaQuery.of(context).size.width * 0.30, // Daha küçük boyut (%25)
+                        width:
+                            MediaQuery.of(context).size.width *
+                            0.30, // Daha küçük boyut (%25)
                         fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
@@ -197,8 +238,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   // Ana içerik (logo ve metin) ortada
                   Center(
                     child: FadeTransition(
-                      opacity: _fadeAnimation, // Logo için soluklaşma animasyonu
-                      child: ScaleTransition( // Logo için ölçeklendirme animasyonu
+                      opacity:
+                          _fadeAnimation, // Logo için soluklaşma animasyonu
+                      child: ScaleTransition(
+                        // Logo için ölçeklendirme animasyonu
                         scale: _scaleAnimation,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -206,11 +249,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             // Logo resmi
                             Image.asset(
                               'assets/herbalife_logo.webp', // Uzantı .webp olarak ayarlandı
-                              width: MediaQuery.of(context).size.width * 0.6, // Ekran genişliğinin %60'ı (arka plan resimlerinden büyük)
+                              width:
+                                  MediaQuery.of(context).size.width *
+                                  0.6, // Ekran genişliğinin %60'ı (arka plan resimlerinden büyük)
                               fit: BoxFit.contain,
                               errorBuilder: (context, error, stackTrace) {
                                 return Container(
-                                  width: MediaQuery.of(context).size.width * 0.6,
+                                  width:
+                                      MediaQuery.of(context).size.width * 0.6,
                                   height: 100,
                                   color: Colors.grey[400],
                                   child: const Center(
@@ -224,7 +270,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             ),
                             const SizedBox(height: 18), // Boşluk
                             SlideTransition(
-                              position: _slideAnimation, // Metin için kaydırma animasyonu
+                              position:
+                                  _slideAnimation, // Metin için kaydırma animasyonu
                               child: const Text(
                                 'live your best life',
                                 textAlign: TextAlign.center,
@@ -256,4 +303,3 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
   }
 }
-

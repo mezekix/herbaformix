@@ -1,13 +1,16 @@
+import 'dart:async'; // StreamSubscription için
+
 import 'package:flutter/foundation.dart';
+
 import '../../../models/product_model.dart';
 import '../../../services/firestore_service.dart';
-import 'dart:async'; // StreamSubscription için
 
 class ProductProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   List<ProductModel> _products = [];
   bool _isLoading = false;
-  StreamSubscription<List<ProductModel>>? _productsSubscription; // Stream'i dinlemek için
+  StreamSubscription<List<ProductModel>>?
+  _productsSubscription; // Stream'i dinlemek için
 
   ProductProvider(this._firestoreService) {
     fetchProducts(); // Provider oluşturulduğunda ürünleri çekmeye başla
@@ -24,17 +27,52 @@ class ProductProvider with ChangeNotifier {
     _productsSubscription?.cancel();
 
     // Firestore'dan gelen stream'i dinle
-    _productsSubscription = _firestoreService.getProducts().listen((productsData) {
-      _products = productsData;
-      _isLoading = false;
-      print("ProductProvider: ${productsData.length} ürün yüklendi.");
-      notifyListeners(); // UI'ı güncelle
-    }, onError: (error) {
-      print("ProductProvider Hata: $error");
-      _isLoading = false;
-      _products = []; // Hata durumunda listeyi boşalt
-      notifyListeners();
-    });
+    _productsSubscription = _firestoreService.getProducts().listen(
+      (productsData) {
+        _products = productsData;
+        _isLoading = false;
+        notifyListeners(); // UI'ı güncelle
+      },
+      onError: (error) {
+        debugPrint("ProductProvider Hata: $error");
+        _isLoading = false;
+        _products = []; // Hata durumunda listeyi boşalt
+        notifyListeners();
+      },
+    );
+  }
+
+  Future<void> addProduct(ProductModel product) async {
+    try {
+      await _firestoreService.addProduct(product);
+      // Stream will auto-update the list. No need to call notifyListeners unless for other UI changes.
+    } catch (e) {
+      debugPrint("ProductProvider Hata (addProduct): $e");
+      rethrow;
+    }
+  }
+
+  Future<void> updateProduct(ProductModel product) async {
+    try {
+      await _firestoreService.updateProduct(product);
+      // Stream will auto-update the list.
+    } catch (e) {
+      debugPrint("ProductProvider Hata (updateProduct): $e");
+      rethrow;
+    }
+  }
+
+  Future<void> deleteProduct(String productId) async {
+    try {
+      await _firestoreService.deleteProduct(productId);
+      // The stream will update the list, so we just show a confirmation or handle errors.
+      // No need to call notifyListeners() if the list is the only thing changing,
+      // as the stream handles it. But good for other UI feedback.
+    } catch (e) {
+      debugPrint("ProductProvider Hata (deleteProduct): $e");
+      // Optionally, re-throw the error to be caught in the UI layer.
+      rethrow;
+    }
   }
 
   // Provider yok edildiğinde StreamSubscription'ı iptal etmeyi unutma!

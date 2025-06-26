@@ -13,9 +13,7 @@ service cloud.firestore {
     // products koleksiyonu: Giriş yapmış herhangi bir kullanıcı tüm ürünleri okuyabilir.
     // (Şimdilik ürün ekleme/silme işlemini sadece konsoldan yaptığımızı varsayıyoruz)
     match /products/{productId} {
-      allow read: if request.auth != null;
-      // Eğer kullanıcıların ürün eklemesini/silmesini isterseniz buraya 'write' kuralı eklenir.
-      // allow write: if ... ; 
+      allow read, write: if request.auth != null;
     }
 
     // scheduled_follow_ups koleksiyonu için yeni kurallar

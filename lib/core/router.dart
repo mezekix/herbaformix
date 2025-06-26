@@ -11,6 +11,7 @@ import '../features/customers/screens/customer_list_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/orders/screens/add_edit_order_screen.dart';
 import '../features/orders/screens/order_list_screen.dart';
+import '../features/products/screens/add_edit_product_screen.dart';
 import '../features/products/screens/product_detail_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
@@ -57,6 +58,14 @@ class AppRouter {
             // veya ProductListScreen.routeName (Eğer PLS.routeName = 'products')
             builder: (context, state) => const ProductListScreen(),
             routes: [
+              GoRoute(
+                path: AddEditProductScreen.routeName, // 'add-product'
+                name: AddEditProductScreen.routeName,
+                builder: (context, state) {
+                  final product = state.extra as ProductModel?;
+                  return AddEditProductScreen(product: product);
+                },
+              ),
               GoRoute(
                 path: ProductDetailScreen.routeName, // 'product-detail'
                 name: ProductDetailScreen.routeName,
@@ -124,14 +133,14 @@ class AppRouter {
       final String currentLocation = state.matchedLocation;
       final String currentPath = state.uri.toString(); // Tam path'i almak için
 
-      print(
+      debugPrint(
         "[Redirect Check] Path: $currentPath, Location: $currentLocation, AuthStatus: ${auth.status}, LoggedIn: $loggedIn",
       );
 
       // Eğer Splash Screen'deysek, Splash kendi yönlendirmesini yapacak.
       if (currentLocation == SplashScreen.routeName ||
           currentPath == SplashScreen.routeName) {
-        print("[Redirect Decision] Splash'te kalınıyor.");
+        debugPrint("[Redirect Decision] Splash'te kalınıyor.");
         return null;
       }
 
@@ -140,13 +149,13 @@ class AppRouter {
         // Eğer Login sayfasındaysa, Ana Sayfa'ya yönlendir.
         if (currentLocation == LoginScreen.routeName ||
             currentPath == LoginScreen.routeName) {
-          print(
+          debugPrint(
             "[Redirect Decision] Giriş yapıldı, Login ekranında -> Ana Sayfa'ya yönlendiriliyor ($HomeScreen.routeName).",
           );
           return HomeScreen.routeName; // '/home'
         }
         // Diğer durumlarda (Home, Profile vb.) yönlendirme yapma, olduğu yerde kal.
-        print(
+        debugPrint(
           "[Redirect Decision] Giriş yapıldı, $currentLocation ekranında -> Kalınıyor.",
         );
         return null;
@@ -156,13 +165,13 @@ class AppRouter {
         // Eğer Login sayfasında değilse (ve Splash de değil), Login'e yönlendir.
         if (currentLocation != LoginScreen.routeName &&
             currentPath != LoginScreen.routeName) {
-          print(
+          debugPrint(
             "[Redirect Decision] Giriş yapılmamış, $currentLocation ekranında -> Login'e yönlendiriliyor ($LoginScreen.routeName).",
           );
           return LoginScreen.routeName; // '/login'
         }
         // Zaten Login sayfasındaysa (veya Splash'teyse), yönlendirme yapma.
-        print(
+        debugPrint(
           "[Redirect Decision] Giriş yapılmamış, Login ekranında -> Kalınıyor.",
         );
         return null;

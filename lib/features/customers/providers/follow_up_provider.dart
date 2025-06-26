@@ -70,7 +70,7 @@ class FollowUpProvider with ChangeNotifier {
             notifyListeners(); // Arayüzü yeni veriyle ve "yükleme bitti" durumuyla güncelle.
           },
           onError: (error) {
-            print("FollowUpProvider Hata (listenToFollowUps): $error");
+            debugPrint("FollowUpProvider Hata (listenToFollowUps): $error");
             _isLoading = false;
             _followUps = []; // Hata durumunda listeyi temizle.
             notifyListeners(); // Arayüzü hata durumuyla güncelle.
@@ -81,7 +81,7 @@ class FollowUpProvider with ChangeNotifier {
   /// Firestore'dan gelen anlık PLANLANMIŞ takip verilerini dinler.
   void _listenToScheduledFollowUps() {
     if (_userId.isEmpty) {
-      print(
+      debugPrint(
         "FollowUpProvider Hata: Kullanıcı ID'si boş olduğu için planlanmış takipler dinlenemiyor.",
       );
       _isLoading = false;
@@ -102,7 +102,9 @@ class FollowUpProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            print("FollowUpProvider Hata (listenToScheduledFollowUps): $error");
+            debugPrint(
+              "FollowUpProvider Hata (listenToScheduledFollowUps): $error",
+            );
             _isLoading = false;
             _scheduledFollowUps = [];
             notifyListeners();
@@ -135,7 +137,7 @@ class FollowUpProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print("FollowUpProvider Hata (addFollowUp): $e");
+      debugPrint("FollowUpProvider Hata (addFollowUp): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -154,7 +156,7 @@ class FollowUpProvider with ChangeNotifier {
       await _firestoreService.updateFollowUp(_userId, _customerId, followUp);
       return true;
     } catch (e) {
-      print("FollowUpProvider Hata (updateFollowUp): $e");
+      debugPrint("FollowUpProvider Hata (updateFollowUp): $e");
       return false;
     } finally {
       _isLoading = false;
@@ -178,7 +180,7 @@ class FollowUpProvider with ChangeNotifier {
       // Bu yüzden lokal listeyi manuel olarak düzenlememize gerek yok.
       return true;
     } catch (e) {
-      print("FollowUpProvider Hata (deleteFollowUp): $e");
+      debugPrint("FollowUpProvider Hata (deleteFollowUp): $e");
       return false; // Hata durumunda false döndür.
     } finally {
       // İşlem başarılı da olsa, başarısız da olsa yüklenme durumunu kapat.

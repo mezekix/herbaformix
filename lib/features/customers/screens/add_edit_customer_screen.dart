@@ -187,22 +187,23 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                     context,
                     listen: false,
                   ).deleteCustomer(widget.customer!.id);
-                  if (mounted) {
-                    setState(() {
-                      _isLoading = false;
-                    });
-                    if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Müşteri silindi.')),
-                      );
-                      context.pop();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Müşteri silinirken hata oluştu.'),
-                        ),
-                      );
-                    }
+
+                  if (!mounted) return;
+
+                  setState(() {
+                    _isLoading = false;
+                  });
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Müşteri silindi.')),
+                    );
+                    context.pop();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Müşteri silinirken hata oluştu.'),
+                      ),
+                    );
                   }
                 }
               },

@@ -47,13 +47,13 @@ class AuthProvider with ChangeNotifier {
           email: firebaseUser.email ?? "N/A",
         );
         await _firestoreService.setUserProfile(_userProfile!);
-        print(
+        debugPrint(
           "Yeni kullanıcı için varsayılan profil oluşturuldu: ${firebaseUser.uid}",
         );
       }
       _status = AuthStatus.authenticated;
     }
-    print(
+    debugPrint(
       "AuthProvider: Durum değişti -> $_status, Firebase Kullanıcı: ${_firebaseUser?.uid}, Profil: ${_userProfile?.name}",
     );
     notifyListeners();
@@ -92,7 +92,7 @@ class AuthProvider with ChangeNotifier {
           email: newUser.email ?? "E-posta yok",
         );
         await _firestoreService.setUserProfile(_userProfile!);
-        print("Kayıt sonrası yeni profil oluşturuldu: ${newUser.uid}");
+        debugPrint("Kayıt sonrası yeni profil oluşturuldu: ${newUser.uid}");
         // _onAuthStateChanged zaten dinlendiği için durumu o güncelleyecek,
         // ancak _userProfile'ı burada set etmek _onAuthStateChanged'den önce erişilebilir olmasını sağlar.
         // _status = AuthStatus.authenticated; // _onAuthStateChanged yapacak
@@ -123,7 +123,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print("Profil güncelleme hatası (AuthProvider): $e");
+      debugPrint("Profil güncelleme hatası (AuthProvider): $e");
       return false;
     }
   }

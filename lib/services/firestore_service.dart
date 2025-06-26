@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/customer_model.dart';
 import '../models/follow_up_model.dart'; // Yeni oluşturduğumuz takip modelini buraya ekliyoruz.
@@ -41,6 +42,20 @@ class FirestoreService {
         .map((s) => s.docs.map((d) => d.data()).toList());
   }
 
+  Future<DocumentReference<ProductModel>> addProduct(
+    ProductModel product,
+  ) async {
+    return await productsRef.add(product);
+  }
+
+  Future<void> updateProduct(ProductModel product) async {
+    await productsRef.doc(product.id).update(product.toMap());
+  }
+
+  Future<void> deleteProduct(String productId) async {
+    await productsRef.doc(productId).delete();
+  }
+
   CollectionReference<CustomerModel> customersRef(String userId) => _db
       .collection('users')
       .doc(userId)
@@ -72,7 +87,7 @@ class FirestoreService {
       }
       return null;
     } catch (e) {
-      print("FirestoreService Hata (getCustomer): $e");
+      debugPrint("FirestoreService Hata (getCustomer): $e");
       rethrow;
     }
   }
@@ -113,7 +128,7 @@ class FirestoreService {
         .snapshots() // Veritabanındaki her değişikliği anlık olarak dinler.
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList())
         .handleError((error) {
-          print(
+          debugPrint(
             "Takip görüşmeleri getirilirken hata oluştu (müşteri: $customerId): $error",
           );
           return []; // Hata durumunda boş bir liste döndürür.
@@ -130,7 +145,7 @@ class FirestoreService {
       // Modeli direkt olarak referansa ekliyoruz. ID'yi Firestore otomatik oluşturacak.
       await followUpsRef(userId, customerId).add(followUp);
     } catch (e) {
-      print("Takip görüşmesi eklerken hata: $e");
+      debugPrint("Takip görüşmesi eklerken hata: $e");
       // Hata olursa, bunu çağıran kodun haberi olması için hatayı tekrar fırlatıyoruz.
       throw Exception("Takip görüşmesi eklenemedi: $e");
     }
@@ -148,7 +163,7 @@ class FirestoreService {
         customerId,
       ).doc(followUp.id).update(followUp.toMap());
     } catch (e) {
-      print("Takip görüşmesi güncellenirken hata: $e");
+      debugPrint("Takip görüşmesi güncellenirken hata: $e");
       throw Exception("Takip görüşmesi güncellenemedi: $e");
     }
   }
@@ -162,7 +177,7 @@ class FirestoreService {
     try {
       await followUpsRef(userId, customerId).doc(followUpId).delete();
     } catch (e) {
-      print("Takip görüşmesi silerken hata: $e");
+      debugPrint("Takip görüşmesi silerken hata: $e");
       throw Exception("Takip görüşmesi silinemedi: $e");
     }
   }
@@ -224,7 +239,7 @@ class FirestoreService {
 
       await batch.commit(); // Tüm işlemleri tek seferde veritabanına gönder.
     } catch (e) {
-      print("Planlanmış takip grubu eklenirken hata: $e");
+      debugPrint("Planlanmış takip grubu eklenirken hata: $e");
       throw Exception("Planlanmış takipler oluşturulamadı: $e");
     }
   }
@@ -238,14 +253,23 @@ class FirestoreService {
         'isCompleted': true,
       });
     } catch (e) {
-      print("Planlanmış takip tamamlandı olarak işaretlenirken hata: $e");
-      throw Exception("Görev güncellenemedi: $e");
+      debugPrint("Planlanmış takip tamamlandı olarak işaretlenirken hata: $e");
+      throw Exception("Takip tamamlandı olarak işaretlenemedi: $e");
     }
   }
 
-  // --- Orders ---
-  // Belirli bir kullanıcıya ait siparişler için Koleksiyon Referansı
-  // users/{userId}/orders/{orderId}
+  /// Belirli bir planlanmış takip görevini siler.
+  Future<void> deleteScheduledFollowUp(String scheduledFollowUpId) async {
+    try {
+      await scheduledFollowUpsRef().doc(scheduledFollowUpId).delete();
+    } catch (e) {
+      debugPrint("Planlanmış takip silinirken hata: $e");
+      throw Exception("Planlanmış takip silinemedi: $e");
+    }
+  }
+
+  // --- Orders (Siparişler) ---
+
   CollectionReference<OrderModel> ordersRef(String userId) => _db
       .collection('users')
       .doc(userId)
@@ -256,66 +280,25 @@ class FirestoreService {
         toFirestore: (order, _) => order.toMap(),
       );
 
-  // Yeni sipariş ekleme
-  Future<DocumentReference<OrderModel>> addOrder(
-    String userId,
-    OrderModel order,
-  ) async {
-    try {
-      // userId'nin order modelinde doğru olduğundan emin olalım.
-      final orderToAdd = OrderModel(
-        id: '', // Firestore ID atayacak
-        userId: userId,
-        customerId: order.customerId,
-        customerName: order.customerName,
-        items: order.items,
-        orderDate: order.orderDate, // Veya Timestamp.now()
-        status: order.status,
-        totalAmount: order.items.fold(0, (sum, item) => sum + item.totalPrice),
-        totalVpEarned: order.items.fold(0, (sum, item) => sum + item.totalVp),
-        notes: order.notes,
-        shippingAddress: order.shippingAddress,
-      );
-      return await ordersRef(userId).add(orderToAdd);
-    } catch (e) {
-      print("Sipariş eklerken hata: $e");
-      throw Exception("Sipariş eklenemedi: $e");
-    }
-  }
-
-  // Kullanıcının tüm siparişlerini getiren bir Stream
   Stream<List<OrderModel>> getOrders(String userId) {
     return ordersRef(userId)
         .orderBy('orderDate', descending: true)
         .snapshots()
-        .map((snapshot) {
-          return snapshot.docs.map((doc) => doc.data()).toList();
-        })
-        .handleError((error) {
-          print(
-            "Siparişleri getirirken hata oluştu (kullanıcı: $userId): $error",
-          );
-          return [];
-        });
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
-  // Sipariş güncelleme (özellikle status güncellemesi için)
+  Future<DocumentReference<OrderModel>> addOrder(
+    String userId,
+    OrderModel order,
+  ) async {
+    return await ordersRef(userId).add(order);
+  }
+
   Future<void> updateOrder(String userId, OrderModel order) async {
-    try {
-      await ordersRef(userId).doc(order.id).update(order.toMap());
-    } catch (e) {
-      print("Sipariş güncellerken hata: $e");
-      throw Exception("Sipariş güncellenemedi: $e");
-    }
+    await ordersRef(userId).doc(order.id).update(order.toMap());
   }
 
-  // Sipariş silme (genellikle önerilmez, status 'cancelled' yapılabilir)
   Future<void> deleteOrder(String userId, String orderId) async {
-    try {
-      await ordersRef(userId).doc(orderId).delete();
-    } catch (e) {
-      print("Sipariş silerken hata: $e");
-      throw Exception("Sipariş silinemedi: $e");
-    }
+    await ordersRef(userId).doc(orderId).delete();
   }
 }

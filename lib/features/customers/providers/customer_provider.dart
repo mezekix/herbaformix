@@ -64,7 +64,7 @@ class CustomerProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            print("CustomerProvider Hata (fetchCustomers): $error");
+            debugPrint("CustomerProvider Hata (fetchCustomers): $error");
             _isLoading = false;
             _customers = [];
             notifyListeners();
@@ -94,7 +94,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print("CustomerProvider Hata (addCustomer): $e");
+      debugPrint("CustomerProvider Hata (addCustomer): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -102,8 +102,9 @@ class CustomerProvider with ChangeNotifier {
   }
 
   Future<bool> updateCustomer(CustomerModel customer) async {
-    if (_currentUserId == null || customer.consultantId != _currentUserId)
+    if (_currentUserId == null || customer.consultantId != _currentUserId) {
       return false;
+    }
     _isLoading = true;
     notifyListeners();
     try {
@@ -112,7 +113,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print("CustomerProvider Hata (updateCustomer): $e");
+      debugPrint("CustomerProvider Hata (updateCustomer): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -129,7 +130,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print("CustomerProvider Hata (deleteCustomer): $e");
+      debugPrint("CustomerProvider Hata (deleteCustomer): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -150,7 +151,7 @@ class CustomerProvider with ChangeNotifier {
     } catch (e) {
       // Lokal listede bulunamadı, bu beklenen bir durum olabilir.
       // Şimdi veritabanından çekmeyi deneyeceğiz.
-      print(
+      debugPrint(
         "Müşteri lokalde bulunamadı ($customerId), veritabanından çekiliyor...",
       );
     }
@@ -163,7 +164,7 @@ class CustomerProvider with ChangeNotifier {
       );
       return customer;
     } catch (e) {
-      print("CustomerProvider Hata (getCustomerById): $e");
+      debugPrint("CustomerProvider Hata (getCustomerById): $e");
       return null;
     }
   }

@@ -48,11 +48,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _nameController.text = userProfile.name ?? '';
         _vpGoalController.text = userProfile.monthlyVPTarget?.toString() ?? '';
         _distributorLevel = userProfile.distributorLevel;
-        print(
+        debugPrint(
           "ProfileScreen: Veriler AuthProvider'dan yüklendi: ${userProfile.name}",
         );
       } else {
-        print(
+        debugPrint(
           "ProfileScreen: AuthProvider'dan profil verisi alınamadı veya null.",
         );
       }
@@ -260,7 +260,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Yönlendirme go_router redirect ile otomatik yapılacak
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent.withOpacity(0.8),
+                  backgroundColor: Colors.redAccent.withAlpha(204),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   textStyle: const TextStyle(fontSize: 16),

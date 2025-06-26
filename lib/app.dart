@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'core/app_colors.dart'; // Yeni renk dosyamızı import ediyoruz
 import 'core/router.dart';
 import 'features/auth/providers/auth_provider.dart';
-import 'core/app_colors.dart'; // Yeni renk dosyamızı import ediyoruz
 
 class App extends StatefulWidget {
   const App({super.key});
@@ -33,15 +34,15 @@ class _AppState extends State<App> {
           primary: AppColors.primary,
           secondary: AppColors.secondary,
           error: AppColors.error,
-          background: AppColors.background,
           surface: AppColors.surface,
+          surfaceVariant: AppColors.background,
           onPrimary: AppColors.textOnPrimary, // primary üzerindeki yazı rengi
-          onSecondary: AppColors.textOnSecondary, // secondary üzerindeki yazı rengi
-          onBackground: AppColors.textPrimary, // background üzerindeki yazı rengi
+          onSecondary:
+              AppColors.textOnSecondary, // secondary üzerindeki yazı rengi
           onSurface: AppColors.textPrimary, // surface üzerindeki yazı rengi
           onError: AppColors.white, // error üzerindeki yazı rengi
         ),
-        
+
         // AppBar Teması
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.primary,
@@ -52,9 +53,7 @@ class _AppState extends State<App> {
             fontWeight: FontWeight.bold,
             color: AppColors.textOnPrimary,
           ),
-          iconTheme: IconThemeData(
-            color: AppColors.textOnPrimary,
-          ),
+          iconTheme: IconThemeData(color: AppColors.textOnPrimary),
         ),
 
         // Buton Temaları
@@ -62,8 +61,14 @@ class _AppState extends State<App> {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
             foregroundColor: AppColors.textOnPrimary,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14), // Biraz daha büyük butonlar
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600), // Yazı kalınlığı arttı
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24,
+              vertical: 14,
+            ), // Biraz daha büyük butonlar
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ), // Yazı kalınlığı arttı
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10), // Daha yuvarlak kenarlar
             ),
@@ -73,15 +78,21 @@ class _AppState extends State<App> {
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
             foregroundColor: AppColors.primary,
-            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            textStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         outlinedButtonTheme: OutlinedButtonThemeData(
-           style: OutlinedButton.styleFrom(
+          style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.primary,
             side: const BorderSide(color: AppColors.primary, width: 1.5),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            textStyle: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -92,12 +103,17 @@ class _AppState extends State<App> {
         inputDecorationTheme: InputDecorationTheme(
           filled: true, // Arka plan rengi için
           fillColor: AppColors.surface, // Giriş alanlarının arka planı
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide.none, // Varsayılan kenarlığı kaldır, fillColor ile daha iyi görünür
+            borderSide: BorderSide
+                .none, // Varsayılan kenarlığı kaldır, fillColor ile daha iyi görünür
           ),
-          enabledBorder: OutlineInputBorder( // Odaklanılmamış durum
+          enabledBorder: OutlineInputBorder(
+            // Odaklanılmamış durum
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: Colors.grey.shade300),
           ),
@@ -105,33 +121,51 @@ class _AppState extends State<App> {
             borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AppColors.primary, width: 2),
           ),
-          labelStyle: const TextStyle(color: AppColors.textSecondary), // Label rengi
+          labelStyle: const TextStyle(
+            color: AppColors.textSecondary,
+          ), // Label rengi
           hintStyle: TextStyle(color: Colors.grey.shade500),
-          prefixIconColor: AppColors.primary.withOpacity(0.7),
-          floatingLabelStyle: const TextStyle(color: AppColors.primary), // Odaklanınca label rengi
-        ),
-
-        // Card Teması - DÜZELTİLDİ: CardThemeData
-        cardTheme: CardThemeData( // CardThemeData yerine CardTheme
-          elevation: 1, // Daha ince bir gölge
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0), // Yatay margin sıfırlandı, sayfa padding'i kullanılacak
-          color: AppColors.surface,
+          prefixIconColor: AppColors.primary.withAlpha(
+            179,
+          ), // withOpacity(0.7) yerine
+          floatingLabelStyle: const TextStyle(
+            color: AppColors.primary,
+          ), // Odaklanınca label rengi
         ),
 
         // Diğer genel tema ayarları
         scaffoldBackgroundColor: AppColors.background,
         textTheme: TextTheme(
-          headlineSmall: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 22),
-          titleLarge: TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary, fontSize: 20),
-          titleMedium: TextStyle(fontWeight: FontWeight.w500, color: AppColors.textPrimary, fontSize: 16),
-          bodyLarge: TextStyle(color: AppColors.textPrimary, fontSize: 16), // Varsayılan metin
-          bodyMedium: TextStyle(color: AppColors.textSecondary, fontSize: 14), // İkincil metinler
-          labelLarge: const TextStyle(color: AppColors.textOnPrimary, fontSize: 16, fontWeight: FontWeight.w600), // Butonlar için
+          headlineSmall: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+            fontSize: 22,
+          ),
+          titleLarge: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+            fontSize: 20,
+          ),
+          titleMedium: TextStyle(
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+            fontSize: 16,
+          ),
+          bodyLarge: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 16,
+          ), // Varsayılan metin
+          bodyMedium: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+          ), // İkincil metinler
+          labelLarge: const TextStyle(
+            color: AppColors.textOnPrimary,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ), // Butonlar için
         ),
-        
+
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
           backgroundColor: AppColors.accent, // Vurgu rengi
           foregroundColor: AppColors.textOnPrimary,
@@ -140,16 +174,25 @@ class _AppState extends State<App> {
         progressIndicatorTheme: const ProgressIndicatorThemeData(
           color: AppColors.primary,
         ),
-        
-        iconTheme: IconThemeData( // Genel ikon teması
-          color: AppColors.primary.withOpacity(0.9),
+
+        iconTheme: IconThemeData(
+          // Genel ikon teması
+          color: AppColors.primary.withAlpha(230), // withOpacity(0.9) yerine
           size: 24,
         ),
-        
-        listTileTheme: ListTileThemeData( // ListTile için varsayılanlar
+
+        listTileTheme: ListTileThemeData(
+          // ListTile için varsayılanlar
           iconColor: AppColors.primary,
-          titleTextStyle: TextStyle(fontSize: 16, color: AppColors.textPrimary, fontWeight: FontWeight.w500),
-          subtitleTextStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          titleTextStyle: TextStyle(
+            fontSize: 16,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w500,
+          ),
+          subtitleTextStyle: TextStyle(
+            fontSize: 14,
+            color: AppColors.textSecondary,
+          ),
         ),
 
         visualDensity: VisualDensity.adaptivePlatformDensity,

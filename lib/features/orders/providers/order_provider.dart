@@ -76,7 +76,7 @@ class OrderProvider with ChangeNotifier {
                 lastDayOfMonth.add(const Duration(days: 1)),
               ),
         ) // Ayın sonundan önce
-        .fold(0.0, (sum, order) => sum + order.totalVpEarned);
+        .fold(0.0, (total, order) => total + order.totalVpEarned);
   }
 
   // Beklemede olan sipariş sayısını al
@@ -106,7 +106,7 @@ class OrderProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            print("OrderProvider Hata (fetchOrders): $error");
+            debugPrint("OrderProvider Hata (fetchOrders): $error");
             _isLoading = false;
             _orders = [];
             notifyListeners();
@@ -130,9 +130,12 @@ class OrderProvider with ChangeNotifier {
         status: order.status,
         totalAmount: order.items.fold(
           0.0,
-          (sum, item) => sum + item.totalPrice,
+          (total, item) => total + item.totalPrice,
         ),
-        totalVpEarned: order.items.fold(0.0, (sum, item) => sum + item.totalVp),
+        totalVpEarned: order.items.fold(
+          0.0,
+          (total, item) => total + item.totalVp,
+        ),
         notes: order.notes,
         shippingAddress: order.shippingAddress,
       );
@@ -143,7 +146,7 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print("OrderProvider Hata (addOrder): $e");
+      debugPrint("OrderProvider Hata (addOrder): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -165,7 +168,7 @@ class OrderProvider with ChangeNotifier {
       // --- OTOMATİK TAKİP OLUŞTURMA MANTIĞI ---
       // Eğer yeni durum "Teslim Edildi" ise, planı oluştur.
       if (order.status == OrderStatus.delivered) {
-        print(
+        debugPrint(
           "Sipariş 'Teslim Edildi' olarak güncellendi. Takip planı oluşturuluyor...",
         );
 
@@ -174,12 +177,12 @@ class OrderProvider with ChangeNotifier {
         );
 
         if (customer != null) {
-          print(
+          debugPrint(
             "'${customer.firstName}' için takip planı oluşturma metodu çağrılıyor.",
           );
           await _createStandardFollowUpSchedule(customer);
         } else {
-          print(
+          debugPrint(
             "HATA: Takip planı oluşturulamadı çünkü müşteri ID'si (${order.customerId}) bulunamadı.",
           );
         }
@@ -189,7 +192,7 @@ class OrderProvider with ChangeNotifier {
       notifyListeners(); // isLoading durumu için
       return true;
     } catch (e) {
-      print("OrderProvider Hata (updateOrder): $e");
+      debugPrint("OrderProvider Hata (updateOrder): $e");
       _isLoading = false;
       notifyListeners();
       return false;
@@ -213,7 +216,7 @@ class OrderProvider with ChangeNotifier {
     // Güvenlik kontrolü: Müşterinin danışman ID'si var mı ve mevcut kullanıcıyla eşleşiyor mu?
     if (customer.consultantId.isEmpty ||
         customer.consultantId != _currentUserId) {
-      print(
+      debugPrint(
         "HATA: Otomatik takip planı oluşturulamıyor. Müşteri kaydındaki danışman ID'si ('${customer.consultantId}') mevcut kullanıcı ID'siyle ('$_currentUserId') eşleşmiyor veya boştur.",
       );
       return; // ID'ler eşleşmiyorsa veya boşsa işlemi durdur.
@@ -241,11 +244,30 @@ class OrderProvider with ChangeNotifier {
     try {
       // Oluşturulan tüm görevleri tek bir işlemde veritabanına yaz.
       await _firestoreService.addScheduledFollowUpBatch(followUpBatch);
-      print(
+      debugPrint(
         "BAŞARILI: '${customer.firstName} ${customer.lastName}' için standart takip planı oluşturuldu.",
       );
     } catch (e) {
-      print("HATA: Standart takip planı oluşturulurken hata: $e");
+      debugPrint("HATA: Standart takip planı oluşturulurken hata: $e");
+    }
+  }
+
+  /// Bir siparişi siler.
+  Future<bool> deleteOrder(String orderId) async {
+    if (_currentUserId == null) return false;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _firestoreService.deleteOrder(_currentUserId!, orderId);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint("OrderProvider Hata (deleteOrder): $e");
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
   }
 

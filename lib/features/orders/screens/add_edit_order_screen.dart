@@ -54,8 +54,6 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
         return 'Teslim Edildi';
       case OrderStatus.cancelled:
         return 'İptal Edildi';
-      default:
-        return 'Bilinmiyor';
     }
   }
 
@@ -140,9 +138,9 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
   }
 
   double get _calculateTotalAmount =>
-      _orderItems.fold(0, (sum, item) => sum + item.totalPrice);
+      _orderItems.fold(0, (total, item) => total + item.totalPrice);
   double get _calculateTotalVp =>
-      _orderItems.fold(0, (sum, item) => sum + item.totalVp);
+      _orderItems.fold(0, (total, item) => total + item.totalVp);
 
   Future<void> _saveOrder() async {
     if (!_formKey.currentState!.validate()) return;
@@ -273,7 +271,8 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                     widget.order!.id,
                     OrderStatus.cancelled,
                   );
-                  if (mounted) context.pop();
+                  if (!mounted) return;
+                  context.pop();
                 }
               },
             ),

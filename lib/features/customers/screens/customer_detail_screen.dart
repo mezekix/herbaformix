@@ -502,10 +502,11 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
         ).showSnackBar(SnackBar(content: Text('Hata: ${e.toString()}')));
       }
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
+      }
     }
   }
 

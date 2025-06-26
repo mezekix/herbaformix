@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
@@ -7,22 +8,34 @@ class AuthService {
   Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
 
   // E-posta ve şifre ile giriş
-  Future<UserCredential?> signInWithEmailAndPassword(String email, String password) async {
+  Future<UserCredential?> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
-      return await _firebaseAuth.signInWithEmailAndPassword(email: email, password: password);
+      return await _firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
     } on FirebaseAuthException catch (e) {
       // Hata yönetimi (örneğin, kullanıcıya göstermek için)
-      print('Giriş hatası: ${e.message}');
+      debugPrint('Giriş hatası: ${e.message}');
       return null;
     }
   }
 
   // E-posta ve şifre ile kayıt
-  Future<UserCredential?> createUserWithEmailAndPassword(String email, String password) async {
+  Future<UserCredential?> createUserWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
     try {
-      return await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
+      return await _firebaseAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
     } on FirebaseAuthException catch (e) {
-      print('Kayıt hatası: ${e.message}');
+      debugPrint('Kayıt hatası: ${e.message}');
       return null;
     }
   }
