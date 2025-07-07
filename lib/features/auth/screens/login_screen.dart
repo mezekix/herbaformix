@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
-import '../providers/auth_provider.dart'; // AuthProvider
+import '../../../models/user_role.dart'; // Rol modelini import et
+import '../providers/auth_provider.dart';
 // import 'package:go_router/go_router.dart'; // Gerekirse yönlendirme için
 
 class LoginScreen extends StatefulWidget {
@@ -18,8 +19,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isRegisterMode = false; // Giriş/Kayıt modunu takip etmek için
+  UserRole _selectedRole = UserRole.customer; // Varsayılan seçili rol
 
-  Future<void> _login() async {
+  Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -28,60 +31,52 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.signIn(
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
+    bool success;
+
+    if (_isRegisterMode) {
+      // Kayıt Modu
+      success = await authProvider.signUp(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+        _selectedRole, // Seçilen rolü gönder
+      );
+    } else {
+      // Giriş Modu
+      success = await authProvider.signIn(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
+    }
 
     if (mounted) {
-      // Widget ağaçta hala mevcutsa
       setState(() {
         _isLoading = false;
       });
       if (!success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Giriş başarısız. E-posta veya şifre hatalı.'),
-          ),
-        );
-      }
-      // Başarılı giriş durumunda go_router'ın redirect'i otomatik olarak ana sayfaya yönlendirecek.
-    }
-  }
-
-  Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    setState(() {
-      _isLoading = true;
-    });
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final success = await authProvider.signUp(
-      // signUp metodunu çağırıyoruz
-      _emailController.text.trim(),
-      _passwordController.text.trim(),
-    );
-
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (success) {
+        final message = _isRegisterMode
+            ? 'Kayıt başarısız. Lütfen tekrar deneyin.'
+            : 'Giriş başarısız. E-posta veya şifre hatalı.';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+      } else if (_isRegisterMode) {
+        // Kayıt başarılıysa kullanıcıya bilgi ver ve giriş moduna geçir
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Kayıt başarılı! Lütfen giriş yapın.')),
         );
-        // Kayıt sonrası otomatik giriş yaptırmak yerine login ekranında kalabilir veya
-        // direkt ana sayfaya yönlendirme de yapılabilir (AuthProvider'daki değişikliğe göre)
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Kayıt başarısız. Lütfen tekrar deneyin.'),
-          ),
-        );
+        setState(() {
+          _isRegisterMode = false;
+        });
       }
+      // Başarılı giriş durumunda go_router zaten yönlendirme yapacak.
     }
+  }
+
+  void _toggleMode() {
+    setState(() {
+      _isRegisterMode = !_isRegisterMode;
+      _formKey.currentState?.reset(); // Mod değiştirince formu temizle
+    });
   }
 
   @override
@@ -122,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 elevation: 8,
                 color: AppColors.white.withAlpha(230),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -149,7 +144,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'HerbaForm\'a Hoş Geldiniz',
+                          _isRegisterMode
+                              ? 'Hesap Oluşturun'
+                              : 'HerbaForm\'a Hoş Geldiniz',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.headlineSmall
                               ?.copyWith(color: AppColors.primary),
@@ -188,6 +185,32 @@ class _LoginScreenState extends State<LoginScreen> {
                             return null;
                           },
                         ),
+                        // Sadece kayıt modunda rol seçimini göster
+                        if (_isRegisterMode) ...[
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<UserRole>(
+                            value: _selectedRole,
+                            decoration: const InputDecoration(
+                              labelText: 'Rolünüz',
+                              prefixIcon: Icon(Icons.person_outline),
+                            ),
+                            items: UserRole.values.map((UserRole role) {
+                              return DropdownMenuItem<UserRole>(
+                                value: role,
+                                child: Text(
+                                  role.name,
+                                ), // Extension'dan gelen isim
+                              );
+                            }).toList(),
+                            onChanged: (UserRole? newValue) {
+                              setState(() {
+                                _selectedRole = newValue!;
+                              });
+                            },
+                            validator: (value) =>
+                                value == null ? 'Lütfen bir rol seçin.' : null,
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         if (_isLoading)
                           const CircularProgressIndicator()
@@ -196,13 +219,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               ElevatedButton(
-                                onPressed: _login,
-                                child: const Text('Giriş Yap'),
+                                onPressed: _submitForm,
+                                child: Text(
+                                  _isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap',
+                                ),
                               ),
                               const SizedBox(height: 12),
-                              OutlinedButton(
-                                onPressed: _register,
-                                child: const Text('Hesabın yok mu? Kayıt Ol'),
+                              TextButton(
+                                onPressed: _toggleMode,
+                                child: Text(
+                                  _isRegisterMode
+                                      ? 'Zaten bir hesabınız var mı? Giriş Yapın'
+                                      : 'Hesabınız yok mu? Kayıt Olun',
+                                ),
                               ),
                             ],
                           ),

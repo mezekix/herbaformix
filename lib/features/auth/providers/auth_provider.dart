@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fb_auth; // Alias ekledik
 import 'package:flutter/foundation.dart';
 
 import '../../../models/user_profile_model.dart'; // UserProfileModel'i import et
+import '../../../models/user_role.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/firestore_service.dart'; // FirestoreService'i import et
 
@@ -45,6 +46,7 @@ class AuthProvider with ChangeNotifier {
         _userProfile = UserProfileModel(
           id: firebaseUser.uid,
           email: firebaseUser.email ?? "N/A",
+          role: UserRole.customer, // Varsayılan rol ataması
         );
         await _firestoreService.setUserProfile(_userProfile!);
         debugPrint(
@@ -76,7 +78,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> signUp(String email, String password) async {
+  Future<bool> signUp(String email, String password, UserRole role) async {
     _status = AuthStatus.authenticating;
     notifyListeners();
     try {
@@ -90,6 +92,7 @@ class AuthProvider with ChangeNotifier {
         _userProfile = UserProfileModel(
           id: newUser.uid,
           email: newUser.email ?? "E-posta yok",
+          role: role,
         );
         await _firestoreService.setUserProfile(_userProfile!);
         debugPrint("Kayıt sonrası yeni profil oluşturuldu: ${newUser.uid}");

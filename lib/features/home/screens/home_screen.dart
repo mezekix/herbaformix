@@ -256,12 +256,12 @@ class HomeScreen extends StatelessWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
           _showQuickAddMenu(context);
         },
-        icon: const Icon(Icons.add),
-        label: const Text('Hızlı Ekle'),
+        tooltip: 'Hızlı Ekle',
+        child: const Icon(Icons.add),
       ),
     );
   }

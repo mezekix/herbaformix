@@ -5,10 +5,12 @@ import 'package:provider/provider.dart';
 
 import 'app.dart';
 import 'features/auth/providers/auth_provider.dart';
+import 'features/calorie_tracker/providers/calorie_provider.dart';
 import 'features/customers/providers/customer_provider.dart';
 import 'features/home/providers/home_provider.dart'; // Yeni provider'ı import ediyoruz.
 import 'features/orders/providers/order_provider.dart'; // OrderProvider'ı import et
 import 'features/products/providers/product_provider.dart';
+import 'features/water_tracker/providers/water_provider.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'services/firestore_service.dart';
@@ -63,6 +65,12 @@ class MyAppInitializer extends StatelessWidget {
             context.read<FirestoreService>(),
             context.read<AuthProvider>(),
           ),
+        ),
+        ChangeNotifierProvider<WaterProvider>(
+          create: (context) => WaterProvider(),
+        ),
+        ChangeNotifierProvider<CalorieProvider>(
+          create: (context) => CalorieProvider(),
         ),
       ],
       child: const App(),

@@ -199,46 +199,50 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       final product = _filteredProducts[index];
                       return Card(
                         margin: const EdgeInsets.symmetric(
-                          horizontal: 12.0,
+                          horizontal: 16.0,
                           vertical: 6.0,
                         ),
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         child: ListTile(
+                          contentPadding: const EdgeInsets.all(12.0),
                           leading: Hero(
                             tag: 'productImage_${product.id}',
                             child: CircleAvatar(
-                              radius: 28,
+                              radius: 30,
+                              backgroundColor: Colors.grey[200],
                               backgroundImage:
                                   product.imageUrl != null &&
                                       product.imageUrl!.isNotEmpty
                                   ? NetworkImage(product.imageUrl!)
                                   : null,
-                              backgroundColor: Colors.grey[200],
                               child:
                                   product.imageUrl == null ||
                                       product.imageUrl!.isEmpty
-                                  ? Text(
-                                      product.name.isNotEmpty
-                                          ? product.name[0].toUpperCase()
-                                          : '?',
+                                  ? const Icon(
+                                      Icons.shopping_bag_outlined,
+                                      color: Colors.grey,
                                     )
                                   : null,
                             ),
                           ),
                           title: Text(
                             product.name,
-                            style: Theme.of(context).textTheme.titleMedium,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            'VP: ${product.vp.toStringAsFixed(2)}${product.price != null ? ' | Fiyat: ${product.price!.toStringAsFixed(2)} TL' : ''}',
+                            'VP: ${product.vp.toStringAsFixed(2)} - Fiyat: ${product.price?.toStringAsFixed(2) ?? 'N/A'} TL',
                           ),
                           trailing: const Icon(
                             Icons.arrow_forward_ios,
                             size: 16,
                           ),
                           onTap: () {
-                            context.goNamed(
+                            context.pushNamed(
                               ProductDetailScreen.routeName,
-                              extra: product,
+                              pathParameters: {'productId': product.id},
                             );
                           },
                         ),

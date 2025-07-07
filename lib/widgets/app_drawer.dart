@@ -4,11 +4,13 @@ import 'package:provider/provider.dart';
 
 import '../core/app_colors.dart'; // Renkler için
 import '../features/auth/providers/auth_provider.dart';
+import '../features/calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../features/customers/screens/customer_list_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/orders/screens/order_list_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
+import '../features/water_tracker/screens/water_tracker_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -142,37 +144,20 @@ class AppDrawer extends StatelessWidget {
             isNamedRoute: true,
           ),
           const Divider(),
-          ListTile(
-            leading: Icon(
-              Icons.water_drop_outlined,
-              color: AppColors.textSecondary,
-            ),
-            title: Text(
-              'Su Takip',
-              style: TextStyle(color: AppColors.textPrimary),
-            ),
-            onTap: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Su Takip sayfası yakında!')),
-              );
-            },
+          _buildListTile(
+            context,
+            icon: Icons.water_drop_outlined,
+            title: 'Su Takip',
+            routeName:
+                WaterTrackerScreen.routeName, // 'water-tracker' rotasını kullan
+            isNamedRoute: true,
           ),
-          ListTile(
-            leading: Icon(
-              Icons.local_fire_department_outlined,
-              color: AppColors.textSecondary,
-            ),
-            title: Text(
-              'Kalori Sayacı',
-              style: TextStyle(color: AppColors.textPrimary),
-            ),
-            onTap: () {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Kalori Sayacı sayfası yakında!')),
-              );
-            },
+          _buildListTile(
+            context,
+            icon: Icons.local_fire_department_outlined,
+            title: 'Kalori Sayacı',
+            routeName: CalorieTrackerScreen.routeName,
+            isNamedRoute: true,
           ),
           const Divider(),
           ListTile(

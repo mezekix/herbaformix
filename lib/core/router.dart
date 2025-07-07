@@ -5,6 +5,7 @@ import 'package:provider/provider.dart'; // redirect içinde Provider.of veya co
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/splash_screen.dart';
+import '../features/calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../features/customers/screens/add_edit_customer_screen.dart';
 import '../features/customers/screens/customer_detail_screen.dart';
 import '../features/customers/screens/customer_list_screen.dart';
@@ -15,6 +16,7 @@ import '../features/products/screens/add_edit_product_screen.dart';
 import '../features/products/screens/product_detail_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
+import '../features/water_tracker/screens/water_tracker_screen.dart';
 import '../models/customer_model.dart';
 import '../models/order_model.dart';
 import '../models/product_model.dart';
@@ -51,6 +53,16 @@ class AppRouter {
             builder: (context, state) => const ProfileScreen(),
           ),
           GoRoute(
+            path: WaterTrackerScreen.routeName, // 'water-tracker'
+            name: WaterTrackerScreen.routeName,
+            builder: (context, state) => const WaterTrackerScreen(),
+          ),
+          GoRoute(
+            path: CalorieTrackerScreen.routeName, // 'calorie-tracker'
+            name: CalorieTrackerScreen.routeName,
+            builder: (context, state) => const CalorieTrackerScreen(),
+          ),
+          GoRoute(
             path: 'products', // '/home/products'
             name: ProductListScreen.routeName.substring(
               1,
@@ -67,15 +79,18 @@ class AppRouter {
                 },
               ),
               GoRoute(
-                path: ProductDetailScreen.routeName, // 'product-detail'
+                path:
+                    '${ProductDetailScreen.routeName}/:productId', // 'product-detail/:productId'
                 name: ProductDetailScreen.routeName,
                 builder: (context, state) {
-                  final product = state.extra as ProductModel?;
-                  if (product != null) {
-                    return ProductDetailScreen(product: product);
+                  final productId = state.pathParameters['productId'];
+                  if (productId != null) {
+                    // Not: ProductDetailScreen'in kendisi bu ID'yi alıp
+                    // product'ı provider'dan çekecek şekilde güncellenmeli.
+                    return ProductDetailScreen(productId: productId);
                   }
                   return const Scaffold(
-                    body: Center(child: Text('Ürün bulunamadı!')),
+                    body: Center(child: Text('Ürün ID\'si bulunamadı!')),
                   );
                 },
               ),

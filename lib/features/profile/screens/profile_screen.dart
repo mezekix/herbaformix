@@ -89,6 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final updatedProfile = UserProfileModel(
       id: currentFirebaseUser.uid,
       email: currentFirebaseUser.email!, // E-posta Auth'tan gelir, değişmez.
+      role: authProvider.userProfile!.role, // Mevcut rolü koru
       name: _nameController.text.trim(),
       distributorLevel:
           _distributorLevel, // Bu değerin nasıl set edildiğine dikkat edin (örn: Dropdown)
