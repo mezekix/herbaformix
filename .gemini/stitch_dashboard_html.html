@@ -1,0 +1,303 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Dashboard - Günlük Takip</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#7ac144",
+                        "primary-dark": "#68a639",
+                        "background-light": "#f7f8f6",
+                        "background-dark": "#181e14",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#22281e",
+                        "card-dark": "#2c3327",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "2xl": "2.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar hide for clean mobile look */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Circular Progress CSS logic */
+        .circular-chart {
+            display: block;
+            margin: 0 auto;
+            max-width: 80%;
+            max-height: 250px;
+        }
+        .circle-bg {
+            fill: none;
+            stroke: #edf2eb;
+            stroke-width: 3.8;
+        }
+        .circle {
+            fill: none;
+            stroke-width: 2.8;
+            stroke-linecap: round;
+            animation: progress 1s ease-out forwards;
+        }
+        .percentage {
+            fill: #141612;
+            font-family: 'Manrope', sans-serif;
+            font-weight: bold;
+            font-size: 0.5em;
+            text-anchor: middle;
+        }
+        @keyframes progress {
+            0% { stroke-dasharray: 0 100; }
+        }
+        
+        /* Checkbox custom styles */
+        .checkbox-wrapper input:checked + div {
+            background-color: #7ac144;
+            border-color: #7ac144;
+        }
+        .checkbox-wrapper input:checked + div svg {
+            display: block;
+        }
+        .checkbox-wrapper input:checked ~ span {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#141612] dark:text-white pb-28">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-30 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md px-4 pt-6 pb-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="relative">
+<div class="size-10 rounded-full bg-cover bg-center border-2 border-white dark:border-surface-dark shadow-sm" data-alt="User profile portrait of a smiling woman" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuAAY2S6aHWPiSRPvnNQw4NltW79pNzSEDZsoqqv0nhTKZUL1R9ytOd1nNAPDigqdC8jy6nL9OuzK0WK5aBoENyVD34ojkFAkJTBPU5DuJLmEiPIMJUZmZbWz7ibwSDiFHh4lrhlb018S6fZdPw-_9FaJKNyNfgPW12qjjRmiLNma5vQqsg15gcim3K6aAwdYpIFzcY9J8jq0_tc-Sbi4L0nwfVmA3YOAHo6xBS-8oR-np72OFLS_qvpF1QTKH3DPmPOdQoj1GfKzTRj&quot;);">
+</div>
+<div class="absolute bottom-0 right-0 size-3 bg-primary rounded-full border-2 border-white dark:border-surface-dark"></div>
+</div>
+<div class="flex flex-col">
+<span class="text-sm text-gray-500 dark:text-gray-400 font-medium leading-none">Günaydın,</span>
+<h1 class="text-xl font-bold leading-tight">Merve 👋</h1>
+</div>
+</div>
+<button class="relative flex items-center justify-center size-10 rounded-full bg-white dark:bg-surface-dark shadow-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-card-dark transition-colors">
+<span class="material-symbols-outlined text-[24px]">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border border-white dark:border-surface-dark"></span>
+</button>
+</div>
+</header>
+<main class="flex flex-col gap-6 px-4 mt-4 w-full max-w-md mx-auto">
+<!-- Hero Progress Card -->
+<section class="relative overflow-hidden rounded-[2rem] bg-white dark:bg-surface-dark p-6 shadow-sm">
+<div class="flex items-center justify-between">
+<div class="flex flex-col gap-2 z-10">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 w-fit">
+<span class="material-symbols-outlined text-primary text-[16px]">calendar_today</span>
+<span class="text-xs font-bold text-primary uppercase tracking-wider">Gün 12</span>
+</div>
+<h2 class="text-2xl font-bold text-[#141612] dark:text-white leading-tight mt-1">
+                        Bugün Harika <br>Gidiyorsun!
+                    </h2>
+<p class="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Hedeflerinin %65'i tamamlandı</p>
+</div>
+<!-- Circular Progress -->
+<div class="relative size-24 flex-shrink-0">
+<svg class="circular-chart block w-full text-primary" viewBox="0 0 36 36">
+<path class="circle-bg stroke-gray-100 dark:stroke-gray-700" d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+<path class="circle stroke-current" d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="65, 100"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center flex-col">
+<span class="text-xl font-bold text-[#141612] dark:text-white">%65</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Hydration Tracker -->
+<section class="rounded-[2rem] bg-[#eef6e9] dark:bg-[#1f261b] p-5 shadow-sm">
+<div class="flex items-center justify-between gap-4">
+<div class="flex flex-col justify-between h-full gap-4 flex-1">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-[20px]">water_drop</span>
+<h3 class="text-base font-bold text-[#141612] dark:text-white">Su Tüketimi</h3>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="text-2xl font-extrabold text-[#141612] dark:text-white">1.2L</span>
+<span class="text-sm font-medium text-gray-500">/ 3L</span>
+</div>
+</div>
+<button class="flex items-center justify-center gap-1 bg-primary active:bg-primary-dark text-white rounded-full h-10 px-4 text-sm font-bold shadow-md shadow-primary/20 transition-transform active:scale-95 w-fit">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        200ml Ekle
+                    </button>
+</div>
+<!-- Water Visual -->
+<div class="relative w-24 h-32 flex-shrink-0 bg-white/50 dark:bg-black/20 rounded-2xl flex items-end justify-center overflow-hidden border border-white/60 dark:border-white/10">
+<!-- Water Fill Animation Simulation -->
+<div class="absolute bottom-0 w-full bg-blue-400/80 dark:bg-blue-500/80 transition-all duration-1000" style="height: 40%">
+<div class="w-full h-2 bg-blue-300/50 absolute top-0"></div>
+</div>
+<!-- Glass reflection -->
+<div class="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent pointer-events-none"></div>
+<div class="absolute top-2 right-2 size-1.5 bg-white/60 rounded-full blur-[1px]"></div>
+<!-- Bubbles -->
+<div class="absolute bottom-4 left-1/3 size-1 bg-white/40 rounded-full"></div>
+<div class="absolute bottom-8 right-1/3 size-2 bg-white/40 rounded-full"></div>
+<!-- Accessible label for the visual -->
+<img class="absolute inset-0 opacity-0" data-alt="Animated glass of water showing 40% fullness" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpR8N9nhmQK0Ubj0CGMK0dnC897ItJqtJRl5_NaP7B6n1uIRtXwsBLvyYkSK8CYGHSUjXMc1Kyh8_ddaZHrRfZSeFE1GzowSFJfLMsknIndPhS4qF7qUMA3lOM8fpbAA2jd97xKM8JbaET9S5DxKBRu7U-tMgI90Vo2BlVEvTeVrh3Ix0aAUioZwCRI_cyrojHG-zbvNG1MAGLEZAjigcZF_aJWeTqAXiSOAAhmvT8QcpaDk9BBnYEvnn_xCiM3nizfvY47J5yisqK">
+</div>
+</div>
+</section>
+<!-- Meal Checklist -->
+<section class="flex flex-col gap-3">
+<div class="flex items-center justify-between px-1">
+<h3 class="text-lg font-bold text-[#141612] dark:text-white">Öğün Takibi</h3>
+<span class="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded-lg">3/5 Tamamlandı</span>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Item 1: Breakfast (Checked) -->
+<label class="checkbox-wrapper group relative flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<input checked="" class="peer sr-only" type="checkbox">
+<div class="flex-shrink-0 size-6 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-primary transition-colors bg-white dark:bg-transparent flex items-center justify-center mt-0.5">
+<svg class="hidden w-3.5 h-3.5 text-white pointer-events-none" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="flex-1 flex flex-col gap-0.5 transition-colors">
+<span class="text-xs font-bold uppercase tracking-wide text-gray-400">Sabah</span>
+<span class="text-base font-semibold text-[#141612] dark:text-white">Aloe Vera, Çay, Shake</span>
+</span>
+</label>
+<!-- Item 2: Snack (Checked) -->
+<label class="checkbox-wrapper group relative flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<input checked="" class="peer sr-only" type="checkbox">
+<div class="flex-shrink-0 size-6 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-primary transition-colors bg-white dark:bg-transparent flex items-center justify-center mt-0.5">
+<svg class="hidden w-3.5 h-3.5 text-white pointer-events-none" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="flex-1 flex flex-col gap-0.5 transition-colors">
+<span class="text-xs font-bold uppercase tracking-wide text-gray-400">Ara Öğün</span>
+<span class="text-base font-semibold text-[#141612] dark:text-white">Protein Bar</span>
+</span>
+</label>
+<!-- Item 3: Lunch (Unchecked) -->
+<label class="checkbox-wrapper group relative flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<input class="peer sr-only" type="checkbox">
+<div class="flex-shrink-0 size-6 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-primary transition-colors bg-white dark:bg-transparent flex items-center justify-center mt-0.5">
+<svg class="hidden w-3.5 h-3.5 text-white pointer-events-none" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="flex-1 flex flex-col gap-0.5 transition-colors">
+<span class="text-xs font-bold uppercase tracking-wide text-primary">Öğle</span>
+<span class="text-base font-semibold text-[#141612] dark:text-white">Sağlıklı Yemek</span>
+</span>
+</label>
+<!-- Item 4: Snack (Unchecked) -->
+<label class="checkbox-wrapper group relative flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<input class="peer sr-only" type="checkbox">
+<div class="flex-shrink-0 size-6 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-primary transition-colors bg-white dark:bg-transparent flex items-center justify-center mt-0.5">
+<svg class="hidden w-3.5 h-3.5 text-white pointer-events-none" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="flex-1 flex flex-col gap-0.5 transition-colors">
+<span class="text-xs font-bold uppercase tracking-wide text-gray-500">Ara Öğün</span>
+<span class="text-base font-semibold text-[#141612] dark:text-white">Meyve</span>
+</span>
+</label>
+<!-- Item 5: Dinner (Unchecked) -->
+<label class="checkbox-wrapper group relative flex items-start gap-4 p-4 rounded-2xl bg-white dark:bg-surface-dark shadow-sm border border-transparent hover:border-primary/20 transition-all cursor-pointer">
+<input class="peer sr-only" type="checkbox">
+<div class="flex-shrink-0 size-6 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-primary transition-colors bg-white dark:bg-transparent flex items-center justify-center mt-0.5">
+<svg class="hidden w-3.5 h-3.5 text-white pointer-events-none" fill="none" stroke="currentColor" stroke-width="4" viewBox="0 0 24 24">
+<path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="flex-1 flex flex-col gap-0.5 transition-colors">
+<span class="text-xs font-bold uppercase tracking-wide text-gray-500">Akşam</span>
+<span class="text-base font-semibold text-[#141612] dark:text-white">Shake</span>
+</span>
+</label>
+</div>
+</section>
+<!-- Bottom Spacer -->
+<div class="h-8"></div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full bg-white dark:bg-surface-dark border-t border-gray-100 dark:border-gray-800 pb-safe pt-2 px-6 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] rounded-t-[2rem]">
+<div class="flex items-center justify-between max-w-md mx-auto h-16">
+<!-- Home (Active) -->
+<button class="flex flex-col items-center justify-center gap-1 text-primary w-16">
+<span class="material-symbols-outlined text-[26px] font-variation-settings-fill">home</span>
+<span class="text-[10px] font-bold">Ana Sayfa</span>
+</button>
+<!-- Program -->
+<button class="flex flex-col items-center justify-center gap-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 w-16">
+<span class="material-symbols-outlined text-[26px]">list_alt</span>
+<span class="text-[10px] font-medium">Programım</span>
+</button>
+<!-- Progress (Gelişim) -->
+<button class="relative -top-6 flex flex-col items-center justify-center">
+<div class="size-14 rounded-full bg-primary text-white shadow-lg shadow-primary/30 flex items-center justify-center border-4 border-background-light dark:border-background-dark">
+<span class="material-symbols-outlined text-[28px]">monitoring</span>
+</div>
+<span class="text-[10px] font-medium text-gray-400 mt-1">Gelişim</span>
+</button>
+<!-- Academy -->
+<button class="flex flex-col items-center justify-center gap-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 w-16">
+<span class="material-symbols-outlined text-[26px]">school</span>
+<span class="text-[10px] font-medium">Ürünler<br></span>
+</button>
+<!-- Support -->
+<button class="flex flex-col items-center justify-center gap-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 w-16">
+<span class="material-symbols-outlined text-[26px]">support_agent</span>
+<span class="text-[10px] font-medium">Destek</span>
+</button>
+</div>
+<!-- Safe area padding for newer iPhones -->
+<div class="h-6 w-full"></div>
+</nav>
+<!-- Inline Material Icons Config for Fill variations -->
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.font-variation-settings-fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+
+
+</body></html>

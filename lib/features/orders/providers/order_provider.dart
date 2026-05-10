@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:herbaformix/models/scheduled_follow_up_model.dart';
+import '../../../models/scheduled_follow_up_model.dart';
 
 import '../../../models/customer_model.dart';
 import '../../../models/order_model.dart'; // OrderStatus enum'ı için

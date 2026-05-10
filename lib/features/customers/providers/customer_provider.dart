@@ -6,6 +6,33 @@ import '../../../models/customer_model.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
+/// Hem `users/{uid}/customers` alt koleksiyonundan hem de `userProfiles`
+/// koleksiyonundan gelen müşterileri temsil eden birleşik model.
+class CombinedCustomerEntry {
+  /// Müşteri UID'si veya CustomerModel doküman ID'si.
+  final String id;
+
+  /// Müşterinin tam adı (ad + soyad).
+  final String name;
+
+  /// Telefon numarası.
+  final String phoneNumber;
+
+  /// Bağlanma yöntemi: "davet_kodu" (userProfiles kaynağı) veya "manuel" (alt koleksiyon kaynağı).
+  final String connectionType;
+
+  /// `userProfiles` kaynağından gelen müşterinin UID'si (varsa).
+  final String? userProfileId;
+
+  const CombinedCustomerEntry({
+    required this.id,
+    required this.name,
+    required this.phoneNumber,
+    required this.connectionType,
+    this.userProfileId,
+  });
+}
+
 class CustomerProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   final AuthProvider _authProvider;
@@ -166,6 +193,67 @@ class CustomerProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("CustomerProvider Hata (getCustomerById): $e");
       return null;
+    }
+  }
+
+  /// `users/{uid}/customers` alt koleksiyonu ile `userProfiles` koleksiyonundaki
+  /// müşterileri birleştirerek tekrarsız (deduplicated) bir liste döner.
+  ///
+  /// - `userProfiles` kaynağı önceliklendirilir.
+  /// - Aynı müşteri her iki kaynakta da varsa (UID eşleşmesiyle) yalnızca bir kez gösterilir.
+  /// - `userProfiles` kaynaklı müşteriler → `connectionType: "davet_kodu"`
+  /// - Alt koleksiyon kaynaklı müşteriler → `connectionType: "manuel"`
+  Future<List<CombinedCustomerEntry>> getCombinedCustomers() async {
+    if (_currentUserId == null) return [];
+
+    try {
+      // 1. userProfiles kaynağından müşterileri çek (davet_kodu bağlantısı)
+      final userProfileCustomers = await _firestoreService
+          .getCustomersByDistributorId(_currentUserId!)
+          .first;
+
+      // 2. Alt koleksiyon kaynağından müşterileri çek (manuel bağlantı)
+      final subCollectionCustomers = await _firestoreService
+          .getCustomers(_currentUserId!)
+          .first;
+
+      // 3. userProfiles kaynaklı müşterileri önce ekle (öncelikli kaynak)
+      final result = <CombinedCustomerEntry>[];
+      // Deduplicate için eklenen UID'leri takip et
+      final addedIds = <String>{};
+
+      for (final profile in userProfileCustomers) {
+        final entry = CombinedCustomerEntry(
+          id: profile.id,
+          name: profile.name ?? '',
+          phoneNumber: profile.phoneNumber ?? '',
+          connectionType: 'davet_kodu',
+          userProfileId: profile.id,
+        );
+        result.add(entry);
+        addedIds.add(profile.id);
+      }
+
+      // 4. Alt koleksiyon kaynaklı müşterileri ekle; userProfiles'da zaten varsa atla
+      for (final customer in subCollectionCustomers) {
+        // UID eşleşmesi: CustomerModel.id ile userProfile.id karşılaştır
+        if (!addedIds.contains(customer.id)) {
+          final entry = CombinedCustomerEntry(
+            id: customer.id,
+            name: '${customer.firstName} ${customer.lastName}'.trim(),
+            phoneNumber: customer.phoneNumber,
+            connectionType: 'manuel',
+            userProfileId: null,
+          );
+          result.add(entry);
+          addedIds.add(customer.id);
+        }
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('CustomerProvider Hata (getCombinedCustomers): $e');
+      return [];
     }
   }
 

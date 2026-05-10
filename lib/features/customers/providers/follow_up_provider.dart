@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:herbaformix/models/scheduled_follow_up_model.dart';
+import '../../../models/scheduled_follow_up_model.dart';
 
 import '../../../models/follow_up_model.dart';
 import '../../../services/firestore_service.dart';

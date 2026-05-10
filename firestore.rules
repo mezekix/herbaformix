@@ -2,44 +2,93 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- GENEL KURALLAR ---
+    // Ürünler - Global koleksiyon (değiştirilmedi)
+    match /products/{productId} {
+      allow read, write: if true;
+    }
     
-    // userProfiles koleksiyonu: Her kullanıcı sadece kendi profilini okuyabilir ve yazabilir.
+    // Kullanıcı Profilleri
     match /userProfiles/{userId} {
+      // Kullanıcı yalnızca kendi profilini okuyup yazabilir
+      allow read: if request.auth != null && (
+        request.auth.uid == userId ||
+        // Distribütör, assignedDistributorId alanı kendi UID'siyle eşleşen profilleri okuyabilir
+        resource.data.assignedDistributorId == request.auth.uid
+      );
+      
+      // Yazma: Kullanıcı yalnızca kendi profilini yazabilir
+      // assignedDistributorId alanı istemci tarafından doğrudan güncellenemez
+      allow create: if request.auth != null &&
+        request.auth.uid == userId &&
+        !('assignedDistributorId' in request.resource.data);
+      
+      allow update: if request.auth != null &&
+        request.auth.uid == userId &&
+        // assignedDistributorId alanı istemci tarafından değiştirilemez
+        (
+          !('assignedDistributorId' in request.resource.data) ||
+          request.resource.data.assignedDistributorId == resource.data.assignedDistributorId
+        );
+    }
+    
+    // Davet Kodları
+    match /inviteCodes/{codeId} {
+      // Yalnızca kimliği doğrulanmış kullanıcılar okuyabilir
+      allow read: if request.auth != null;
+      
+      // Yalnızca distribütör rolündeki kullanıcılar yeni doküman oluşturabilir
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'distributor' &&
+        // isUsed ve usedByUserId alanları oluşturma sırasında istemci tarafından ayarlanamaz
+        request.resource.data.isUsed == false &&
+        !('usedByUserId' in request.resource.data);
+      
+      // isUsed ve usedByUserId alanları yalnızca davet kodu kullanımı sırasında güncellenebilir.
+      // Güncelleme: yalnızca isUsed false→true ve usedByUserId atanıyorsa izin ver.
+      allow update: if request.auth != null &&
+        resource.data.isUsed == false &&
+        request.resource.data.isUsed == true &&
+        request.resource.data.usedByUserId == request.auth.uid &&
+        request.resource.data.code == resource.data.code &&
+        request.resource.data.distributorId == resource.data.distributorId;
+      
+      allow delete: if false;
+    }
+    
+    // Kullanıcıya özel veriler (Müşteriler ve Siparişler) - eski kurallar (üst düzey)
+    match /users/{userId} {
+      allow read, write: if true;
+      
+      match /customers/{customerId} {
+        allow read, write: if true;
+        
+        match /follow_ups/{followUpId} {
+          allow read, write: if true;
+        }
+      }
+      
+      match /orders/{orderId} {
+        allow read, write: if true;
+      }
+    }
+    
+    // Kullanıcıya Özel Veriler - tüm alt koleksiyonlar
+    // {document=**} ifadesi tüm alt koleksiyonları (customers, orders, follow_ups) kapsar.
+    match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // products koleksiyonu: Giriş yapmış herhangi bir kullanıcı tüm ürünleri okuyabilir.
-    // (Şimdilik ürün ekleme/silme işlemini sadece konsoldan yaptığımızı varsayıyoruz)
-    match /products/{productId} {
+    // Planlanmış Takipler - kimliği doğrulanmış kullanıcılar erişebilir
+    match /scheduled_follow_ups/{followUpId} {
       allow read, write: if request.auth != null;
     }
 
-    // scheduled_follow_ups koleksiyonu için yeni kurallar
-    match /scheduled_follow_ups/{followUpId} {
-      // Bir kullanıcının bu koleksiyonda bir dökümanı okumasına veya silmesine,
-      // sadece dökümandaki 'consultantId' alanı kendi kullanıcı ID'si ise izin ver.
-      allow read, delete: if request.auth != null && resource.data.consultantId == request.auth.uid;
-      
-      // Bir kullanıcının bu koleksiyona yeni bir döküman eklemesine,
-      // sadece oluşturulacak dökümandaki 'consultantId' alanı kendi kullanıcı ID'si ise izin ver.
-      allow create: if request.auth != null && request.resource.data.consultantId == request.auth.uid;
-
-      // Bir kullanıcının dökümanı güncellemesine (örn: isCompleted = true yapmak),
-      // sadece dökümandaki 'consultantId' alanı kendi kullanıcı ID'si ise izin ver.
-      allow update: if request.auth != null && resource.data.consultantId == request.auth.uid;
+    match /careerRoadmap/{levelId} {
+      allow read, write: if request.auth != null;
     }
-
-    // --- KULLANICIYA ÖZEL VERİLER ---
-
-    // Bir kullanıcının kendi dokümanı altındaki tüm alt koleksiyonlar için geçerli olacak kural.
-    // Bu kural sayesinde, /users/{userId}/customers, /users/{userId}/orders, 
-    // ve /users/{userId}/customers/{customerId}/follow_ups yollarının tümü korunur.
-    match /users/{userId}/{document=**} {
-      // Bir kullanıcının, kendi belgesinin altındaki herhangi bir veriyi
-      // okumasına ve yazmasına sadece kendisi giriş yapmışsa izin ver.
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    
+    match /programs/{programId} {
+      allow read, write: if request.auth != null;
     }
   }
-} 
+}

@@ -24,6 +24,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late TextEditingController _priceController;
   late TextEditingController _overviewController;
   late TextEditingController _imageUrlController;
+  String? _selectedCategory;
+
+  static const List<String> _categories = [
+    'İç Beslenme',
+    'Dış Beslenme',
+    'Diğer',
+  ];
 
   bool _isLoading = false;
   bool get _isEditing => widget.product != null;
@@ -44,6 +51,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _imageUrlController = TextEditingController(
       text: widget.product?.imageUrl ?? '',
     );
+    _selectedCategory = widget.product?.category;
   }
 
   @override
@@ -63,12 +71,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       });
 
       final newProduct = ProductModel(
-        id: widget.product?.id ?? '', // Firestore will generate if empty
+        id: widget.product?.id ?? '',
         name: _nameController.text.trim(),
         vp: double.tryParse(_vpController.text) ?? 0.0,
         price: double.tryParse(_priceController.text),
         overview: _overviewController.text.trim(),
         imageUrl: _imageUrlController.text.trim(),
+        category: _selectedCategory,
       );
 
       final provider = context.read<ProductProvider>();
@@ -188,6 +197,19 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       ),
                       maxLines: 3,
                       textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: _selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Kategori',
+                        border: OutlineInputBorder(),
+                      ),
+                      hint: const Text('Kategori seçin'),
+                      items: _categories
+                          .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                          .toList(),
+                      onChanged: (val) => setState(() => _selectedCategory = val),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(

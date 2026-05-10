@@ -243,10 +243,10 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
                 // Silme işlemi (genelde status 'cancelled' yapılır)
-                final orderProvider = Provider.of<OrderProvider>(
-                  context,
-                  listen: false,
-                ); // OrderProvider'ı burada al
+                final orderProvider =
+                    Provider.of<OrderProvider>(context, listen: false);
+                final router = GoRouter.of(context);
+
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -272,7 +272,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                     OrderStatus.cancelled,
                   );
                   if (!mounted) return;
-                  context.pop();
+                  router.pop();
                 }
               },
             ),
@@ -289,7 +289,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                   children: [
                     // Müşteri Seçimi
                     DropdownButtonFormField<CustomerModel>(
-                      value: _selectedCustomer,
+                      initialValue: _selectedCustomer,
                       hint: const Text('Müşteri Seçin*'),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
@@ -360,7 +360,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                     // Sipariş Durumu (Sadece düzenleme modunda anlamlı olabilir veya varsayılan)
                     if (_isEditing)
                       DropdownButtonFormField<OrderStatus>(
-                        value: _selectedStatus,
+                        initialValue: _selectedStatus,
                         decoration: const InputDecoration(
                           labelText: 'Sipariş Durumu',
                           border: OutlineInputBorder(),
@@ -440,7 +440,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
             Text("Ürün Ekle", style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             DropdownButtonFormField<ProductModel>(
-              value: _productToSearch,
+              initialValue: _productToSearch,
               hint: const Text('Ürün Seçin'),
               isExpanded: true,
               decoration: const InputDecoration(border: OutlineInputBorder()),

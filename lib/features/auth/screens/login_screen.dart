@@ -18,8 +18,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _inviteCodeController = TextEditingController();
   bool _isLoading = false;
   bool _isRegisterMode = false; // Giriş/Kayıt modunu takip etmek için
+  bool _obscurePassword = true;
   UserRole _selectedRole = UserRole.customer; // Varsayılan seçili rol
 
   Future<void> _submitForm() async {
@@ -35,10 +37,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (_isRegisterMode) {
       // Kayıt Modu
-      success = await authProvider.signUp(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-        _selectedRole, // Seçilen rolü gönder
+      final inviteCode = _inviteCodeController.text.trim().isEmpty
+          ? null
+          : _inviteCodeController.text.trim();
+      success = await authProvider.signUpWithInviteCode(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        role: _selectedRole,
+        inviteCode: inviteCode,
       );
     } else {
       // Giriş Modu
@@ -53,9 +59,10 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
       if (!success) {
-        final message = _isRegisterMode
-            ? 'Kayıt başarısız. Lütfen tekrar deneyin.'
-            : 'Giriş başarısız. E-posta veya şifre hatalı.';
+        final message = authProvider.errorMessage ??
+            (_isRegisterMode
+                ? 'Kayıt başarısız. Lütfen tekrar deneyin.'
+                : 'Giriş başarısız. E-posta veya şifre hatalı.');
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
@@ -76,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _isRegisterMode = !_isRegisterMode;
       _formKey.currentState?.reset(); // Mod değiştirince formu temizle
+      _inviteCodeController.clear(); // Davet kodunu temizle
     });
   }
 
@@ -83,163 +91,409 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _inviteCodeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Stitch MCP style colors
+    const Color stitchPrimary = AppColors.primary;
+    const Color stitchBackgroundLight = Color(0xFFf7f8f6);
+    const Color stitchBorder = Color(0xFFe0e3dd);
+    const Color stitchTextPrimary = Color(0xFF141612);
+    const Color stitchTextSecondary = Color(0xFF74816a);
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF181e14) : stitchBackgroundLight;
+    final cardColor = isDark ? const Color(0xFF181e14) : Colors.white;
+    final inputBg = isDark ? const Color(0xFF1f261b) : Colors.white;
+    final borderColor = isDark ? Colors.grey[700]! : stitchBorder;
+    final textPrimary = isDark ? Colors.white : stitchTextPrimary;
+    final textSecondary = isDark ? Colors.grey[400]! : stitchTextSecondary;
+
     return Scaffold(
-      // AppBar'ı kaldırarak daha modern bir tam ekran görünümü elde edebiliriz.
-      // appBar: AppBar(title: const Text('HerbaForm Giriş')),
-      body: Container(
-        // 1. Adım: Gradient Arka Plan
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.rosemary, // Koyu Yeşil
-              AppColors.garden, // Ana Yeşil
-              AppColors.aqua, // Açık vurgu rengi
-            ],
-            stops: [0.0, 0.5, 1.0],
-          ),
-        ),
+      backgroundColor: bgColor,
+      body: SafeArea(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Card(
-                // 2. Adım: Yarı Saydam Kart
-                elevation: 8,
-                color: AppColors.white.withAlpha(230),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 32.0,
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        // Logo veya Başlık
-                        Image.asset(
-                          'assets/logo/logo.png', // Logo yolunuzu doğrulayın
-                          height: 80,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              color: cardColor,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 16),
+                      // Logo
+                      SizedBox(
+                        height: 96,
+                        child: Image.asset(
+                          'assets/logo/logo.png',
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
                               Icons.spa,
-                              size: 60,
-                              color: AppColors.primary,
+                              size: 80,
+                              color: stitchPrimary,
                             );
                           },
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _isRegisterMode
-                              ? 'Hesap Oluşturun'
-                              : 'HerbaForm\'a Hoş Geldiniz',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(color: AppColors.primary),
+                      ),
+                      const SizedBox(height: 40),
+                      // Headline
+                      Text(
+                        _isRegisterMode ? 'Aramıza Katılın' : 'Tekrar Hoş Geldiniz',
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
                         ),
-                        const SizedBox(height: 24),
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'E-posta',
-                            prefixIcon: Icon(Icons.email_outlined),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _isRegisterMode
+                            ? 'Sağlıklı yaşam yolculuğunuza başlayın'
+                            : 'Sağlıklı yaşam yolculuğunuza devam edin',
+                        style: TextStyle(
+                          color: textSecondary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.normal,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      // Email
+                      TextFormField(
+                        controller: _emailController,
+                        style: TextStyle(color: textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'E-posta veya Kullanıcı Adı',
+                          hintStyle: TextStyle(color: textSecondary),
+                          prefixIcon: Icon(Icons.person_outline, color: textSecondary),
+                          filled: true,
+                          fillColor: inputBg,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(color: borderColor),
                           ),
-                          validator: (value) {
-                            if (value == null ||
-                                value.isEmpty ||
-                                !value.contains('@')) {
-                              return 'Geçerli bir e-posta girin.';
-                            }
-                            return null;
-                          },
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Şifre',
-                            prefixIcon: Icon(Icons.lock_outline),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(color: borderColor),
                           ),
-                          obscureText: true,
-                          validator: (value) {
-                            if (value == null ||
-                                value.isEmpty ||
-                                value.length < 6) {
-                              return 'Şifre en az 6 karakter olmalı.';
-                            }
-                            return null;
-                          },
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
+                          ),
                         ),
-                        // Sadece kayıt modunda rol seçimini göster
-                        if (_isRegisterMode) ...[
-                          const SizedBox(height: 16),
-                          DropdownButtonFormField<UserRole>(
-                            value: _selectedRole,
-                            decoration: const InputDecoration(
-                              labelText: 'Rolünüz',
-                              prefixIcon: Icon(Icons.person_outline),
+                        validator: (value) {
+                          if (value == null || value.isEmpty || !value.contains('@')) {
+                            return 'Geçerli bir e-posta girin.';
+                          }
+                          return null;
+                        },
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 20),
+                      // Password
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        style: TextStyle(color: textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Şifre',
+                          hintStyle: TextStyle(color: textSecondary),
+                          prefixIcon: Icon(Icons.lock_outline, color: textSecondary),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              color: textSecondary,
                             ),
-                            items: UserRole.values.map((UserRole role) {
-                              return DropdownMenuItem<UserRole>(
-                                value: role,
-                                child: Text(
-                                  role.name,
-                                ), // Extension'dan gelen isim
-                              );
-                            }).toList(),
-                            onChanged: (UserRole? newValue) {
+                            onPressed: () {
                               setState(() {
-                                _selectedRole = newValue!;
+                                _obscurePassword = !_obscurePassword;
                               });
                             },
-                            validator: (value) =>
-                                value == null ? 'Lütfen bir rol seçin.' : null,
+                          ),
+                          filled: true,
+                          fillColor: inputBg,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty || value.length < 6) {
+                            return 'Şifre en az 6 karakter olmalı.';
+                          }
+                          return null;
+                        },
+                      ),
+                      // Role Selection (Only in register mode)
+                      if (_isRegisterMode) ...[
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<UserRole>(
+                          initialValue: _selectedRole,
+                          dropdownColor: inputBg,
+                          style: TextStyle(color: textPrimary),
+                          decoration: InputDecoration(
+                            hintText: 'Rolünüz',
+                            hintStyle: TextStyle(color: textSecondary),
+                            prefixIcon: Icon(Icons.badge_outlined, color: textSecondary),
+                            filled: true,
+                            fillColor: inputBg,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 20),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
+                            ),
+                          ),
+                          items: UserRole.values.map((UserRole role) {
+                            return DropdownMenuItem<UserRole>(
+                              value: role,
+                              child: Text(role.name),
+                            );
+                          }).toList(),
+                          onChanged: (UserRole? newValue) {
+                            setState(() {
+                              _selectedRole = newValue!;
+                            });
+                          },
+                          validator: (value) => value == null ? 'Lütfen bir rol seçin.' : null,
+                        ),
+                        // Davet Kodu (yalnızca müşteri rolünde göster)
+                        if (_selectedRole == UserRole.customer) ...[
+                          const SizedBox(height: 20),
+                          TextFormField(
+                            controller: _inviteCodeController,
+                            style: TextStyle(color: textPrimary),
+                            decoration: InputDecoration(
+                              hintText: 'Distribütörünüzden aldığınız kod (opsiyonel)',
+                              hintStyle: TextStyle(color: textSecondary),
+                              prefixIcon: Icon(Icons.card_giftcard_outlined, color: textSecondary),
+                              filled: true,
+                              fillColor: inputBg,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 20),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
+                              ),
+                            ),
                           ),
                         ],
-                        const SizedBox(height: 24),
-                        if (_isLoading)
-                          const CircularProgressIndicator()
-                        else
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              ElevatedButton(
-                                onPressed: _submitForm,
-                                child: Text(
-                                  _isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              TextButton(
-                                onPressed: _toggleMode,
-                                child: Text(
-                                  _isRegisterMode
-                                      ? 'Zaten bir hesabınız var mı? Giriş Yapın'
-                                      : 'Hesabınız yok mu? Kayıt Olun',
-                                ),
-                              ),
-                            ],
-                          ),
                       ],
-                    ),
+                      // Forgot Password Link
+                      if (!_isRegisterMode) ...[
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {},
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                            ),
+                            child: const Text(
+                              'Şifremi Unuttum?',
+                              style: TextStyle(
+                                color: stitchPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        const SizedBox(height: 32),
+                      ],
+                      
+                      // Login Button
+                      if (_isLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: CircularProgressIndicator(color: stitchPrimary),
+                        )
+                      else
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: _submitForm,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: stitchPrimary,
+                              foregroundColor: Colors.white,
+                              elevation: 4,
+                              shadowColor: stitchPrimary.withAlpha(64),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: Text(
+                              _isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                      const SizedBox(height: 32),
+                      
+                      // Social Login Divider
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: borderColor)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'veya ile devam et',
+                              style: TextStyle(
+                                color: textSecondary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: borderColor)),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      // Social Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildSocialButton(
+                            icon: Icons.g_mobiledata, // Fallback icon since we don't have SVG
+                            borderColor: borderColor,
+                            bgColor: inputBg,
+                            iconColor: textPrimary,
+                            iconSize: 36,
+                          ),
+                          const SizedBox(width: 24),
+                          _buildSocialButton(
+                            icon: Icons.apple,
+                            borderColor: borderColor,
+                            bgColor: inputBg,
+                            iconColor: textPrimary,
+                          ),
+                          const SizedBox(width: 24),
+                          _buildSocialButton(
+                            icon: Icons.face,
+                            borderColor: borderColor,
+                            bgColor: inputBg,
+                            iconColor: stitchPrimary,
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 40),
+                      
+                      // Footer
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _isRegisterMode
+                                ? 'Zaten bir hesabınız var mı?'
+                                : 'Henüz hesabınız yok mu?',
+                            style: TextStyle(
+                              color: textSecondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _toggleMode,
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
+                            child: Text(
+                              _isRegisterMode ? 'Giriş Yapın' : 'Kayıt Ol',
+                              style: const TextStyle(
+                                color: stitchPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialButton({
+    required IconData icon,
+    required Color borderColor,
+    required Color bgColor,
+    required Color iconColor,
+    double iconSize = 24,
+  }) {
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: bgColor,
+        shape: BoxShape.circle,
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(5),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(28),
+          onTap: () {}, // Sosyal giriş fonksiyonu eklenebilir
+          child: Center(
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: iconSize,
             ),
           ),
         ),

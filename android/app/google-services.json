@@ -7,9 +7,104 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:433193562880:android:844a045642651c5c50b9e5",
+        "android_client_info": {
+          "package_name": "com.example.customer_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433193562880:android:1e910bac98f7b16b50b9e5",
+        "android_client_info": {
+          "package_name": "com.herbalife.customer_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433193562880:android:b974632a2851005550b9e5",
+        "android_client_info": {
+          "package_name": "com.mze.customer_track"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:433193562880:android:ecf17521acef5d7c50b9e5",
         "android_client_info": {
           "package_name": "com.mze.herbaformix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433193562880:android:eae3c8a44aeb7c0c50b9e5",
+        "android_client_info": {
+          "package_name": "com.mze.herbaformix_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433193562880:android:317e65edc83d815d50b9e5",
+        "android_client_info": {
+          "package_name": "com.mze.pdf_to_firebase"
         }
       },
       "oauth_client": [],

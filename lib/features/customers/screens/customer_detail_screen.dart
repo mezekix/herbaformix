@@ -58,6 +58,16 @@ class CustomerDetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildCustomerHeader(context),
+                  const SizedBox(height: 16),
+
+                  // --- SAĞLIK BİLGİLERİ BÖLÜMÜ ---
+                  Text(
+                    'Sağlık Bilgileri',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  _buildHealthInfoCard(context),
                   const SizedBox(height: 24),
 
                   // --- YENİ BÖLÜM: PLANLANMIŞ TAKİPLER ---
@@ -220,8 +230,63 @@ class CustomerDetailScreen extends StatelessWidget {
                 Text(customer.isActive ? 'Aktif Müşteri' : 'Pasif Müşteri'),
               ],
             ),
+            // Notlar alanı — yalnızca dolu ise göster
+            if (customer.notes != null && customer.notes!.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text(
+                'Notlar',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.notes_outlined, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(customer.notes!),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// "Sağlık Bilgileri" bilgi kartını oluşturur.
+  Widget _buildHealthInfoCard(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: Colors.blue.shade700,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Bu müşteri uygulamaya kayıtlıysa sağlık bilgileri profilinde görünür.',
+              style: TextStyle(
+                color: Colors.blue.shade800,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -545,7 +610,7 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<FollowUpType>(
-              value: _type,
+              initialValue: _type,
               decoration: const InputDecoration(
                 labelText: 'Görüşme Türü',
                 border: OutlineInputBorder(),

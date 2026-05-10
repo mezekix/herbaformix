@@ -11,8 +11,6 @@ extension UserRoleExtension on UserRole {
         return 'Başarı Yaratıcısı';
       case UserRole.customer:
         return 'Müşteri';
-      default:
-        return '';
     }
   }
 }

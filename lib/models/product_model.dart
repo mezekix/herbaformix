@@ -11,6 +11,8 @@ class ProductModel {
   final String? usageInfo;
   final String? features; // New field (String)
   final String? ingredients; // New field (String)
+  final int? recommendedOffsetMins; // Uyanma saatinden kaç dakika sonra kullanılacağı
+  final Map<String, String>? instructionsByGoal; // Hedefe göre değişen tarifler
 
   ProductModel({
     required this.id,
@@ -24,6 +26,8 @@ class ProductModel {
     this.usageInfo,
     this.features,
     this.ingredients,
+    this.recommendedOffsetMins,
+    this.instructionsByGoal,
   });
 
   factory ProductModel.fromMap(Map<String, dynamic> map, String documentId) {
@@ -39,6 +43,10 @@ class ProductModel {
       usageInfo: map['usageInfo'] as String?,
       features: map['features'] as String?, // Mapped from features
       ingredients: map['ingredients'] as String?, // Mapped from ingredients
+      recommendedOffsetMins: map['recommended_offset_mins'] as int?,
+      instructionsByGoal: map['instructions_by_goal'] != null
+          ? Map<String, String>.from(map['instructions_by_goal'] as Map)
+          : null,
     );
   }
 
@@ -54,6 +62,8 @@ class ProductModel {
       'usageInfo': usageInfo,
       'features': features,
       'ingredients': ingredients,
+      'recommended_offset_mins': recommendedOffsetMins,
+      'instructions_by_goal': instructionsByGoal,
     };
   }
 }

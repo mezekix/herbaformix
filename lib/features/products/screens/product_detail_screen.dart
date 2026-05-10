@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart'; // Renkler için
 import '../../../models/product_model.dart';
+import '../../../models/user_role.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import 'add_edit_product_screen.dart';
 
@@ -72,6 +74,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   Future<void> _deleteProduct() async {
     if (_product == null) return;
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -93,13 +102,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     );
 
     if (confirmed == true) {
-      final productProvider = Provider.of<ProductProvider>(
-        context,
-        listen: false,
-      );
-      final scaffoldMessenger = ScaffoldMessenger.of(context);
-      final router = GoRouter.of(context);
-
       try {
         await productProvider.deleteProduct(_product!.id);
         if (!mounted) return; // Widget hala ağaçta mı kontrol et
@@ -151,12 +153,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       );
     }
 
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isCustomer = authProvider.userProfile?.role == UserRole.customer;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Product Details'),
+        title: const Text('Ürün Detayı'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: AppColors.textPrimary,
+        actions: [
+          if (!isCustomer)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: _editProduct,
+              tooltip: 'Düzenle',
+            ),
+          if (!isCustomer)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _deleteProduct,
+              tooltip: 'Sil',
+              color: Colors.red,
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -168,15 +188,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
               const SizedBox(height: 24),
               _buildProductInfo(),
               const SizedBox(height: 24),
-              _buildSectionTitle('Description'),
+              _buildSectionTitle('Açıklama'),
               const SizedBox(height: 8),
               _buildDescription(),
               const SizedBox(height: 24),
-              _buildSectionTitle('Ingredients'),
+              _buildSectionTitle('İçindekiler'),
               const SizedBox(height: 8),
               _buildIngredients(),
               const SizedBox(height: 24),
-              _buildSectionTitle('Usage'),
+              _buildSectionTitle('Kullanım Bilgisi'),
               const SizedBox(height: 8),
               _buildUsage(),
               const SizedBox(height: 24),
@@ -273,7 +293,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Reviews'),
+        _buildSectionTitle('Değerlendirmeler'),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -385,7 +405,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Related Products'),
+        _buildSectionTitle('İlgili Ürünler'),
         const SizedBox(height: 16),
         SizedBox(
           height: 220,
@@ -462,7 +482,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             ),
           ),
           child: const Text(
-            'Add to Cart',
+            'Sepete Ekle',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,

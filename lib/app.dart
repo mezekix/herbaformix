@@ -35,7 +35,7 @@ class _AppState extends State<App> {
           secondary: AppColors.secondary,
           error: AppColors.error,
           surface: AppColors.surface,
-          surfaceVariant: AppColors.background,
+          surfaceContainerHighest: AppColors.background,
           onPrimary: AppColors.textOnPrimary, // primary üzerindeki yazı rengi
           onSecondary:
               AppColors.textOnSecondary, // secondary üzerindeki yazı rengi

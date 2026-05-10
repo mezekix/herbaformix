@@ -22,7 +22,7 @@ class AppColors {
   static const Color nightSky = Color(0xFF101820); // Çok Koyu Gri/Siyah
 
   // Uygulama için seçilen birincil ve ikincil renkler
-  static const Color primary = garden;
+  static const Color primary = Color(0xFF7AC144); // Stitch MCP Vitality Green
   static const Color secondary = grass; // Veya mango, aqua gibi bir vurgu
   static const Color accent = mango; // Vurgu için başka bir seçenek
   static const Color background = Color(0xFFF5F5F5); // Biraz daha yumuşak bir arka plan

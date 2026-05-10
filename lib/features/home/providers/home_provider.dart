@@ -4,12 +4,15 @@ import 'package:flutter/foundation.dart';
 
 import '../../../models/scheduled_follow_up_model.dart';
 import '../../../services/firestore_service.dart';
+import '../../../services/routine_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../program/services/program_service.dart';
 
 /// Ana sayfanın ihtiyaç duyduğu verileri ve durumu yöneten Provider.
 class HomeProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   final AuthProvider _authProvider;
+  final RoutineService _routineService = RoutineService();
 
   String? _currentUserId;
   StreamSubscription<List<ScheduledFollowUpModel>>?
@@ -21,11 +24,17 @@ class HomeProvider with ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  /// Ardışık tamamlama serisi (streak) — kaç gün üst üste tamamlandı
+  int _completionStreak = 0;
+  int get completionStreak => _completionStreak;
+
   HomeProvider(this._firestoreService, this._authProvider) {
     _currentUserId = _authProvider.firebaseUser?.uid;
     _authProvider.addListener(_authListener);
     if (_currentUserId != null) {
+      ProgramService().ensureTodayRoutines(_currentUserId!);
       _listenToUpcomingFollowUps(_currentUserId!);
+      _loadStreak(_currentUserId!);
     }
   }
 
@@ -35,12 +44,32 @@ class HomeProvider with ChangeNotifier {
       _currentUserId = newUserId;
       _upcomingFollowUpsSubscription?.cancel();
       _upcomingFollowUps = [];
+      _completionStreak = 0;
       if (_currentUserId != null) {
+        ProgramService().ensureTodayRoutines(_currentUserId!);
         _listenToUpcomingFollowUps(_currentUserId!);
+        _loadStreak(_currentUserId!);
       } else {
         _isLoading = false;
         notifyListeners();
       }
+    }
+  }
+
+  Future<void> _loadStreak(String userId) async {
+    try {
+      final streak = await _routineService.getCompletionStreak(userId);
+      _completionStreak = streak;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('HomeProvider streak yüklenirken hata: $e');
+    }
+  }
+
+  /// Streak'i yeniden yükler (örn. rutin tamamlandığında çağrılabilir)
+  Future<void> refreshStreak() async {
+    if (_currentUserId != null) {
+      await _loadStreak(_currentUserId!);
     }
   }
 

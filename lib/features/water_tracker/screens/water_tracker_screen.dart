@@ -67,7 +67,7 @@ class WaterTrackerScreen extends StatelessWidget {
           color: theme.colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               spreadRadius: 2,
               blurRadius: 10,
             ),
@@ -236,8 +236,16 @@ class WaterTrackerScreen extends StatelessWidget {
                 ),
               ),
               title: Text('${log.amount} ml su eklendi'),
-              subtitle: Text(DateFormat.Hm().format(log.time)), // Saat:Dakika
+              subtitle: Text(DateFormat.Hm().format(log.time)),
               dense: true,
+              trailing: IconButton(
+                icon: Icon(Icons.delete_outline,
+                    size: 18, color: Colors.grey.shade400),
+                tooltip: 'Sil',
+                onPressed: () {
+                  waterProvider.removeLog(log.id);
+                },
+              ),
             );
           },
         ),

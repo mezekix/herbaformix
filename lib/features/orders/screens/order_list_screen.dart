@@ -4,6 +4,8 @@ import 'package:intl/intl.dart'; // Tarih formatlama için EKLENDİ
 import 'package:provider/provider.dart';
 
 import '../../../models/order_model.dart';
+import '../../../models/user_role.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import './add_edit_order_screen.dart';
 
@@ -99,17 +101,21 @@ class OrderListScreen extends StatelessWidget {
     final orderProvider = Provider.of<OrderProvider>(context);
     final orders = orderProvider.orders;
 
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isCustomer = authProvider.userProfile?.role == UserRole.customer;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Siparişlerim'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            tooltip: 'Yeni Sipariş Oluştur',
-            onPressed: () {
-              context.goNamed(AddEditOrderScreen.routeName);
-            },
-          ),
+          if (!isCustomer)
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'Yeni Sipariş Oluştur',
+              onPressed: () {
+                context.goNamed(AddEditOrderScreen.routeName);
+              },
+            ),
         ],
       ),
       body: orderProvider.isLoading
@@ -124,12 +130,13 @@ class OrderListScreen extends StatelessWidget {
                     style: TextStyle(fontSize: 18),
                   ),
                   const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.add_shopping_cart),
-                    label: const Text('İlk Siparişinizi Oluşturun'),
-                    onPressed: () =>
-                        context.goNamed(AddEditOrderScreen.routeName),
-                  ),
+                  if (!isCustomer)
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.add_shopping_cart),
+                      label: const Text('İlk Siparişinizi Oluşturun'),
+                      onPressed: () =>
+                          context.goNamed(AddEditOrderScreen.routeName),
+                    ),
                 ],
               ),
             )
@@ -181,23 +188,26 @@ class OrderListScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.delete_outline,
-                            color: Theme.of(context).colorScheme.error,
+                        if (!isCustomer)
+                          IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            tooltip: 'Siparişi Sil',
+                            onPressed: () =>
+                                _deleteOrder(context, orderProvider, order),
                           ),
-                          tooltip: 'Siparişi Sil',
-                          onPressed: () =>
-                              _deleteOrder(context, orderProvider, order),
-                        ),
                       ],
                     ),
-                    onTap: () {
-                      context.goNamed(
-                        AddEditOrderScreen.routeName,
-                        extra: order,
-                      );
-                    },
+                    onTap: isCustomer
+                        ? null
+                        : () {
+                            context.goNamed(
+                              AddEditOrderScreen.routeName,
+                              extra: order,
+                            );
+                          },
                   ),
                 );
               },

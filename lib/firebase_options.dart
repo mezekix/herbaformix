@@ -77,4 +77,5 @@ class DefaultFirebaseOptions {
     authDomain: 'herbaformix.firebaseapp.com',
     storageBucket: 'herbaformix.firebasestorage.app',
   );
+
 }

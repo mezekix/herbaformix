@@ -157,6 +157,11 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
               icon: const Icon(Icons.delete_outline),
               tooltip: 'Müşteriyi Sil',
               onPressed: () async {
+                final customerProvider =
+                    Provider.of<CustomerProvider>(context, listen: false);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
+
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -183,10 +188,8 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                   setState(() {
                     _isLoading = true;
                   });
-                  final success = await Provider.of<CustomerProvider>(
-                    context,
-                    listen: false,
-                  ).deleteCustomer(widget.customer!.id);
+                  final success = await customerProvider
+                      .deleteCustomer(widget.customer!.id);
 
                   if (!mounted) return;
 
@@ -194,12 +197,12 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                     _isLoading = false;
                   });
                   if (success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    scaffoldMessenger.showSnackBar(
                       const SnackBar(content: Text('Müşteri silindi.')),
                     );
-                    context.pop();
+                    navigator.pop();
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    scaffoldMessenger.showSnackBar(
                       const SnackBar(
                         content: Text('Müşteri silinirken hata oluştu.'),
                       ),

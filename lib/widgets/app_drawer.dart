@@ -11,6 +11,7 @@ import '../features/orders/screens/order_list_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/water_tracker/screens/water_tracker_screen.dart';
+import '../models/user_role.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -101,6 +102,7 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userProfile = authProvider.userProfile;
 
     return Drawer(
       child: ListView(
@@ -125,24 +127,37 @@ class AppDrawer extends StatelessWidget {
           _buildListTile(
             context,
             icon: Icons.shopping_bag_outlined,
-            title: 'Ürünler',
+            title: userProfile?.role == UserRole.customer ? 'Ürün Kataloğu' : 'Ürünler',
             routeName: ProductListScreen.routeName.substring(1), // 'products'
             isNamedRoute: true,
           ),
-          _buildListTile(
-            context,
-            icon: Icons.people_alt_outlined,
-            title: 'Müşterilerim',
-            routeName: CustomerListScreen.routeName.substring(1), // 'customers'
-            isNamedRoute: true,
-          ),
-          _buildListTile(
-            context,
-            icon: Icons.receipt_long_outlined,
-            title: 'Siparişlerim',
-            routeName: OrderListScreen.routeName.substring(1), // 'orders'
-            isNamedRoute: true,
-          ),
+          if (userProfile?.role != UserRole.customer)
+            _buildListTile(
+              context,
+              icon: Icons.people_alt_outlined,
+              title: 'Müşterilerim',
+              routeName: CustomerListScreen.routeName.substring(1), // 'customers'
+              isNamedRoute: true,
+            ),
+          if (userProfile?.role != UserRole.customer)
+            _buildListTile(
+              context,
+              icon: Icons.receipt_long_outlined,
+              title: 'Siparişlerim',
+              routeName: OrderListScreen.routeName.substring(1), // 'orders'
+              isNamedRoute: true,
+            ),
+          // Müşteriler için "Siparişlerim" kısmını ayrı bir ekranda veya filtrelenmiş halde gösterebiliriz.
+          // Şimdilik Müşteri tarafında Siparişlerim listesini de gizleyelim veya 
+          // OrderListScreen'i müşteri rolüne göre filtreleyecek şekilde güncelleyelim.
+          if (userProfile?.role == UserRole.customer)
+            _buildListTile(
+              context,
+              icon: Icons.receipt_long_outlined,
+              title: 'Sipariş Geçmişim',
+              routeName: OrderListScreen.routeName.substring(1),
+              isNamedRoute: true,
+            ),
           const Divider(),
           _buildListTile(
             context,
