@@ -8,6 +8,7 @@ import '../../../models/user_role.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import 'add_edit_product_screen.dart';
+import '../../../widgets/cached_product_image.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   static const String routeName = 'product-detail';
@@ -214,22 +215,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
 
   Widget _buildProductImage() {
     return Center(
-      child: _product!.imageUrl != null && _product!.imageUrl!.isNotEmpty
-          ? Image.network(
-              _product!.imageUrl!,
-              height: 250,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => Container(
-                height: 250,
-                color: Colors.grey[200],
-                child: const Icon(Icons.image_not_supported, size: 60),
-              ),
-            )
-          : Container(
-              height: 250,
-              color: Colors.grey[200],
-              child: const Icon(Icons.shopping_bag, size: 60),
-            ),
+      child: CachedProductImage(
+        imageUrl: _product!.imageUrl,
+        height: 250,
+        fit: BoxFit.contain,
+      ),
     );
   }
 
@@ -439,15 +429,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             Container(
               height: 150,
               color: Colors.grey[200],
-              child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                  ? Image.network(
-                      product.imageUrl!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Center(child: Icon(Icons.image, size: 40)),
-                    )
-                  : const Center(child: Icon(Icons.image, size: 40)),
+              child: CachedProductImage(
+                imageUrl: product.imageUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: 150,
+              ),
             ),
             const SizedBox(height: 8),
             Text(

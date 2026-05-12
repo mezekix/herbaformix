@@ -238,16 +238,54 @@ class ProgramProvider with ChangeNotifier {
 
   Future<void> _scheduleNotifications(ProgramModel program) async {
     await _notificationService.initialize();
+    
     for (final slot in program.slots) {
-      if (slot.isNormalMeal || slot.products.isEmpty) continue;
+      // 1. Ana Slot için bildirim (Ürün, Normal Öğün veya Ara Öğün fark etmeksizin)
       final id = getMealNotificationId(slot.id);
-      final productNames = slot.products.map((p) => p.productName).join(', ');
+      String title = '⏰ ${slot.label} Zamanı!';
+      String body = 'Öğününüzü/Ürününüzü almayı unutmayın.';
+      
+      if (slot.products.isNotEmpty) {
+        final productNames = slot.products.map((p) => p.productName).join(', ');
+        title = '🥤 ${slot.label} Zamanı!';
+        body = '$productNames kullanmayı unutmayın.';
+      } else if (slot.isNormalMeal) {
+        title = '🍽️ ${slot.label} Zamanı!';
+        body = 'Sağlıklı bir öğün tüketmeyi unutmayın.';
+      } else {
+        title = '🍎 ${slot.label} Zamanı!';
+        body = 'Ara öğün zamanı geldi, atıştırmalığınızı unutmayın.';
+      }
+      
       await _notificationService.scheduleMealNotification(
         notificationId: id,
-        title: '🥤 ${slot.label} Zamanı!',
-        body: '$productNames kullanmayı unutmayın.',
+        title: title,
+        body: body,
         scheduledTime: slot.scheduledTime,
       );
+
+      // 2. Normal öğün (snack değilse) için 30 dk öncesine SU bildirimi
+      if (slot.isNormalMeal && slot.kind != MealSlotKind.snack) {
+        final timeParts = slot.scheduledTime.split(':');
+        if (timeParts.length == 2) {
+          final mealHour = int.tryParse(timeParts[0]) ?? 0;
+          final mealMinute = int.tryParse(timeParts[1]) ?? 0;
+          final now = DateTime.now();
+          final mealTime = DateTime(now.year, now.month, now.day, mealHour, mealMinute);
+          final waterTime = mealTime.subtract(const Duration(minutes: 30));
+          
+          final waterScheduledTime = '${waterTime.hour.toString().padLeft(2, '0')}:${waterTime.minute.toString().padLeft(2, '0')}';
+          // Su bildirimi için slot id'sine özel benzersiz bir ID (100000 ekleyerek çakışmayı önlüyoruz)
+          final waterId = id + 100000;
+          
+          await _notificationService.scheduleMealNotification(
+            notificationId: waterId,
+            title: '💧 Su Hatırlatıcısı',
+            body: '${slot.label} öğününüzden önce 1 büyük bardak (500ml) su içmeyi unutmayın.',
+            scheduledTime: waterScheduledTime,
+          );
+        }
+      }
     }
   }
 
@@ -282,7 +320,15 @@ class ProgramProvider with ChangeNotifier {
     MealSlot newSlot,
     List<ProductModel> allProducts,
   ) async {
-    if (_activeProgram == null) return false;
+    // _activeProgram null ise Firestore'dan çek
+    if (_activeProgram == null) {
+      debugPrint('[ProgramProvider] _activeProgram null, Firestore\'dan çekiliyor...');
+      _activeProgram = await _programService.getActiveProgram(userId);
+      if (_activeProgram == null) {
+        debugPrint('[ProgramProvider] Firestore\'da da aktif program yok!');
+        return false;
+      }
+    }
     _isLoading = true;
     notifyListeners();
     try {
@@ -290,11 +336,52 @@ class ProgramProvider with ChangeNotifier {
         slots: [..._activeProgram!.slots, newSlot],
       );
       await _programService.saveProgram(userId, updated, allProducts);
+      
+      await _notificationService.cancelAllProgramNotifications();
+      await _scheduleNotifications(updated);
+
+      _activeProgram = updated;
+      _isLoading = false;
+      notifyListeners();
+      debugPrint('[ProgramProvider] Slot eklendi ve bildirimler yeniden zamanlandı.');
+      return true;
+    } catch (e) {
+      debugPrint('[ProgramProvider] addSlotToActiveProgram hatası: $e');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Aktif programdan bir slotu siler
+  Future<bool> removeSlotFromActiveProgram(
+    String userId,
+    String slotId,
+    List<ProductModel> allProducts,
+  ) async {
+    // _activeProgram null ise Firestore'dan çek
+    if (_activeProgram == null) {
+      _activeProgram = await _programService.getActiveProgram(userId);
+      if (_activeProgram == null) return false;
+    }
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final updatedSlots = _activeProgram!.slots.where((s) => s.id != slotId).toList();
+      final updated = _activeProgram!.copyWith(slots: updatedSlots);
+      
+      await _programService.saveProgram(userId, updated, allProducts);
+      
+      await _notificationService.cancelAllProgramNotifications();
+      await _scheduleNotifications(updated);
+
       _activeProgram = updated;
       _isLoading = false;
       notifyListeners();
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ProgramProvider] removeSlotFromActiveProgram hatası: $e');
+      _errorMessage = 'Öğün silinirken hata oluştu: $e';
       _isLoading = false;
       notifyListeners();
       return false;

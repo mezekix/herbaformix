@@ -8,6 +8,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import './add_edit_product_screen.dart'; // AddEditProductScreen'i import et
 import './product_detail_screen.dart'; // ProductDetailScreen'i import et
+import '../../../widgets/cached_product_image.dart';
 
 class ProductListScreen extends StatefulWidget {
   static const String routeName =
@@ -268,15 +269,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: CircleAvatar(
-                  radius: 30,
-                  backgroundImage:
-                      product.imageUrl != null && product.imageUrl!.isNotEmpty
-                      ? NetworkImage(product.imageUrl!)
-                      : const AssetImage('assets/logo/logo.png')
-                            as ImageProvider,
-                  backgroundColor:
-                      Colors.transparent, // Gradyanın görünmesi için
+                child: ClipOval(
+                  child: CachedProductImage(
+                    imageUrl: product.imageUrl,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ),
@@ -346,20 +345,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       end: Alignment.bottomCenter,
                     ),
                   ),
-                  child:
-                      product.imageUrl != null && product.imageUrl!.isNotEmpty
-                      ? Image.network(
-                          product.imageUrl!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.broken_image, size: 50),
-                        )
-                      : Image.asset(
-                          'assets/logo/logo.png', // Varsayılan resim
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.broken_image, size: 50),
-                        ),
+                  child: CachedProductImage(
+                    imageUrl: product.imageUrl,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),

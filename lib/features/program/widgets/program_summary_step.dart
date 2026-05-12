@@ -179,7 +179,9 @@ class ProgramSummaryStep extends StatelessWidget {
                         userProfile.programStartDate = DateTime.now();
                         await authProvider.updateUserProfile(userProfile);
                       }
-                      context.pop();
+                      if (context.mounted) {
+                        context.pop();
+                      }
                     }
                   },
             style: ElevatedButton.styleFrom(

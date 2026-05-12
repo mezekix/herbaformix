@@ -1289,11 +1289,31 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      // "Tüm Kayıtlar" text butonu
+                      GestureDetector(
+                        onTap: () => context.goNamed(WaterTrackerScreen.routeName),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Tüm Kayıtlar',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(Icons.chevron_right, color: AppColors.primary, size: 16),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 16),
-                // Sağ: animasyonlu su bardağı
+                // Sağ: animasyonlu su bardağı (tıklanabilir)
                 GestureDetector(
                   onTap: () => context.goNamed(WaterTrackerScreen.routeName),
                   child: _WaterGlassWidget(progress: progress),

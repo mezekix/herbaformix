@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/app_colors.dart';
+import '../../program/services/notification_service.dart';
 import '../widgets/change_password_dialog.dart';
 
 class AppSettingsScreen extends StatelessWidget {
@@ -57,9 +58,36 @@ class AppSettingsScreen extends StatelessWidget {
               leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
               title: const Text('Bildirim Tercihleri', style: TextStyle(fontWeight: FontWeight.w600)),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-              onTap: () {
+              onTap: () async {
+                final service = NotificationService();
+                final granted = await service.requestPermission();
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Bildirim tercihleri yakında eklenecek.')),
+                  SnackBar(
+                    content: Text(granted ? 'Bildirim izni verildi.' : 'Bildirim izni verilmedi.'),
+                  ),
+                );
+              },
+            ),
+          ),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey.shade200),
+            ),
+            child: ListTile(
+              leading: const Icon(Icons.notifications_active_outlined, color: Colors.green),
+              title: const Text('Test Bildirimi Gönder', style: TextStyle(fontWeight: FontWeight.w600)),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              onTap: () async {
+                final service = NotificationService();
+                await service.showTestNotification();
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Test bildirimi tetiklendi.'),
+                  ),
                 );
               },
             ),

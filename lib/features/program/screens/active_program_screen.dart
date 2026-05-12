@@ -11,6 +11,7 @@ import '../../../models/product_model.dart';
 import '../../../services/routine_service.dart';
 import '../models/program_model.dart';
 import '../providers/program_provider.dart';
+import '../services/notification_service.dart';
 import '../screens/create_program_screen.dart';
 import '../widgets/water_step_tile.dart';
 
@@ -380,6 +381,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
   String _slotLabel = 'Ara Öğün';
   String _slotTime = '10:30';
   String? _selectedProductId;
+  bool _isPermanent = true;
   bool _isLoading = false;
 
   @override
@@ -480,6 +482,22 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
                 .toList(),
             onChanged: (v) => setState(() => _selectedProductId = v),
           ),
+          const SizedBox(height: 12),
+
+          // Kalıcı / Sadece Bugün seçimi
+          SwitchListTile(
+            title: const Text('Tüm Programıma Ekle', style: TextStyle(fontWeight: FontWeight.w500)),
+            subtitle: Text(
+              _isPermanent
+                  ? 'Her gün tekrarlanır.'
+                  : 'Sadece bugünün rutinlerine eklenir.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            value: _isPermanent,
+            activeTrackColor: AppColors.primary,
+            onChanged: (v) => setState(() => _isPermanent = v),
+            contentPadding: EdgeInsets.zero,
+          ),
           const SizedBox(height: 20),
 
           ElevatedButton(
@@ -509,10 +527,49 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
 
                     final allProds =
                         context.read<ProductProvider>().products;
-                    await context
-                        .read<ProgramProvider>()
-                        .addSlotToActiveProgram(
-                            widget.userId, newSlot, allProds);
+                        
+                    if (_isPermanent) {
+                      await context
+                          .read<ProgramProvider>()
+                          .addSlotToActiveProgram(
+                              widget.userId, newSlot, allProds);
+                    } else {
+                      final timeParts = _slotTime.split(':');
+                      final hour = int.tryParse(timeParts[0]) ?? 0;
+                      final minute = int.tryParse(timeParts[1]) ?? 0;
+                      final now = DateTime.now();
+                      final scheduledTime = DateTime(now.year, now.month, now.day, hour, minute);
+                      
+                      final routine = DailyRoutineModel(
+                        id: '',
+                        productId: product != null ? product.id : (_slotLabel.isEmpty ? 'Ara Öğün' : _slotLabel),
+                        scheduledTime: scheduledTime,
+                        isCompleted: false,
+                        stepType: product != null ? RoutineStepType.product : RoutineStepType.normalMeal,
+                      );
+                      final newId = await context.read<RoutineService>().addSingleRoutine(widget.userId, routine);
+                      
+                      // Tek seferlik öğün için bildirim ayarla
+                      final notifId = newId.hashCode.abs() % 100000;
+                      String title = '⏰ ${_slotLabel.isEmpty ? 'Ara Öğün' : _slotLabel} Zamanı!';
+                      String body = 'Öğününüzü/Ürününüzü almayı unutmayın.';
+                      
+                      if (product != null) {
+                        title = '🥤 ${_slotLabel.isEmpty ? 'Ara Öğün' : _slotLabel} Zamanı!';
+                        body = '${product.name} kullanmayı unutmayın.';
+                      } else {
+                        title = '🍎 ${_slotLabel.isEmpty ? 'Ara Öğün' : _slotLabel} Zamanı!';
+                        body = 'Ara öğün zamanı geldi, atıştırmalığınızı unutmayın.';
+                      }
+                      
+                      await NotificationService().scheduleMealNotification(
+                        notificationId: notifId,
+                        title: title,
+                        body: body,
+                        scheduledTime: _slotTime,
+                        isOneTime: true,
+                      );
+                    }
 
                     if (context.mounted) Navigator.pop(context);
                   },
@@ -557,6 +614,52 @@ class _ProductTile extends StatelessWidget {
     required this.isLast,
     this.isNormalMeal = false,
   });
+
+  void _showDeleteDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              const Text(
+                'Rutin İşlemleri',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.nightSky),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Sadece Bugün İçin Sil', style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await context.read<RoutineService>().deleteRoutine(userId, routine.id);
+                },
+              ),
+              if (routine.slotId != null)
+                ListTile(
+                  leading: const Icon(Icons.delete_forever, color: Colors.red),
+                  title: const Text('Tüm Programdan Kaldır', style: TextStyle(color: Colors.red)),
+                  subtitle: const Text('Bu öğün artık hiçbir gün tekrarlanmaz.', style: TextStyle(fontSize: 12)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final allProds = context.read<ProductProvider>().products;
+                    await context.read<ProgramProvider>().removeSlotFromActiveProgram(userId, routine.slotId!, allProds);
+                  },
+                ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -614,6 +717,7 @@ class _ProductTile extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: () => _showInstruction(context),
+              onLongPress: () => _showDeleteDialog(context),
               child: Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),

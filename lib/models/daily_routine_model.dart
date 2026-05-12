@@ -11,6 +11,7 @@ class DailyRoutineModel {
   // Yeni alanlar — geriye dönük uyumlu (mevcut dokümanlar 'product' olarak yorumlanır)
   final RoutineStepType stepType;
   final int? amountMl; // Yalnızca stepType == water için (250 ml)
+  final String? slotId; // Hangi kalıcı slot'tan üretildiğini takip etmek için
 
   DailyRoutineModel({
     required this.id,
@@ -19,6 +20,7 @@ class DailyRoutineModel {
     this.isCompleted = false,
     this.stepType = RoutineStepType.product,
     this.amountMl,
+    this.slotId,
   });
 
   factory DailyRoutineModel.fromMap(
@@ -45,6 +47,7 @@ class DailyRoutineModel {
       isCompleted: map['is_completed'] as bool? ?? false,
       stepType: stepType,
       amountMl: map['amount_ml'] as int?,
+      slotId: map['slot_id'] as String?,
     );
   }
 
@@ -55,6 +58,7 @@ class DailyRoutineModel {
       'is_completed': isCompleted,
       'step_type': stepType.name,
       if (amountMl != null) 'amount_ml': amountMl,
+      if (slotId != null) 'slot_id': slotId,
     };
   }
 
@@ -65,6 +69,7 @@ class DailyRoutineModel {
     bool? isCompleted,
     RoutineStepType? stepType,
     int? amountMl,
+    String? slotId,
   }) {
     return DailyRoutineModel(
       id: id ?? this.id,
@@ -73,6 +78,7 @@ class DailyRoutineModel {
       isCompleted: isCompleted ?? this.isCompleted,
       stepType: stepType ?? this.stepType,
       amountMl: amountMl ?? this.amountMl,
+      slotId: slotId ?? this.slotId,
     );
   }
 

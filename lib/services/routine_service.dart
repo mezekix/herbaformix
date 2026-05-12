@@ -182,4 +182,27 @@ class RoutineService {
 
     return streak;
   }
+
+  // Sadece bugün için tek seferlik bir rutin ekler
+  Future<String> addSingleRoutine(String userId, DailyRoutineModel routine) async {
+    final routinesRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('Daily_Routines');
+        
+    final newRef = routinesRef.doc();
+    final newRoutine = routine.copyWith(id: newRef.id);
+    await newRef.set(newRoutine.toMap());
+    return newRef.id;
+  }
+
+  // Belirli bir rutini veritabanından siler (tek seferlik öğünleri veya o günkü rutini kaldırmak için)
+  Future<void> deleteRoutine(String userId, String routineId) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('Daily_Routines')
+        .doc(routineId)
+        .delete();
+  }
 }

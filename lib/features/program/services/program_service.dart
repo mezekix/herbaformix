@@ -120,12 +120,34 @@ class ProgramService {
     List<ProductModel> allProducts,
   ) async {
     final now = DateTime.now();
-    await _routineService.clearTodayRoutines(userId);
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
 
     final routinesRef = _firestore
         .collection('users')
         .doc(userId)
         .collection('Daily_Routines');
+
+    // Mevcut bugünkü rutinleri al ve tamamlama durumlarını (isCompleted) sakla
+    final todayDocs = await routinesRef
+        .where('scheduled_time', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('scheduled_time', isLessThan: Timestamp.fromDate(endOfDay))
+        .get();
+
+    final completedMap = <String, bool>{};
+    final batch = _firestore.batch(); // Atomik işlem için batch kullanıyoruz
+
+    for (var doc in todayDocs.docs) {
+      final data = doc.data();
+      final pId = data['product_id'] as String? ?? '';
+      final time = (data['scheduled_time'] as Timestamp).toDate();
+      final key = '${pId}_${time.hour}:${time.minute}';
+      if (data['is_completed'] == true) {
+        completedMap[key] = true;
+      }
+      // Eski rutini silmek üzere batch'e ekle
+      batch.delete(doc.reference);
+    }
 
     // Slotları saate göre sırala
     final sortedSlots = program.sortedSlots;
@@ -144,29 +166,35 @@ class ProgramService {
         // Normal öğünde de su adımı ekle (snack hariç)
         if (slot.kind != MealSlotKind.snack) {
           final waterTime = mealDateTime.subtract(const Duration(minutes: 30));
+          final waterKey = 'water_step_${waterTime.hour}:${waterTime.minute}';
           final waterRef = routinesRef.doc();
-          await waterRef.set(
+          batch.set(
+            waterRef,
             DailyRoutineModel(
               id: waterRef.id,
               productId: 'water_step',
               scheduledTime: waterTime,
-              isCompleted: false,
+              isCompleted: completedMap[waterKey] ?? false,
               stepType: RoutineStepType.water,
               amountMl: 500,
+              slotId: slot.id,
             ).toMap(),
           );
         }
 
-        // Normal öğün için label'ı "Dengeli bir X" formatında oluştur
+        // Normal öğün için label'ı oluştur
         final mealLabel = _buildNormalMealLabel(slot.kind, slot.label);
+        final mealKey = '${mealLabel}_${mealDateTime.hour}:${mealDateTime.minute}';
         final mealRef = routinesRef.doc();
-        await mealRef.set(
+        batch.set(
+          mealRef,
           DailyRoutineModel(
             id: mealRef.id,
             productId: mealLabel,
             scheduledTime: mealDateTime,
-            isCompleted: false,
+            isCompleted: completedMap[mealKey] ?? false,
             stepType: RoutineStepType.normalMeal,
+            slotId: slot.id,
           ).toMap(),
         );
         continue;
@@ -175,33 +203,42 @@ class ProgramService {
       // Su adımı: sadece ana öğünlerde (sabah, öğle, akşam) — ara öğünde yok
       if (slot.kind != MealSlotKind.snack) {
         final waterTime = mealDateTime.subtract(const Duration(minutes: 30));
+        final waterKey = 'water_step_${waterTime.hour}:${waterTime.minute}';
         final waterRef = routinesRef.doc();
-        await waterRef.set(
+        batch.set(
+          waterRef,
           DailyRoutineModel(
             id: waterRef.id,
             productId: 'water_step',
             scheduledTime: waterTime,
-            isCompleted: false,
+            isCompleted: completedMap[waterKey] ?? false,
             stepType: RoutineStepType.water,
             amountMl: 500,
+            slotId: slot.id,
           ).toMap(),
         );
       }
 
       // Her ürün için ayrı rutin kaydı
       for (final mealProduct in slot.products) {
+        final pKey = '${mealProduct.productId}_${mealDateTime.hour}:${mealDateTime.minute}';
         final productRef = routinesRef.doc();
-        await productRef.set(
+        batch.set(
+          productRef,
           DailyRoutineModel(
             id: productRef.id,
             productId: mealProduct.productId,
             scheduledTime: mealDateTime,
-            isCompleted: false,
+            isCompleted: completedMap[pKey] ?? false,
             stepType: RoutineStepType.product,
+            slotId: slot.id,
           ).toMap(),
         );
       }
     }
+
+    // Tüm silme ve yazma işlemlerini tek seferde uygula
+    await batch.commit();
   }
 
   /// Normal öğün için "Dengeli bir X" formatında label oluşturur
@@ -214,7 +251,7 @@ class ProgramService {
       case MealSlotKind.morning:
         return 'Dengeli bir Kahvaltı';
       case MealSlotKind.snack:
-        return 'Sağlıklı Ara Öğün';
+        return fallbackLabel.isNotEmpty ? fallbackLabel : 'Sağlıklı Ara Öğün';
     }
   }
 }

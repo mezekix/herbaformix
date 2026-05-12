@@ -5,6 +5,7 @@ import '../../../core/app_colors.dart';
 import '../../../models/product_model.dart';
 import '../../products/providers/product_provider.dart';
 import '../../products/screens/product_detail_screen.dart';
+import '../../../widgets/cached_product_image.dart';
 
 /// Müşteri "Ürünler" sekmesi — İç/Dış Beslenme ürün kataloğu (embedded, AppBar yok)
 class CustomerProductsScreen extends StatefulWidget {
@@ -286,21 +287,12 @@ class _ProductCard extends StatelessWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                ? Image.network(
-                    product.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.local_drink_outlined,
-                      color: AppColors.primary,
-                      size: 28,
-                    ),
-                  )
-                : const Icon(
-                    Icons.local_drink_outlined,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
+              child: CachedProductImage(
+                imageUrl: product.imageUrl,
+                fit: BoxFit.cover,
+                width: 56,
+                height: 56,
+              ),
             ),
           ),
           const SizedBox(width: 14),
@@ -438,25 +430,10 @@ class _ProductGridCard extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: product.imageUrl != null && product.imageUrl!.isNotEmpty
-                      ? Image.network(
-                          product.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const Center(
-                            child: Icon(
-                              Icons.local_drink_outlined,
-                              color: AppColors.primary,
-                              size: 36,
-                            ),
-                          ),
-                        )
-                      : const Center(
-                          child: Icon(
-                            Icons.local_drink_outlined,
-                            color: AppColors.primary,
-                            size: 36,
-                          ),
-                        ),
+                    child: CachedProductImage(
+                      imageUrl: product.imageUrl,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),

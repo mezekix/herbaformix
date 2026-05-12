@@ -21,16 +21,16 @@ class CustomerProfileMenu extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.05),
               border: Border(
-                bottom: BorderSide(color: AppColors.primary.withOpacity(0.1)),
+                bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
               ),
             ),
             child: Column(
               children: [
                 CircleAvatar(
                   radius: 50,
-                  backgroundColor: AppColors.primary.withOpacity(0.2),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                   backgroundImage: userProfile?.profilePhotoUrl != null
                       ? NetworkImage(userProfile!.profilePhotoUrl!) // TODO: Handle file:// and initials properly as in HomeScreen
                       : null,
@@ -125,7 +125,7 @@ class CustomerProfileMenu extends StatelessWidget {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
+          color: AppColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: AppColors.primary),
