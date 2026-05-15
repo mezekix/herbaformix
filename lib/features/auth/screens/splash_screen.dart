@@ -1,13 +1,13 @@
-import 'dart:async'; // Timer için gerekli
-import 'dart:math'; // Random konumlandırma için gerekli
+import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart'; // go_router için gerekli
-import 'package:provider/provider.dart'; // Provider için gerekli
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/screens/login_screen.dart';
-// Kendi uygulama yapınıza göre bu import'ları düzenleyin
 import '../../home/screens/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -20,120 +20,108 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController
-  _controller; // Tüm animasyonları kontrol eden ana kontrolcü
-  late Animation<double> _fadeAnimation; // Ana logo için soluklaşma animasyonu
-  late Animation<double>
-  _scaleAnimation; // Ana logo için ölçeklendirme animasyonu
-  late Animation<Offset>
-  _slideAnimation; // Metin için yukarı kaydırma animasyonu
+  static const Color _bgColor = Color(0xFF256431);
 
-  // Arka plan resmi 1 için ölçeklendirme animasyonu
+  late AnimationController _controller;
+
+  // f1/f2 arka plan resimleri animasyonları
   late Animation<double> _bgImage1Scale;
-  // Arka plan resmi 1 için rastgele konumlandırma (üst yarıda)
-  late Alignment _bgImage1Alignment;
-
-  // Arka plan resmi 2 için ölçeklendirme animasyonu
   late Animation<double> _bgImage2Scale;
-  // Arka plan resmi 2 için rastgele konumlandırma (alt yarıda)
+  late Alignment _bgImage1Alignment;
   late Alignment _bgImage2Alignment;
+
+  // H Logo animasyonları
+  late Animation<double> _logoFade;
+  late Animation<double> _logoScale;
+
+  // Slogan yazısı animasyonları
+  late Animation<Offset> _textSlide;
+  late Animation<double> _textFade;
 
   @override
   void initState() {
     super.initState();
 
-    // Random nesnesi oluştur
+    // Status bar rengini splash ile aynı yap
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: _bgColor,
+      statusBarIconBrightness: Brightness.light,
+    ));
+
     final random = Random();
 
-    // Arka plan resimleri için rastgele hizalamalar belirle
-    // Resim 1 için ekranın üst yarısı (-1.0 ile -0.4 arası y değeri)
+    // f1: ekranın üst bölgesinde rastgele konum
     _bgImage1Alignment = Alignment(
-      random.nextDouble() * 1.4 - 0.7, // -0.7 ile 0.7 arasında rastgele x
-      random.nextDouble() * 0.3 - 0.8, // -0.8 ile -0.5 arasında rastgele y
+      random.nextDouble() * 1.4 - 0.7,
+      random.nextDouble() * 0.3 - 0.8, // üst kısım
     );
-    // Resim 2 için ekranın alt yarısı (0.4 ile 1.0 arası y değeri)
+    // f2: ekranın alt bölgesinde rastgele konum
     _bgImage2Alignment = Alignment(
-      random.nextDouble() * 1.4 - 0.7, // -0.7 ile 0.7 arasında rastgele x
-      random.nextDouble() * 0.3 + 0.5, // 0.5 ile 0.8 arasında rastgele y
+      random.nextDouble() * 1.4 - 0.7,
+      random.nextDouble() * 0.3 + 0.5, // alt kısım
     );
 
-    // Animasyon kontrolcüsünü başlat
-    // Toplam animasyon süresi 5 saniye
+    // Toplam süre: 3 saniye
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 3),
     );
 
-    // Arka plan resmi 1 için ölçeklendirme animasyonu (bounce kaldırıldı)
+    // 1) f1 resmi: %0-%35 arası scale in
     _bgImage1Scale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(
-          0.0,
-          0.4,
-          curve: Curves.easeOut,
-        ), // İlk %40'ta yumuşak büyüsün
+        curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
       ),
     );
 
-    // Arka plan resmi 2 için ölçeklendirme animasyonu (bounce kaldırıldı)
+    // 2) f2 resmi: %8-%40 arası scale in (biraz gecikmeli)
     _bgImage2Scale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(
-          0.1,
-          0.5,
-          curve: Curves.easeOut,
-        ), // Biraz gecikmeli olarak %10-%50 arasında yumuşak büyüsün
+        curve: const Interval(0.08, 0.40, curve: Curves.easeOut),
       ),
     );
 
-    // Ana logo için soluklaşma (fade-in) animasyonu
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    // 3) H Logo: %35-%75 arası fade + scale
+    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(
-          0.4,
-          0.9,
-          curve: Curves.easeOut,
-        ), // %40-%80 arasında belirsin
+        curve: const Interval(0.35, 0.75, curve: Curves.easeOut),
       ),
     );
-
-    // Ana logo için ölçeklendirme animasyonu (bounce kaldırıldı)
-    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+    _logoScale = Tween<double>(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(
-          0.4,
-          0.9,
-          curve: Curves.easeOut,
-        ), // %40-%90 arasında yumuşak büyüsün
+        curve: const Interval(0.35, 0.75, curve: Curves.easeOut),
       ),
     );
 
-    // Metin için yukarı kaydırma (slide-in-up) animasyonu (bounce kaldırıldı)
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: const Interval(
-              0.7,
-              1.0,
-              curve: Curves.easeOut,
-            ), // %70-%100 arasında yumuşak kaydırılsın
-          ),
-        );
+    // 4) Slogan yazısı: %60-%100 arası slide up + fade
+    _textSlide = Tween<Offset>(
+      begin: const Offset(0, 0.5),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.60, 1.0, curve: Curves.easeOut),
+      ),
+    );
+    _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.60, 1.0, curve: Curves.easeOut),
+      ),
+    );
 
-    // Animasyonları başlat
+    // Animasyonu başlat
     _controller.forward();
 
-    // Animasyon tamamlandıktan sonra navigasyon yap
+    // Animasyon bittikten sonra navigasyon
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        // Animasyon bittikten 1 saniye sonra navigasyon yap
-        Future.delayed(const Duration(seconds: 1), () {
-          if (!mounted) return; // Widget ağaçta hala var mı kontrol et
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (!mounted) return;
           final authProvider = Provider.of<AuthProvider>(
             context,
             listen: false,
@@ -153,150 +141,127 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _controller.dispose(); // Animasyon kontrolcüsünü temizle
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Container(
-          // Arka plan gradyanı - Daha yumuşak pastel renkler kullanıldı
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: _bgColor,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: _bgColor,
+      ),
+      child: Scaffold(
+        backgroundColor: _bgColor,
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFFA5D6A7),
-                Color(0xFFE1BEE7),
-              ], // Pastel yeşil ve lavanta tonları
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+                Color(0xFF256431),
+                Color(0xFF1B4D26),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Stack(
-                // Katmanlar halinde elemanları yerleştirmek için Stack kullanıldı
-                children: [
-                  // Arka plan resmi 1 (Ekranın üst yarısı)
-                  Align(
-                    alignment: _bgImage1Alignment,
-                    child: ScaleTransition(
-                      // Sadece ölçeklendirme animasyonu kullanıldı
-                      scale: _bgImage1Scale,
-                      child: Image.asset(
-                        'assets/f1.png', // Uzantı .png
-                        width:
-                            MediaQuery.of(context).size.width *
-                            0.30, // Daha küçük boyut (%25)
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: MediaQuery.of(context).size.width * 0.30,
-                            height: 50,
-                            color: Colors.grey[300],
-                            child: const Center(
-                              child: Text(
-                                'Resim 1',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+          child: Stack(
+            children: [
+              // --- f1 resmi: ekranın üst bölgesinde ---
+              Align(
+                alignment: _bgImage1Alignment,
+                child: ScaleTransition(
+                  scale: _bgImage1Scale,
+                  child: Image.asset(
+                    'assets/f1.png',
+                    width: screenWidth * 0.30,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox.shrink(),
                   ),
-                  // Arka plan resmi 2 (Ekranın alt yarısı)
-                  Align(
-                    alignment: _bgImage2Alignment,
-                    child: ScaleTransition(
-                      // Sadece ölçeklendirme animasyonu kullanıldı
-                      scale: _bgImage2Scale,
-                      child: Image.asset(
-                        'assets/f2.png', // Uzantı .png
-                        width:
-                            MediaQuery.of(context).size.width *
-                            0.30, // Daha küçük boyut (%25)
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: MediaQuery.of(context).size.width * 0.30,
-                            height: 50,
-                            color: Colors.grey[300],
-                            child: const Center(
-                              child: Text(
-                                'Resim 2',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                ),
+              ),
+              // --- f2 resmi: ekranın alt bölgesinde ---
+              Align(
+                alignment: _bgImage2Alignment,
+                child: ScaleTransition(
+                  scale: _bgImage2Scale,
+                  child: Image.asset(
+                    'assets/f2.png',
+                    width: screenWidth * 0.30,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const SizedBox.shrink(),
                   ),
-                  // Ana içerik (logo ve metin) ortada
-                  Center(
-                    child: FadeTransition(
-                      opacity:
-                          _fadeAnimation, // Logo için soluklaşma animasyonu
+                ),
+              ),
+              // --- Ortada: H Logo + Slogan ---
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // H Logo
+                    FadeTransition(
+                      opacity: _logoFade,
                       child: ScaleTransition(
-                        // Logo için ölçeklendirme animasyonu
-                        scale: _scaleAnimation,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Logo resmi
-                            Image.asset(
-                              'assets/herbalife_logo.webp', // Uzantı .webp olarak ayarlandı
-                              width:
-                                  MediaQuery.of(context).size.width *
-                                  0.6, // Ekran genişliğinin %60'ı (arka plan resimlerinden büyük)
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.6,
-                                  height: 100,
-                                  color: Colors.grey[400],
-                                  child: const Center(
-                                    child: Text(
-                                      'Herbalife Logo',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
+                        scale: _logoScale,
+                        child: Image.asset(
+                          'assets/logo/logo_h.png',
+                          width: screenWidth * 0.45,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return SizedBox(
+                              width: screenWidth * 0.45,
+                              height: 100,
+                              child: const Center(
+                                child: Text(
+                                  'H',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 60,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 18), // Boşluk
-                            SlideTransition(
-                              position:
-                                  _slideAnimation, // Metin için kaydırma animasyonu
-                              child: const Text(
-                                'live your best life',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  shadows: [
-                                    Shadow(
-                                      blurRadius: 10.0,
-                                      color: Colors.black38,
-                                      offset: Offset(2.0, 2.0),
-                                    ),
-                                  ],
                                 ),
                               ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 18),
+                    // Slogan
+                    SlideTransition(
+                      position: _textSlide,
+                      child: FadeTransition(
+                        opacity: _textFade,
+                        child: const Text(
+                          'Doğadan gelen güç, seninle başlar',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            shadows: [
+                              Shadow(
+                                blurRadius: 8.0,
+                                color: Colors.black12,
+                                offset: Offset(1.0, 1.0),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

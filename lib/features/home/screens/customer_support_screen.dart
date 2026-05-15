@@ -7,7 +7,8 @@ import '../../auth/providers/auth_provider.dart';
 
 /// Müşteri "Destek" sekmesi — distribütöre ulaşma ve SSS
 class CustomerSupportScreen extends StatelessWidget {
-  const CustomerSupportScreen({super.key});
+  final bool hideTitle;
+  const CustomerSupportScreen({super.key, this.hideTitle = false});
 
   @override
   Widget build(BuildContext context) {
@@ -17,24 +18,26 @@ class CustomerSupportScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Destek',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: AppColors.nightSky,
+            if (!hideTitle) ...[
+              const Text(
+                'Destek',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.nightSky,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Sorularınız için danışmanınıza ulaşın',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade500,
+              const SizedBox(height: 4),
+              Text(
+                'Sorularınız için danışmanınıza ulaşın',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade500,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ],
 
             // Danışman iletişim kartı
             Container(

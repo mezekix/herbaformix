@@ -144,176 +144,201 @@ class _ProductListScreenState extends State<ProductListScreen> {
     final isCustomer = authProvider.userProfile?.role == UserRole.customer;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isCustomer ? 'Ürün Kataloğu' : 'Ürünler'),
-        actions: [
-          IconButton(
-            icon: Icon(_isGridView ? Icons.view_list : Icons.view_module),
-            onPressed: () {
-              setState(() {
-                _isGridView = !_isGridView;
-              });
-            },
-          ),
-          if (!isCustomer)
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              tooltip: 'Yeni Ürün Ekle',
-              onPressed: () {
-                context.goNamed(AddEditProductScreen.routeName);
-              },
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Ürün Ara',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            title: Text(isCustomer ? 'Ürün Kataloğu' : 'Ürünler'),
+            pinned: true,
+            floating: true,
+            snap: true,
+            actions: [
+              IconButton(
+                icon: Icon(_isGridView ? Icons.view_list : Icons.view_module),
+                onPressed: () {
+                  setState(() {
+                    _isGridView = !_isGridView;
+                  });
+                },
               ),
-            ),
+              if (!isCustomer)
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  tooltip: 'Yeni Ürün Ekle',
+                  onPressed: () {
+                    context.goNamed(AddEditProductScreen.routeName);
+                  },
+                ),
+            ],
           ),
-          SizedBox(
-            height: 60,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              scrollDirection: Axis.horizontal,
-              itemCount: _categories.length,
-              itemBuilder: (context, index) {
-                final category = _categories[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: FilterChip(
-                    label: Text(category),
-                    selected: _selectedCategory == category,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedCategory = category;
-                        _filterProducts();
-                      });
-                    },
-                    selectedColor: Theme.of(
-                      context,
-                    ).primaryColor.withAlpha(204),
-                    labelStyle: TextStyle(
-                      color: _selectedCategory == category
-                          ? Colors.white
-                          : Theme.of(context).textTheme.bodyLarge?.color,
-                      fontWeight: FontWeight.w600,
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      labelText: 'Ürün Ara',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                              },
+                            )
+                          : null,
                     ),
-                    checkmarkColor: Colors.white,
                   ),
-                );
-              },
+                ),
+                SizedBox(
+                  height: 60,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _categories.length,
+                    itemBuilder: (context, index) {
+                      final category = _categories[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        child: FilterChip(
+                          label: Text(category),
+                          selected: _selectedCategory == category,
+                          onSelected: (selected) {
+                            setState(() {
+                              _selectedCategory = category;
+                              _filterProducts();
+                            });
+                          },
+                          selectedColor: Theme.of(
+                            context,
+                          ).primaryColor.withAlpha(204),
+                          labelStyle: TextStyle(
+                            color: _selectedCategory == category
+                                ? Colors.white
+                                : Theme.of(context).textTheme.bodyLarge?.color,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          checkmarkColor: Colors.white,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: productProvider.isLoading && _filteredProducts.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredProducts.isEmpty
-                ? Center(
-                    child: Text(
-                      _searchQuery.isEmpty
-                          ? 'Henüz ürün eklenmemiş.'
-                          : 'Aramanızla eşleşen ürün bulunamadı.',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  )
-                : _isGridView
-                ? _buildGridView()
-                : _buildListView(),
-          ),
+          if (productProvider.isLoading && _filteredProducts.isEmpty)
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_filteredProducts.isEmpty)
+            SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  _searchQuery.isEmpty
+                      ? 'Henüz ürün eklenmemiş.'
+                      : 'Aramanızla eşleşen ürün bulunamadı.',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            )
+          else if (_isGridView)
+            _buildSliverGridView()
+          else
+            _buildSliverListView(),
         ],
       ),
     );
   }
 
-  Widget _buildListView() {
-    return ListView.builder(
-      itemCount: _filteredProducts.length,
-      itemBuilder: (context, index) {
-        final product = _filteredProducts[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.all(12.0),
-            leading: Hero(
-              tag: 'productImage_${product.id}',
-              child: Container(
+  Widget _buildSliverListView() {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final product = _filteredProducts[index];
+          return _buildListItem(product);
+        },
+        childCount: _filteredProducts.length,
+      ),
+    );
+  }
+
+  Widget _buildListItem(ProductModel product) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(12.0),
+        leading: Hero(
+          tag: 'productImage_${product.id}',
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [Colors.grey.shade100, Colors.white],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: ClipOval(
+              child: CachedProductImage(
+                imageUrl: product.imageUrl,
                 width: 60,
                 height: 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Colors.grey.shade100, Colors.white],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: ClipOval(
-                  child: CachedProductImage(
-                    imageUrl: product.imageUrl,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+                fit: BoxFit.cover,
               ),
             ),
-            title: Text(
-              product.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              'Fiyat: ${(product.price ?? 0).toStringAsFixed(2)} ₺',
-              style: TextStyle(color: Theme.of(context).primaryColor),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              context.pushNamed(
-                ProductDetailScreen.routeName,
-                pathParameters: {'productId': product.id},
-              );
-            },
           ),
-        );
-      },
+        ),
+        title: Text(
+          product.name,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        subtitle: Text(
+          'Fiyat: ${(product.price ?? 0).toStringAsFixed(2)} ₺',
+          style: TextStyle(color: Theme.of(context).primaryColor),
+        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () {
+          context.pushNamed(
+            ProductDetailScreen.routeName,
+            pathParameters: {'productId': product.id},
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildGridView() {
-    return GridView.builder(
+  Widget _buildSliverGridView() {
+    return SliverPadding(
       padding: const EdgeInsets.all(10.0),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, // Yan yana 2 ürün
-        crossAxisSpacing: 10.0,
-        mainAxisSpacing: 10.0,
-        childAspectRatio: 0.75, // Kartların en-boy oranı
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 10.0,
+          mainAxisSpacing: 10.0,
+          childAspectRatio: 0.75,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final product = _filteredProducts[index];
+            return _buildGridItem(product);
+          },
+          childCount: _filteredProducts.length,
+        ),
       ),
-      itemCount: _filteredProducts.length,
-      itemBuilder: (context, index) {
-        final product = _filteredProducts[index];
-        return _buildGridItem(product);
-      },
     );
   }
 
@@ -359,9 +384,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 children: [
                   Text(
                     '${product.name}\n',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -381,16 +407,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    children: List.generate(5, (index) {
-                      // Örnek rating gösterimi
-                      return Icon(
-                        index < 4 ? Icons.star : Icons.star_border,
-                        color: Colors.amber,
-                        size: 16,
-                      );
-                    }),
-                  ),
                 ],
               ),
             ),

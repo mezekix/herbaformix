@@ -9,6 +9,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
 import 'add_edit_product_screen.dart';
 import '../../../widgets/cached_product_image.dart';
+import 'product_image_viewer_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   static const String routeName = 'product-detail';
@@ -24,6 +25,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   ProductModel? _product;
+  List<ProductModel> _relatedProducts = [];
   bool _isLoading = true;
   String? _error;
 
@@ -57,6 +59,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       );
       setState(() {
         _product = product;
+        
+        // Benzer ürünleri hazırla (kendisi hariç, karıştırılmış ve ilk 6 ürün)
+        _relatedProducts = productProvider.products
+            .where((p) => p.id != product.id)
+            .toList()
+          ..shuffle();
+        if (_relatedProducts.length > 6) {
+          _relatedProducts = _relatedProducts.sublist(0, 6);
+        }
+        
         _isLoading = false;
       });
     } catch (e) {
@@ -158,70 +170,113 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     final isCustomer = authProvider.userProfile?.role == UserRole.customer;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ürün Detayı'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: AppColors.textPrimary,
-        actions: [
-          if (!isCustomer)
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: _editProduct,
-              tooltip: 'Düzenle',
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(isCustomer),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDescription(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('İçindekiler'),
+                  const SizedBox(height: 8),
+                  _buildIngredients(),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Kullanım Bilgisi'),
+                  const SizedBox(height: 8),
+                  _buildUsage(),
+                  const SizedBox(height: 24),
+                  _buildRelatedProductsSection(),
+                  const SizedBox(height: 90),
+                ],
+              ),
             ),
-          if (!isCustomer)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              onPressed: _deleteProduct,
-              tooltip: 'Sil',
-              color: Colors.red,
-            ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildProductImage(),
-              const SizedBox(height: 24),
-              _buildProductInfo(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Açıklama'),
-              const SizedBox(height: 8),
-              _buildDescription(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('İçindekiler'),
-              const SizedBox(height: 8),
-              _buildIngredients(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Kullanım Bilgisi'),
-              const SizedBox(height: 8),
-              _buildUsage(),
-              const SizedBox(height: 24),
-              _buildReviewsSection(),
-              const SizedBox(height: 24),
-              _buildRelatedProductsSection(),
-              const SizedBox(height: 90), // For bottom button spacing
-            ],
           ),
-        ),
+        ],
       ),
       bottomSheet: _buildAddToCartButton(),
     );
   }
 
-  Widget _buildProductImage() {
-    return Center(
-      child: CachedProductImage(
-        imageUrl: _product!.imageUrl,
-        height: 250,
-        fit: BoxFit.contain,
+  Widget _buildSliverAppBar(bool isCustomer) {
+    return SliverAppBar(
+      expandedHeight: 300,
+      pinned: true,
+      backgroundColor: Colors.white,
+      foregroundColor: AppColors.textPrimary,
+      elevation: 0.5,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => context.pop(),
+      ),
+      // Üst bar'da title YOK — isim FlexibleSpaceBar.title'da
+      actions: [
+        if (!isCustomer)
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: _editProduct,
+            tooltip: 'Düzenle',
+          ),
+        if (!isCustomer)
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: _deleteProduct,
+            tooltip: 'Sil',
+            color: Colors.red,
+          ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        // Ürün ismi: açıkken altta, scroll'da yukarıya taşınır
+        title: Text(
+          _product!.name,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        titlePadding: const EdgeInsetsDirectional.only(
+          start: 56,
+          bottom: 16,
+          end: 56,
+        ),
+        collapseMode: CollapseMode.pin,
+        background: Container(
+          color: Colors.white,
+          padding: const EdgeInsets.only(top: 60, bottom: 48),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                PageRouteBuilder(
+                  opaque: false,
+                  barrierColor: Colors.black,
+                  pageBuilder: (_, _, _) => ProductImageViewerScreen(
+                    imageUrl: _product!.imageUrl,
+                    heroTag: 'productImage_${_product!.id}',
+                    productName: _product!.name,
+                  ),
+                ),
+              );
+            },
+            child: Hero(
+              tag: 'productImage_${_product!.id}',
+              child: CachedProductImage(
+                imageUrl: _product!.imageUrl,
+                height: 250,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
+
 
   Widget _buildProductInfo() {
     return Column(
@@ -232,13 +287,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'A delicious and nutritious meal replacement shake that provides essential nutrients and helps support weight management.',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
         ),
       ],
     );
@@ -279,131 +327,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     );
   }
 
-  Widget _buildReviewsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Değerlendirmeler'),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Text('4.5', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(width: 8),
-            const Icon(Icons.star, color: Colors.amber, size: 30),
-            const SizedBox(width: 16),
-            const Text('125 reviews'),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _buildRatingBar(5, 0.4),
-        _buildRatingBar(4, 0.3),
-        _buildRatingBar(3, 0.15),
-        _buildRatingBar(2, 0.10),
-        _buildRatingBar(1, 0.05),
-        const SizedBox(height: 24),
-        _buildReviewItem(
-          'Sophia Bennett',
-          '2 weeks ago',
-          'I love this shake! It\'s delicious and keeps me full for hours. I\'ve been using it for a month and have already seen great results.',
-        ),
-        const SizedBox(height: 16),
-        _buildReviewItem(
-          'Ethan Carter',
-          '1 month ago',
-          'This shake is a convenient and healthy option for busy days. The taste is good, and it\'s easy to prepare.',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRatingBar(int star, double percentage) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Text('$star'),
-          const SizedBox(width: 8),
-          const Icon(Icons.star, color: Colors.amber, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: LinearProgressIndicator(
-              value: percentage,
-              backgroundColor: Colors.grey[300],
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text('${(percentage * 100).toInt()}%'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewItem(String name, String date, String review) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const CircleAvatar(child: Icon(Icons.person)),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(date, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-            const Spacer(),
-            Row(
-              children: List.generate(
-                5,
-                (index) => Icon(Icons.star, color: Colors.amber, size: 16),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(review),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Icon(Icons.thumb_up_alt_outlined, size: 18),
-            const SizedBox(width: 4),
-            const Text('15'),
-            const SizedBox(width: 16),
-            const Icon(Icons.thumb_down_alt_outlined, size: 18),
-            const SizedBox(width: 4),
-            const Text('2'),
-          ],
-        ),
-      ],
-    );
-  }
 
   Widget _buildRelatedProductsSection() {
-    final productProvider = Provider.of<ProductProvider>(context);
-    final allProducts = productProvider.products;
-    final relatedProducts = allProducts
-        .where((p) => p.id != _product!.id)
-        .toList();
-
-    if (relatedProducts.isEmpty) {
+    if (_relatedProducts.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('İlgili Ürünler'),
+        _buildSectionTitle('İlgi Duyabilirsiniz'),
         const SizedBox(height: 16),
         SizedBox(
           height: 220,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: relatedProducts.length,
+            itemCount: _relatedProducts.length,
             itemBuilder: (context, index) {
-              return _buildRelatedProductItem(relatedProducts[index]);
+              return _buildRelatedProductItem(_relatedProducts[index]);
             },
           ),
         ),
@@ -439,7 +380,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             const SizedBox(height: 8),
             Text(
               product.name,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),

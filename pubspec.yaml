@@ -36,6 +36,7 @@ dependencies:
   path_provider: ^2.1.5
   timezone: ^0.11.0
   cached_network_image: ^3.4.1
+  photo_view: ^0.15.0
 
 
 
@@ -49,16 +50,19 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/logo/logo.png"
+  remove_alpha_ios: true
+  image_path: "assets/logo/logo_h.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/logo/logo_h.png"
   web:
     generate: true
-    image_path: "assets/logo/logo.png"
-    background_color: "#hexcode"
-    theme_color: "#hexcode"
+    image_path: "assets/logo/logo_h.png"
+    background_color: "#ffffff"
+    theme_color: "#1A5C1A"
   windows:
     generate: true
-    image_path: "assets/logo/logo.png"
+    image_path: "assets/logo/logo_h.png"
     icon_size: 48 # min:48, max:256, default: 48
 
 
@@ -71,7 +75,7 @@ flutter:
   assets:
     - assets/
     - assets/logo/
-    
+    - assets/logo/logo.webp
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
   # For details regarding adding assets from package dependencies, see

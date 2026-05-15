@@ -19,6 +19,7 @@ import '../features/profile/screens/profile_screen.dart';
 import '../features/profile/screens/personal_info_screen.dart';
 import '../features/profile/screens/health_goals_screen.dart';
 import '../features/profile/screens/app_settings_screen.dart';
+import '../features/profile/screens/support_screen.dart';
 import '../features/progress/screens/measurements_history_screen.dart';
 import '../features/progress/screens/progress_photos_screen.dart';
 import '../features/water_tracker/screens/water_tracker_screen.dart';
@@ -83,6 +84,11 @@ class AppRouter {
                 path: 'app-settings',
                 name: 'app-settings',
                 builder: (context, state) => const AppSettingsScreen(),
+              ),
+              GoRoute(
+                path: 'support',
+                name: 'support',
+                builder: (context, state) => const SupportScreen(),
               ),
             ],
           ),

@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isRegisterMode = false; // Giriş/Kayıt modunu takip etmek için
   bool _obscurePassword = true;
-  UserRole _selectedRole = UserRole.customer; // Varsayılan seçili rol
+  final UserRole _selectedRole = UserRole.customer; // Varsayılan seçili rol
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
@@ -134,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(
                         height: 96,
                         child: Image.asset(
-                          'assets/logo/logo.png',
+                          'assets/logo/new_logo.png',
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
                               Icons.spa,
@@ -247,48 +247,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       // Role Selection (Only in register mode)
                       if (_isRegisterMode) ...[
+                        // Davet Kodu
                         const SizedBox(height: 20),
-                        DropdownButtonFormField<UserRole>(
-                          initialValue: _selectedRole,
-                          dropdownColor: inputBg,
-                          style: TextStyle(color: textPrimary),
-                          decoration: InputDecoration(
-                            hintText: 'Rolünüz',
-                            hintStyle: TextStyle(color: textSecondary),
-                            prefixIcon: Icon(Icons.badge_outlined, color: textSecondary),
-                            filled: true,
-                            fillColor: inputBg,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 20),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
-                            ),
-                          ),
-                          items: UserRole.values.map((UserRole role) {
-                            return DropdownMenuItem<UserRole>(
-                              value: role,
-                              child: Text(role.name),
-                            );
-                          }).toList(),
-                          onChanged: (UserRole? newValue) {
-                            setState(() {
-                              _selectedRole = newValue!;
-                            });
-                          },
-                          validator: (value) => value == null ? 'Lütfen bir rol seçin.' : null,
-                        ),
-                        // Davet Kodu (yalnızca müşteri rolünde göster)
-                        if (_selectedRole == UserRole.customer) ...[
-                          const SizedBox(height: 20),
-                          TextFormField(
+                        TextFormField(
                             controller: _inviteCodeController,
                             style: TextStyle(color: textPrimary),
                             decoration: InputDecoration(
@@ -312,7 +273,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                        ],
                       ],
                       // Forgot Password Link
                       if (!_isRegisterMode) ...[

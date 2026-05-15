@@ -2,12 +2,10 @@
 <resources>
     <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/empty_icon</item>
-        <!-- İsteğe bağlı: Arka plan rengini kendi splash ekranınıza uyumlu yapabilirsiniz -->
-        <item name="android:windowSplashScreenBackground">@android:color/white</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_color</item>
     </style>
     
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowBackground">@drawable/launch_background</item>
     </style>
 </resources>

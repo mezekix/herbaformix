@@ -15,20 +15,44 @@ class MealPlanStep extends StatefulWidget {
 }
 
 class _MealPlanStepState extends State<MealPlanStep> {
+  bool _slotsInitialized = false;
+
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final provider = context.read<ProgramProvider>();
-    if (provider.slots.isEmpty) {
-      provider.initSlots(provider.selectedGoal ?? 'healthy_living');
-    }
+  void initState() {
+    super.initState();
+    // Slotları sadece bir kez başlat — didChangeDependencies yerine
+    // initState + addPostFrameCallback ile rebuild fırtınasını önle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final provider = context.read<ProgramProvider>();
+      if (provider.slots.isEmpty && !_slotsInitialized) {
+        provider.initSlots(provider.selectedGoal ?? 'healthy_living');
+      }
+      _slotsInitialized = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProgramProvider>();
-    final allProducts = context.watch<ProductProvider>().products;
+    final productProvider = context.watch<ProductProvider>();
 
+    // Ürünler henüz yüklenmediyse yükleniyor göster
+    if (productProvider.isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: AppColors.primary),
+            SizedBox(height: 16),
+            Text('Ürünler yükleniyor...',
+                style: TextStyle(color: AppColors.nightSky)),
+          ],
+        ),
+      );
+    }
+
+    final allProducts = productProvider.products;
     final innerProducts =
         allProducts.where((p) => p.category == 'İç Beslenme').toList();
     final outerProducts =
@@ -177,31 +201,21 @@ class _SlotCardState extends State<_SlotCard> {
       return;
     }
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          const SizedBox(height: 12),
-          const Text('Ürün Seç',
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Ürün Seç',
               style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 18,
                   color: AppColors.nightSky)),
-          const SizedBox(height: 8),
-          Flexible(
+          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+          content: SizedBox(
+            width: double.maxFinite,
             child: ListView.builder(
               shrinkWrap: true,
+              padding: EdgeInsets.zero,
               itemCount: pickable.length,
               itemBuilder: (_, i) {
                 final p = pickable[i];
@@ -216,8 +230,10 @@ class _SlotCardState extends State<_SlotCard> {
                         color: AppColors.primary, size: 18),
                   ),
                   title: Text(p.name,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 14)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.primary)),
                   subtitle: p.category != null
                       ? Text(p.category!,
                           style: TextStyle(
@@ -233,9 +249,14 @@ class _SlotCardState extends State<_SlotCard> {
               },
             ),
           ),
-          const SizedBox(height: 16),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Kapat', style: TextStyle(color: AppColors.primary)),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -484,8 +505,7 @@ class _TypeBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+      child: Container(
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,

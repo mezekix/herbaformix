@@ -84,12 +84,7 @@ class CustomerProfileMenu extends StatelessWidget {
             context,
             title: 'Destek',
             icon: Icons.help_outline,
-            onTap: () {
-              // TODO: Destek sayfasına yönlendir
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Destek sayfası yakında eklenecek.')),
-              );
-            },
+            onTap: () => context.goNamed('support'),
           ),
           
           const SizedBox(height: 32),
