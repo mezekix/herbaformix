@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../models/customer_model.dart';
 import '../providers/customer_provider.dart';
 import './add_edit_customer_screen.dart';
 import './customer_detail_screen.dart';
@@ -20,10 +21,26 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   bool _isCombinedLoading = true;
   String? _combinedError;
 
+  // CustomerProvider'ın son bilinen müşteri sayısı — değişince listeyi yenile
+  int _lastKnownCustomerCount = -1;
+
   @override
   void initState() {
     super.initState();
     _loadCombinedCustomers();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // CustomerProvider'daki müşteri sayısı değişince (ekle/sil) listeyi yenile
+    final count = context.watch<CustomerProvider>().customers.length;
+    if (count != _lastKnownCustomerCount && _lastKnownCustomerCount != -1) {
+      _lastKnownCustomerCount = count;
+      _loadCombinedCustomers();
+    } else {
+      _lastKnownCustomerCount = count;
+    }
   }
 
   Future<void> _loadCombinedCustomers() async {
@@ -52,10 +69,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final customerProvider = Provider.of<CustomerProvider>(context);
-    final manualCustomers = customerProvider.customers;
+    // isLoading durumu için izle — didChangeDependencies zaten count değişimini yakalıyor
+    final customerProvider = context.watch<CustomerProvider>();
     final inviteCodeCustomers = _combinedCustomers
         .where((c) => c.connectionType == 'davet_kodu')
+        .toList();
+    final manualCustomers = _combinedCustomers
+        .where((c) => c.connectionType == 'manuel')
         .toList();
 
     return Scaffold(
@@ -70,9 +90,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             tooltip: 'Yeni Müşteri Ekle',
-            onPressed: () {
-              context.goNamed(AddEditCustomerScreen.routeName);
-            },
+            onPressed: () => context.goNamed(AddEditCustomerScreen.routeName),
           ),
         ],
       ),
@@ -113,49 +131,39 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                   ElevatedButton.icon(
                     icon: const Icon(Icons.add),
                     label: const Text('İlk Müşterinizi Ekleyin'),
-                    onPressed: () {
-                      context.goNamed(AddEditCustomerScreen.routeName);
-                    },
+                    onPressed: () =>
+                        context.goNamed(AddEditCustomerScreen.routeName),
                   ),
                 ],
               ),
             )
           : ListView(
               children: [
-                // --- Davet Koduyla Bağlı Müşteriler Bölümü ---
                 _SectionHeader(
                   title: 'Davet Koduyla Bağlı Müşteriler',
                   count: inviteCodeCustomers.length,
                 ),
                 if (inviteCodeCustomers.isEmpty)
                   const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       'Davet koduyla bağlı müşteri bulunmuyor.',
                       style: TextStyle(color: Colors.grey),
                     ),
                   )
                 else
-                  ...inviteCodeCustomers.map(
-                    (entry) => _CombinedCustomerCard(entry: entry),
-                  ),
-
+                  ...inviteCodeCustomers
+                      .map((entry) => _CombinedCustomerCard(entry: entry)),
                 const Divider(height: 24, thickness: 1),
-
-                // --- Manuel Eklenen Müşteriler Bölümü ---
                 _SectionHeader(
                   title: 'Manuel Eklenen Müşteriler',
                   count: manualCustomers.length,
                 ),
                 if (manualCustomers.isEmpty)
                   const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       'Manuel eklenen müşteri bulunmuyor.',
                       style: TextStyle(color: Colors.grey),
@@ -163,109 +171,13 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                   )
                 else
                   ...manualCustomers.map(
-                    (customer) => Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: 5.0,
-                      ),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer,
-                          child: Text(
-                            customer.firstName.isNotEmpty
-                                ? customer.firstName[0].toUpperCase()
-                                : '?',
-                          ),
-                        ),
-                        title: Text(
-                          '${customer.firstName} ${customer.lastName}'.trim(),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              customer.phoneNumber.isNotEmpty
-                                  ? customer.phoneNumber
-                                  : 'İletişim bilgisi yok',
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'İlk Temas: ${DateFormat('dd.MM.yyyy').format(customer.firstContactDate.toDate())}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 4),
-                            _ConnectionBadge(connectionType: 'manuel'),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                Icons.edit_outlined,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              tooltip: 'Düzenle',
-                              onPressed: () {
-                                context.goNamed(
-                                  AddEditCustomerScreen.routeName,
-                                  extra: customer,
-                                );
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                Icons.delete_outline,
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                              tooltip: 'Sil',
-                              onPressed: () async {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('Müşteriyi Sil'),
-                                    content: Text(
-                                      '"${customer.firstName} ${customer.lastName}" adlı müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        child: const Text('İptal'),
-                                        onPressed: () =>
-                                            Navigator.of(ctx).pop(false),
-                                      ),
-                                      TextButton(
-                                        child: const Text(
-                                          'Sil',
-                                          style: TextStyle(color: Colors.red),
-                                        ),
-                                        onPressed: () =>
-                                            Navigator.of(ctx).pop(true),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                if (confirmed == true) {
-                                  await customerProvider.deleteCustomer(
-                                    customer.id,
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                        onTap: () {
-                          context.goNamed(
-                            CustomerDetailScreen.routeName,
-                            extra: customer,
-                          );
-                        },
-                      ),
+                    (entry) => _ManualCustomerCard(
+                      entry: entry,
+                      onDelete: (customer) async {
+                        await customerProvider.deleteCustomer(customer.id);
+                      },
                     ),
                   ),
-
                 const SizedBox(height: 16),
               ],
             ),
@@ -273,7 +185,6 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
   }
 }
 
-/// Bölüm başlığı widget'ı
 class _SectionHeader extends StatelessWidget {
   final String title;
   final int count;
@@ -289,8 +200,8 @@ class _SectionHeader extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(width: 8),
           Container(
@@ -310,7 +221,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Davet koduyla bağlı müşteri kartı
 class _CombinedCustomerCard extends StatelessWidget {
   final CombinedCustomerEntry entry;
 
@@ -318,14 +228,13 @@ class _CombinedCustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canOpenDetails = entry.customerRecord != null || entry.isLinkedCustomer;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 5.0),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: Text(
-            entry.name.isNotEmpty ? entry.name[0].toUpperCase() : '?',
-          ),
+          child: Text(entry.name.isNotEmpty ? entry.name[0].toUpperCase() : '?'),
         ),
         title: Text(entry.name.isNotEmpty ? entry.name : 'İsimsiz Müşteri'),
         subtitle: Column(
@@ -339,14 +248,181 @@ class _CombinedCustomerCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             _ConnectionBadge(connectionType: entry.connectionType),
+            if (entry.isRecentlyActivated) ...[
+              const SizedBox(height: 4),
+              const _NewActivationBadge(),
+            ],
           ],
+        ),
+        trailing: canOpenDetails ? const Icon(Icons.chevron_right) : null,
+        onTap: canOpenDetails
+            ? () async {
+                if (entry.customerRecord != null) {
+                  context.goNamed(
+                    CustomerDetailScreen.routeName,
+                    extra: entry.customerRecord,
+                  );
+                  return;
+                }
+
+                final customerProvider = context.read<CustomerProvider>();
+                final linkedCustomer = await customerProvider
+                    .getLinkedCustomerFallback(entry);
+
+                if (!context.mounted) return;
+
+                if (linkedCustomer != null) {
+                  context.goNamed(
+                    CustomerDetailScreen.routeName,
+                    extra: linkedCustomer,
+                  );
+                  return;
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Müşteri detay kaydı bulunamadı. Lütfen sayfayı yenileyin.',
+                    ),
+                  ),
+                );
+              }
+            : () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Bu müşteri henüz detay ekranına hazır değil.',
+                    ),
+                  ),
+                ),
+      ),
+    );
+  }
+}
+
+class _ManualCustomerCard extends StatelessWidget {
+  final CombinedCustomerEntry entry;
+  final Future<void> Function(CustomerModel customer) onDelete;
+
+  const _ManualCustomerCard({
+    required this.entry,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final customer = entry.customerRecord!;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 5.0),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          child: Text(
+            customer.firstName.isNotEmpty ? customer.firstName[0].toUpperCase() : '?',
+          ),
+        ),
+        title: Text('${customer.firstName} ${customer.lastName}'.trim()),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              customer.phoneNumber.isNotEmpty
+                  ? customer.phoneNumber
+                  : 'İletişim bilgisi yok',
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'İlk Temas: ${DateFormat('dd.MM.yyyy').format(customer.firstContactDate.toDate())}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 4),
+            const _ConnectionBadge(connectionType: 'manuel'),
+            if (entry.isRecentlyActivated) ...[
+              const SizedBox(height: 4),
+              const _NewActivationBadge(),
+            ],
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.edit_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              tooltip: 'Düzenle',
+              onPressed: () {
+                context.goNamed(AddEditCustomerScreen.routeName, extra: customer);
+              },
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              tooltip: 'Sil',
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Müşteriyi Sil'),
+                    content: Text(
+                      '"${customer.firstName} ${customer.lastName}" adlı müşteriyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+                    ),
+                    actions: [
+                      TextButton(
+                        child: const Text('İptal'),
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                      ),
+                      TextButton(
+                        child: const Text(
+                          'Sil',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  await onDelete(customer);
+                }
+              },
+            ),
+          ],
+        ),
+        onTap: () {
+          context.goNamed(CustomerDetailScreen.routeName, extra: customer);
+        },
+      ),
+    );
+  }
+}
+
+class _NewActivationBadge extends StatelessWidget {
+  const _NewActivationBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'Yeni Aktive Oldu',
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.orange.shade900,
         ),
       ),
     );
   }
 }
 
-/// Bağlanma yöntemi badge'i
 class _ConnectionBadge extends StatelessWidget {
   final String connectionType;
 

@@ -3,6 +3,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herbaformix/models/invite_code_model.dart';
+import 'package:herbaformix/models/invite_status.dart';
 
 void main() {
   group('InviteCodeModel', () {
@@ -79,7 +80,7 @@ void main() {
           code: 'AB12CD34',
           distributorId: 'dist_uid_001',
           createdAt: testDate,
-          isUsed: false,
+          isUsed: false, expiresAt: testDate.add(const Duration(days: 30)), status: InviteStatus.pending,
         );
 
         final map = model.toMap();
@@ -98,7 +99,7 @@ void main() {
           code: 'AB12CD34',
           distributorId: 'dist_uid_001',
           createdAt: testDate,
-          isUsed: false,
+          isUsed: false, expiresAt: testDate.add(const Duration(days: 30)), status: InviteStatus.pending,
           usedByUserId: null,
         );
 
@@ -112,7 +113,7 @@ void main() {
           code: 'AB12CD34',
           distributorId: 'dist_uid_001',
           createdAt: testDate,
-          isUsed: true,
+          isUsed: true, expiresAt: testDate.add(const Duration(days: 30)), status: InviteStatus.pending,
           usedByUserId: 'customer_uid_999',
         );
 
@@ -126,7 +127,7 @@ void main() {
           code: 'AB12CD34',
           distributorId: 'dist_uid_001',
           createdAt: testDate,
-          isUsed: false,
+          isUsed: false, expiresAt: testDate.add(const Duration(days: 30)), status: InviteStatus.pending,
         );
 
         final map = model.toMap();
@@ -168,7 +169,7 @@ void main() {
           code: 'AB12CD34',
           distributorId: 'dist_uid_001',
           createdAt: testDate,
-          isUsed: false,
+          isUsed: false, expiresAt: testDate.add(const Duration(days: 30)), status: InviteStatus.pending,
         );
 
         final updated = original.copyWith(
@@ -192,14 +193,14 @@ void main() {
           code: 'AB12CD34',
           distributorId: 'dist_uid_001',
           createdAt: testDate,
-          isUsed: false,
+          isUsed: false, expiresAt: testDate.add(const Duration(days: 30)), status: InviteStatus.pending,
         );
         final b = InviteCodeModel(
           id: 'doc_id_1',
           code: 'AB12CD34',
           distributorId: 'dist_uid_001',
           createdAt: testDate,
-          isUsed: false,
+          isUsed: false, expiresAt: testDate.add(const Duration(days: 30)), status: InviteStatus.pending,
         );
 
         expect(a, equals(b));
@@ -212,7 +213,7 @@ void main() {
           code: 'AB12CD34',
           distributorId: 'dist_uid_001',
           createdAt: testDate,
-          isUsed: false,
+          isUsed: false, expiresAt: testDate.add(const Duration(days: 30)), status: InviteStatus.pending,
         );
         final b = a.copyWith(isUsed: true);
 

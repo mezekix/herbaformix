@@ -3,65 +3,108 @@
 // davet kodlarını Firestore ile senkronize eder.
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'invite_status.dart';
+
+/// Davet kodunun varsayılan geçerlilik süresi.
+const Duration kInviteCodeDefaultValidity = Duration(days: 7);
+
 class InviteCodeModel {
-  final String id;             // Firestore doküman ID'si
-  final String code;           // 8 karakterlik büyük harf + rakam (örn. "A3BX9K2M")
-  final String distributorId;  // Kodu oluşturan distribütörün UID'si
-  final DateTime createdAt;    // Oluşturulma zamanı
-  final bool isUsed;           // Kod kullanıldı mı?
-  final String? usedByUserId;  // Kodu kullanan müşterinin UID'si (opsiyonel)
+  final String id; // Firestore doküman ID'si
+  final String code; // 8 karakterlik büyük harf + rakam (örn. "A3BX9K2M")
+  final String distributorId; // Kodu oluşturan distribütörün UID'si
+  final DateTime createdAt; // Oluşturulma zamanı
+  final DateTime expiresAt; // Geçerlilik bitiş zamanı (createdAt + 7 gün)
+  final InviteStatus status; // pending / used / expired
+  final bool isUsed; // Geriye uyumluluk: status == used ile aynı bilgiyi tutar
+  final String? usedByUserId; // Kodu kullanan müşterinin UID'si
+
+  // Müşteri-spesifik alanlar (distribütör müşteri eklerken doldurur).
+  final String? customerRecordId; // users/{distId}/customers/{customerId} doc ID'si
+  final String? customerName; // Distribütörün girdiği ad (UI ve WhatsApp metni için)
+  final String? customerPhone; // WhatsApp gönderimi için telefon
+  final String? customerEmail; // Opsiyonel; ileride e-posta gönderimi için
 
   const InviteCodeModel({
     required this.id,
     required this.code,
     required this.distributorId,
     required this.createdAt,
+    required this.expiresAt,
+    required this.status,
     required this.isUsed,
     this.usedByUserId,
+    this.customerRecordId,
+    this.customerName,
+    this.customerPhone,
+    this.customerEmail,
   });
+
+  /// Şu an süresi dolmuş mu? (status'tan bağımsız, sadece zamana bakar.)
+  bool get isExpiredByTime => DateTime.now().isAfter(expiresAt);
+
+  /// Hem status'a hem de süreye göre etkin durumu hesaplar.
+  ///
+  /// Eski belgelerde `status` `pending` olsa bile `expiresAt` geçmişse
+  /// effective olarak `expired` döner.
+  InviteStatus get effectiveStatus {
+    if (status == InviteStatus.used) return InviteStatus.used;
+    if (status == InviteStatus.expired) return InviteStatus.expired;
+    if (isExpiredByTime) return InviteStatus.expired;
+    return InviteStatus.pending;
+  }
 
   /// Firestore dokümanından [InviteCodeModel] oluşturur.
   ///
-  /// [map] Firestore'dan gelen alan-değer çiftleri.
-  /// [id] Firestore doküman ID'si.
-  ///
-  /// `createdAt` alanı için Firestore [Timestamp] → [DateTime] dönüşümü yapılır.
+  /// Geriye dönük uyumluluk:
+  /// - `status` yoksa `isUsed ? used : pending` fallback'i kullanılır.
+  /// - `expiresAt` yoksa `createdAt + 7 gün` fallback'i kullanılır.
+  /// - Yeni müşteri-spesifik alanlar yoksa `null` kalır.
   factory InviteCodeModel.fromMap(Map<String, dynamic> map, String id) {
-    // createdAt: Firestore Timestamp → DateTime dönüşümü
-    DateTime createdAt;
-    final rawCreatedAt = map['createdAt'];
-    if (rawCreatedAt is Timestamp) {
-      createdAt = rawCreatedAt.toDate();
-    } else if (rawCreatedAt is int) {
-      // Milisaniye cinsinden int olarak saklanmışsa da destekle
-      createdAt = DateTime.fromMillisecondsSinceEpoch(rawCreatedAt);
-    } else {
-      // Beklenmedik tür veya null ise şimdiki zamanı kullan
-      createdAt = DateTime.now();
-    }
+    final createdAt = _parseDate(map['createdAt']) ?? DateTime.now();
+    final isUsed = map['isUsed'] as bool? ?? false;
+
+    final expiresAt = _parseDate(map['expiresAt']) ??
+        createdAt.add(kInviteCodeDefaultValidity);
+
+    final statusFromMap = inviteStatusFromString(map['status'] as String?);
+    final status = statusFromMap ??
+        (isUsed ? InviteStatus.used : InviteStatus.pending);
 
     return InviteCodeModel(
       id: id,
       code: map['code'] as String? ?? '',
       distributorId: map['distributorId'] as String? ?? '',
       createdAt: createdAt,
-      isUsed: map['isUsed'] as bool? ?? false,
+      expiresAt: expiresAt,
+      status: status,
+      isUsed: isUsed,
       usedByUserId: map['usedByUserId'] as String?,
+      customerRecordId: map['customerRecordId'] as String?,
+      customerName: map['customerName'] as String?,
+      customerPhone: map['customerPhone'] as String?,
+      customerEmail: map['customerEmail'] as String?,
     );
   }
 
   /// [InviteCodeModel]'i Firestore'a yazmak için [Map]'e dönüştürür.
   ///
-  /// `createdAt` alanı Firestore [Timestamp] olarak saklanır.
-  /// `usedByUserId` null ise map'e dahil edilmez.
+  /// Yeni alanlar her zaman map'e dahil edilir; null olan opsiyonel alanlar
+  /// map'e eklenmez.
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'code': code,
       'distributorId': distributorId,
       'createdAt': Timestamp.fromDate(createdAt),
+      'expiresAt': Timestamp.fromDate(expiresAt),
+      'status': status.toFirestore(),
       'isUsed': isUsed,
-      if (usedByUserId != null) 'usedByUserId': usedByUserId,
     };
+    if (usedByUserId != null) map['usedByUserId'] = usedByUserId;
+    if (customerRecordId != null) map['customerRecordId'] = customerRecordId;
+    if (customerName != null) map['customerName'] = customerName;
+    if (customerPhone != null) map['customerPhone'] = customerPhone;
+    if (customerEmail != null) map['customerEmail'] = customerEmail;
+    return map;
   }
 
   /// Mevcut modeli belirtilen alanlarla kopyalar.
@@ -70,17 +113,37 @@ class InviteCodeModel {
     String? code,
     String? distributorId,
     DateTime? createdAt,
+    DateTime? expiresAt,
+    InviteStatus? status,
     bool? isUsed,
     String? usedByUserId,
+    String? customerRecordId,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
   }) {
     return InviteCodeModel(
       id: id ?? this.id,
       code: code ?? this.code,
       distributorId: distributorId ?? this.distributorId,
       createdAt: createdAt ?? this.createdAt,
+      expiresAt: expiresAt ?? this.expiresAt,
+      status: status ?? this.status,
       isUsed: isUsed ?? this.isUsed,
       usedByUserId: usedByUserId ?? this.usedByUserId,
+      customerRecordId: customerRecordId ?? this.customerRecordId,
+      customerName: customerName ?? this.customerName,
+      customerPhone: customerPhone ?? this.customerPhone,
+      customerEmail: customerEmail ?? this.customerEmail,
     );
+  }
+
+  static DateTime? _parseDate(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is Timestamp) return raw.toDate();
+    if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw);
+    if (raw is DateTime) return raw;
+    return null;
   }
 
   @override
@@ -91,8 +154,14 @@ class InviteCodeModel {
         other.code == code &&
         other.distributorId == distributorId &&
         other.createdAt == createdAt &&
+        other.expiresAt == expiresAt &&
+        other.status == status &&
         other.isUsed == isUsed &&
-        other.usedByUserId == usedByUserId;
+        other.usedByUserId == usedByUserId &&
+        other.customerRecordId == customerRecordId &&
+        other.customerName == customerName &&
+        other.customerPhone == customerPhone &&
+        other.customerEmail == customerEmail;
   }
 
   @override
@@ -101,8 +170,14 @@ class InviteCodeModel {
         code,
         distributorId,
         createdAt,
+        expiresAt,
+        status,
         isUsed,
         usedByUserId,
+        customerRecordId,
+        customerName,
+        customerPhone,
+        customerEmail,
       );
 
   @override
@@ -112,8 +187,13 @@ class InviteCodeModel {
         'code: $code, '
         'distributorId: $distributorId, '
         'createdAt: $createdAt, '
+        'expiresAt: $expiresAt, '
+        'status: $status, '
         'isUsed: $isUsed, '
-        'usedByUserId: $usedByUserId'
+        'usedByUserId: $usedByUserId, '
+        'customerRecordId: $customerRecordId, '
+        'customerName: $customerName, '
+        'customerPhone: $customerPhone'
         ')';
   }
 }

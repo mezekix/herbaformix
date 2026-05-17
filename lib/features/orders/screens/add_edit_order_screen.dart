@@ -39,7 +39,9 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
 
   // Geçici ürün seçimi için
   ProductModel? _productToSearch;
-  int _quantity = 1;
+  // Dropdown ve adet field'ını programatik olarak sıfırlamak için key'ler
+  Key _productDropdownKey = UniqueKey();
+  final TextEditingController _quantityController = TextEditingController(text: '1');
 
   // Çeviri için helper metot
   String _getStatusText(OrderStatus status) {
@@ -96,6 +98,14 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
       _notesController.text = order.notes ?? '';
       _shippingAddressController.text = order.shippingAddress ?? '';
     }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    _shippingAddressController.dispose();
+    _quantityController.dispose();
+    super.dispose();
   }
 
   void _addOrUpdateOrderItem(ProductModel product, int quantity) {
@@ -437,17 +447,26 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Ürün Ekle", style: Theme.of(context).textTheme.titleMedium),
+            Text('Ürün Ekle', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
+
+            // Ürün dropdown — key ile sıfırlanabilir
             DropdownButtonFormField<ProductModel>(
+              key: _productDropdownKey,
               initialValue: _productToSearch,
               hint: const Text('Ürün Seçin'),
               isExpanded: true,
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: productProvider.products.map((product) {
+                final price = product.price != null
+                    ? '${product.price!.toStringAsFixed(2)} ₺'
+                    : 'Fiyat yok';
                 return DropdownMenuItem<ProductModel>(
                   value: product,
-                  child: Text("${product.name} (${product.vp} VP)"),
+                  child: Text(
+                    '${product.name}  •  $price  •  ${product.vp.toStringAsFixed(0)} VP',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 );
               }).toList(),
               onChanged: (value) {
@@ -456,71 +475,82 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                 });
               },
             ),
+
+            // Seçili ürün fiyat özeti
+            if (_productToSearch != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer.withAlpha(80),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Birim fiyat: ${_productToSearch!.price != null ? "${_productToSearch!.price!.toStringAsFixed(2)} ₺" : "Fiyat girilmemiş"}  |  VP: ${_productToSearch!.vp.toStringAsFixed(0)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 8),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _quantity
-                        .toString(), // Düzeltildi: Controller yerine initialValue
+                // Adet field — controller ile yönetiliyor, ana form'dan bağımsız
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    controller: _quantityController,
                     decoration: const InputDecoration(
                       labelText: 'Adet',
                       border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     ),
                     keyboardType: TextInputType.number,
                     onChanged: (value) {
-                      final newQuantity = int.tryParse(value);
-                      if (newQuantity != null && newQuantity >= 1) {
-                        _quantity = newQuantity;
-                      } else if (value.isEmpty) {
-                        _quantity = 1; // Boşsa veya geçersizse 1 yap
-                      }
-                      // Kullanıcı geçersiz bir şey girerse TextFormField'un kendi validasyonu da devreye girebilir.
-                      // Veya setState ile anlık güncelleme yapılabilir. Şimdilik _quantity'yi güncelliyoruz.
-                    },
-                    validator: (value) {
-                      // Adet için validator
-                      if (value == null || value.isEmpty) {
-                        return 'Adet girin';
-                      }
-                      final n = int.tryParse(value);
-                      if (n == null) {
-                        return 'Geçerli sayı girin';
-                      }
-                      if (n < 1) {
-                        return 'Adet en az 1 olmalı';
-                      }
-                      return null;
+                      // _quantityController zaten güncel, ek state gerekmez
                     },
                   ),
                 ),
                 const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    // Adet TextFormField'unun validasyonunu tetikle
-                    // Bu kısım _formKey.currentState!.validate() ile genel form validasyonunda zaten kontrol ediliyor.
-                    // Ancak burada spesifik olarak adet için bir kontrol daha yapılabilir veya UI güncellenebilir.
-                    // Şimdilik _addOrUpdateOrderItem içindeki quantity > 0 kontrolüne güveniyoruz.
-                    if (_productToSearch != null && _quantity > 0) {
-                      _addOrUpdateOrderItem(_productToSearch!, _quantity);
-                      setState(() {
-                        // Seçimi sıfırla
-                        _productToSearch = null;
-                        _quantity = 1;
-                        // Adet TextFormField'unu sıfırlamak için bir controller gerekebilir veya Key ile resetlenebilir.
-                        // Şimdilik sadece _quantity state'ini sıfırlıyoruz.
-                      });
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Lütfen bir ürün seçin ve geçerli bir adet girin.',
-                          ),
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Ekle'),
+                Expanded(
+                  child: SizedBox(
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Listeye Ekle'),
+                      onPressed: () {
+                        if (_productToSearch == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lütfen bir ürün seçin.')),
+                          );
+                          return;
+                        }
+                        final qty = int.tryParse(_quantityController.text) ?? 1;
+                        if (qty < 1) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Adet en az 1 olmalı.')),
+                          );
+                          return;
+                        }
+                        _addOrUpdateOrderItem(_productToSearch!, qty);
+                        // Dropdown ve adet field'ını sıfırla
+                        setState(() {
+                          _productToSearch = null;
+                          _productDropdownKey = UniqueKey();
+                          _quantityController.text = '1';
+                        });
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),

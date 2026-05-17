@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
+import '../models/program_editor_args.dart';
 import '../providers/program_provider.dart';
 import '../widgets/goal_selection_step.dart';
 import '../widgets/weight_input_step.dart';
@@ -13,8 +14,9 @@ import '../widgets/program_summary_step.dart';
 /// Global ProgramProvider kullanır (main.dart'ta tanımlı).
 class CreateProgramScreen extends StatefulWidget {
   static const String routeName = 'create-program';
+  final ProgramEditorArgs? editorArgs;
 
-  const CreateProgramScreen({super.key});
+  const CreateProgramScreen({super.key, this.editorArgs});
 
   @override
   State<CreateProgramScreen> createState() => _CreateProgramScreenState();
@@ -36,12 +38,14 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const _CreateProgramView();
+    return _CreateProgramView(editorArgs: widget.editorArgs);
   }
 }
 
 class _CreateProgramView extends StatelessWidget {
-  const _CreateProgramView();
+  final ProgramEditorArgs? editorArgs;
+
+  const _CreateProgramView({this.editorArgs});
 
   @override
   Widget build(BuildContext context) {
@@ -79,9 +83,28 @@ class _CreateProgramView extends StatelessWidget {
           child: _ProgressBar(current: stepIndex + 1, total: totalSteps),
         ),
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        child: _buildStep(context, step, provider),
+      body: Column(
+        children: [
+          if (editorArgs?.isDistributorMode == true)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: AppColors.primary.withValues(alpha: 0.08),
+              child: Text(
+                'Program yazılan müşteri: ${editorArgs!.targetCustomerName}',
+                style: const TextStyle(
+                  color: AppColors.nightSky,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _buildStep(context, step, provider),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -125,7 +148,10 @@ class _CreateProgramView extends StatelessWidget {
       case ProgramWizardStep.mealPlan:
         return const MealPlanStep(key: ValueKey('meal'));
       case ProgramWizardStep.summary:
-        return const ProgramSummaryStep(key: ValueKey('summary'));
+        return ProgramSummaryStep(
+          key: const ValueKey('summary'),
+          editorArgs: editorArgs,
+        );
     }
   }
 }

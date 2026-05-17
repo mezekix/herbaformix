@@ -22,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isRegisterMode = false; // Giriş/Kayıt modunu takip etmek için
   bool _obscurePassword = true;
-  final UserRole _selectedRole = UserRole.customer; // Varsayılan seçili rol
+  UserRole _selectedRole = UserRole.customer; // Varsayılan seçili rol
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
@@ -74,6 +74,36 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           _isRegisterMode = false;
         });
+      }
+      // Başarılı giriş durumunda go_router zaten yönlendirme yapacak.
+    }
+  }
+
+  Future<void> _submitGoogleSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    String? inviteCode;
+    if (_isRegisterMode) {
+      inviteCode = _inviteCodeController.text.trim().isEmpty ? null : _inviteCodeController.text.trim();
+    }
+    
+    // Rolümüz `_isRegisterMode` true ise seçili roldür (veya varsayılan müşteri).
+    final success = await authProvider.signInWithGoogle(role: _selectedRole, inviteCode: inviteCode);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (!success) {
+        final message = authProvider.errorMessage ?? 'Google ile giriş iptal edildi veya başarısız oldu.';
+        // Hata mesajını göstermeyebiliriz eğer kullanıcı iptal ettiyse (errorMessage null olabilir).
+        if (authProvider.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
       }
       // Başarılı giriş durumunda go_router zaten yönlendirme yapacak.
     }
@@ -247,6 +277,56 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       // Role Selection (Only in register mode)
                       if (_isRegisterMode) ...[
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<UserRole>(
+                          initialValue: _selectedRole,
+                          decoration: InputDecoration(
+                            hintText: 'Hesap Türü',
+                            prefixIcon: Icon(Icons.badge_outlined, color: textSecondary),
+                            filled: true,
+                            fillColor: inputBg,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 20),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(30),
+                              borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
+                            ),
+                          ),
+                          dropdownColor: inputBg,
+                          style: TextStyle(color: textPrimary),
+                          items: const [
+                            DropdownMenuItem(
+                              value: UserRole.customer,
+                              child: Text('Müşteri'),
+                            ),
+                            DropdownMenuItem(
+                              value: UserRole.distributor,
+                              child: Text('Distribütör'),
+                            ),
+                            DropdownMenuItem(
+                              value: UserRole.supervisor,
+                              child: Text('Supervizör ve üstü'),
+                            ),
+                            DropdownMenuItem(
+                              value: UserRole.successCreator,
+                              child: Text('Başarı Yaratıcısı'),
+                            ),
+                          ],
+                          onChanged: (UserRole? newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                _selectedRole = newValue;
+                              });
+                            }
+                          },
+                        ),
                         // Davet Kodu
                         const SizedBox(height: 20),
                         TextFormField(
@@ -361,6 +441,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             bgColor: inputBg,
                             iconColor: textPrimary,
                             iconSize: 36,
+                            onTap: _submitGoogleSignIn,
                           ),
                           const SizedBox(width: 24),
                           _buildSocialButton(
@@ -428,6 +509,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required Color bgColor,
     required Color iconColor,
     double iconSize = 24,
+    VoidCallback? onTap,
   }) {
     return Container(
       width: 56,
@@ -448,7 +530,7 @@ class _LoginScreenState extends State<LoginScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(28),
-          onTap: () {}, // Sosyal giriş fonksiyonu eklenebilir
+          onTap: onTap,
           child: Center(
             child: Icon(
               icon,

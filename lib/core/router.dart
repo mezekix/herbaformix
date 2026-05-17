@@ -29,6 +29,7 @@ import '../models/product_model.dart';
 import '../models/user_role.dart';
 import '../features/auth/screens/customer_onboarding_screen.dart';
 import '../features/program/screens/create_program_screen.dart';
+import '../features/program/models/program_editor_args.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -63,7 +64,10 @@ class AppRouter {
           GoRoute(
             path: CreateProgramScreen.routeName, // 'create-program'
             name: CreateProgramScreen.routeName,
-            builder: (context, state) => const CreateProgramScreen(),
+            builder: (context, state) {
+              final args = state.extra as ProgramEditorArgs?;
+              return CreateProgramScreen(editorArgs: args);
+            },
           ),
           GoRoute(
             path: 'profile', // '/home/profile'

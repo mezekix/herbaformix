@@ -96,6 +96,77 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> signInWithGoogle({UserRole role = UserRole.customer, String? inviteCode}) async {
+    _status = AuthStatus.authenticating;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      String? distributorId;
+
+      // Davet kodunu doğrula (eğer varsa)
+      if (inviteCode != null && inviteCode.trim().isNotEmpty) {
+        final inviteCodeModel = await _firestoreService.validateInviteCode(inviteCode.trim());
+        if (inviteCodeModel == null) {
+          _status = AuthStatus.unauthenticated;
+          _errorMessage = 'Geçersiz davet kodu.';
+          notifyListeners();
+          return false;
+        }
+        distributorId = inviteCodeModel.distributorId;
+      }
+
+      final userCredential = await _authService.signInWithGoogle();
+      
+      if (userCredential == null) {
+        _status = AuthStatus.unauthenticated;
+        // User cancelled login or it failed without throwing
+        notifyListeners();
+        return false;
+      }
+      
+      // Check if user is newly registered by checking if they have a profile
+      if (userCredential.user != null) {
+        final existingProfile = await _firestoreService.getUserProfile(userCredential.user!.uid);
+        if (existingProfile == null) {
+          // If no profile exists, create one with the specified role (or customer by default)
+          final newProfile = UserProfileModel(
+            id: userCredential.user!.uid,
+            email: userCredential.user!.email ?? "E-posta yok",
+            name: userCredential.user!.displayName ?? "",
+            role: role,
+            assignedDistributorId: distributorId,
+          );
+          
+          if (inviteCode != null && inviteCode.trim().isNotEmpty && distributorId != null) {
+            // Atomik batch yazma: profil oluşturma + davet kodu güncelleme
+            final inviteCodeModel = await _firestoreService.validateInviteCode(inviteCode.trim());
+            if (inviteCodeModel != null) {
+              await _firestoreService.signUpWithInviteCodeBatch(
+                userProfile: newProfile,
+                inviteCode: inviteCodeModel,
+                newUserId: userCredential.user!.uid,
+              );
+            } else {
+              await _firestoreService.setUserProfile(newProfile);
+            }
+          } else {
+            await _firestoreService.setUserProfile(newProfile);
+          }
+          debugPrint("Google ile giriş sonrası yeni profil oluşturuldu: ${userCredential.user!.uid}");
+        }
+      }
+
+      // _onAuthStateChanged durumu ve profili güncelleyecek
+      return true;
+    } catch (e) {
+      debugPrint("AuthProvider Error (signInWithGoogle): $e");
+      _status = AuthStatus.unauthenticated;
+      _errorMessage = "Google ile giriş sırasında bir hata oluştu: $e";
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> signUp(String email, String password, UserRole role) async {
     _status = AuthStatus.authenticating;
     _errorMessage = null;
@@ -147,6 +218,20 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       debugPrint("Profil güncelleme hatası (AuthProvider): $e");
       return false;
+    }
+  }
+
+  /// Firestore'dan kullanıcı profilini yeniden çeker ve lokal state'i günceller.
+  ///
+  /// Davet kodu kullanımı gibi atomik batch işlemlerinden sonra
+  /// lokal profil state'inin güncel kalmasını sağlar.
+  Future<void> refreshProfile() async {
+    if (_firebaseUser == null) return;
+    try {
+      _userProfile = await _firestoreService.getUserProfile(_firebaseUser!.uid);
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Profil yenileme hatası (AuthProvider): $e");
     }
   }
 
@@ -272,7 +357,7 @@ class AuthProvider with ChangeNotifier {
       // Atomik batch yazma: profil oluşturma + davet kodu güncelleme
       await _firestoreService.signUpWithInviteCodeBatch(
         userProfile: newProfile,
-        inviteCodeId: inviteCodeModel.id,
+        inviteCode: inviteCodeModel,
         newUserId: newUser.uid,
       );
 

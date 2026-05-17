@@ -119,7 +119,6 @@ class OrderProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      // Firestore servisine göndermeden önce totalAmount ve totalVpEarned'ı hesapla
       final orderWithTotals = OrderModel(
         id: order.id,
         userId: _currentUserId!,
@@ -128,21 +127,22 @@ class OrderProvider with ChangeNotifier {
         items: order.items,
         orderDate: order.orderDate,
         status: order.status,
-        totalAmount: order.items.fold(
-          0.0,
-          (total, item) => total + item.totalPrice,
-        ),
-        totalVpEarned: order.items.fold(
-          0.0,
-          (total, item) => total + item.totalVp,
-        ),
+        totalAmount: order.items.fold(0.0, (total, item) => total + item.totalPrice),
+        totalVpEarned: order.items.fold(0.0, (total, item) => total + item.totalVp),
         notes: order.notes,
         shippingAddress: order.shippingAddress,
       );
       await _firestoreService.addOrder(_currentUserId!, orderWithTotals);
+
+      // Yeni sipariş direkt "Teslim Edildi" olarak oluşturulduysa takip planı oluştur
+      if (order.status == OrderStatus.delivered) {
+        final CustomerModel? customer = await _customerProvider.getCustomerById(order.customerId);
+        if (customer != null) {
+          await _createStandardFollowUpSchedule(customer);
+        }
+      }
+
       _isLoading = false;
-      // Stream zaten listeyi güncelleyeceği için burada notifyListeners'a gerek yok,
-      // ancak _isLoading durumu için çağrılabilir.
       notifyListeners();
       return true;
     } catch (e) {
@@ -213,24 +213,31 @@ class OrderProvider with ChangeNotifier {
 
   /// Standart bir takip planı oluşturup veritabanına ekler.
   Future<void> _createStandardFollowUpSchedule(CustomerModel customer) async {
-    // Güvenlik kontrolü: Müşterinin danışman ID'si var mı ve mevcut kullanıcıyla eşleşiyor mu?
-    if (customer.consultantId.isEmpty ||
-        customer.consultantId != _currentUserId) {
-      debugPrint(
-        "HATA: Otomatik takip planı oluşturulamıyor. Müşteri kaydındaki danışman ID'si ('${customer.consultantId}') mevcut kullanıcı ID'siyle ('$_currentUserId') eşleşmiyor veya boştur.",
-      );
-      return; // ID'ler eşleşmiyorsa veya boşsa işlemi durdur.
-    }
-    final now = DateTime.now();
-    final scheduleDays = [1, 3, 7, 15, 30]; // Takip edilecek günler.
+    if (_currentUserId == null) return;
 
+    // consultantId boşsa mevcut kullanıcıyı kullan
+    final consultantId = customer.consultantId.isNotEmpty
+        ? customer.consultantId
+        : _currentUserId!;
+
+    // Güvenlik: başka bir danışmanın müşterisine takip oluşturma
+    if (consultantId != _currentUserId) {
+      debugPrint(
+        "HATA: Takip planı oluşturulamıyor — müşteri başka bir danışmana ait. "
+        "consultantId: $consultantId, currentUserId: $_currentUserId",
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final scheduleDays = [1, 3, 7, 15, 30];
     final List<ScheduledFollowUpModel> followUpBatch = [];
 
     for (var day in scheduleDays) {
       followUpBatch.add(
         ScheduledFollowUpModel(
-          id: '', // Firestore kendi atayacak.
-          consultantId: customer.consultantId,
+          id: '',
+          consultantId: consultantId,
           customerId: customer.id,
           customerFirstName: customer.firstName,
           customerLastName: customer.lastName,
@@ -242,13 +249,12 @@ class OrderProvider with ChangeNotifier {
     }
 
     try {
-      // Oluşturulan tüm görevleri tek bir işlemde veritabanına yaz.
       await _firestoreService.addScheduledFollowUpBatch(followUpBatch);
       debugPrint(
-        "BAŞARILI: '${customer.firstName} ${customer.lastName}' için standart takip planı oluşturuldu.",
+        "BAŞARILI: '${customer.firstName} ${customer.lastName}' için takip planı oluşturuldu.",
       );
     } catch (e) {
-      debugPrint("HATA: Standart takip planı oluşturulurken hata: $e");
+      debugPrint("HATA: Takip planı oluşturulurken hata: $e");
     }
   }
 

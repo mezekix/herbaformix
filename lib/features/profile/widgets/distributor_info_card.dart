@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/app_colors.dart';
+import '../../../models/invite_status.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../services/firestore_service.dart';
+import '../../auth/providers/auth_provider.dart';
 
 /// Müşterinin bağlı olduğu distribütörün bilgilerini salt okunur kart içinde gösterir.
 ///
 /// - [assignedDistributorId] doluysa Firestore'dan distribütör adı ve telefonunu yükler.
-/// - [assignedDistributorId] boşsa "Henüz bir distribütöre bağlı değilsiniz." mesajı gösterir.
+/// - [assignedDistributorId] boşsa davet kodu giriş alanı gösterir.
 /// - Yükleme sırasında [CircularProgressIndicator] gösterir.
 /// - Hata durumunda "Distribütör bilgisi yüklenemedi." mesajı gösterir.
-class DistributorInfoCard extends StatelessWidget {
+class DistributorInfoCard extends StatefulWidget {
   final String? assignedDistributorId;
 
   const DistributorInfoCard({
@@ -19,45 +22,345 @@ class DistributorInfoCard extends StatelessWidget {
   });
 
   @override
+  State<DistributorInfoCard> createState() => _DistributorInfoCardState();
+}
+
+class _DistributorInfoCardState extends State<DistributorInfoCard> {
+  final _codeController = TextEditingController();
+  bool _isRedeeming = false;
+  String? _errorMessage;
+  String? _successMessage;
+
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
+  /// Müşterinin girdiği davet kodunu doğrular ve bağlama işlemini gerçekleştirir.
+  Future<void> _redeemInviteCode() async {
+    final code = _codeController.text.trim().toUpperCase();
+    if (code.isEmpty) {
+      setState(() => _errorMessage = 'Lütfen bir davet kodu girin.');
+      return;
+    }
+
+    setState(() {
+      _isRedeeming = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+
+    try {
+      final firestoreService = context.read<FirestoreService>();
+      final authProvider = context.read<AuthProvider>();
+      final uid = authProvider.firebaseUser?.uid;
+      final userProfile = authProvider.userProfile;
+
+      if (uid == null || userProfile == null) {
+        setState(() => _errorMessage = 'Kullanıcı oturumu bulunamadı.');
+        return;
+      }
+
+      // 1. Kodu doğrula
+      final inviteCode = await firestoreService.validateInviteCode(code);
+      if (inviteCode == null) {
+        setState(() => _errorMessage = 'Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin.');
+        return;
+      }
+
+      // Süresi dolmuş mu kontrol et
+      if (inviteCode.effectiveStatus == InviteStatus.expired) {
+        setState(() => _errorMessage = 'Bu davet kodunun süresi dolmuş. Danışmanınızdan yeni bir kod isteyin.');
+        return;
+      }
+
+      // Zaten kullanılmış mı kontrol et
+      if (inviteCode.effectiveStatus == InviteStatus.used || inviteCode.isUsed) {
+        setState(() => _errorMessage = 'Bu davet kodu daha önce kullanılmış.');
+        return;
+      }
+
+      // 2. Profili güncelle: assignedDistributorId ekle
+      final updatedProfile = UserProfileModel(
+        id: userProfile.id,
+        email: userProfile.email,
+        role: userProfile.role,
+        name: userProfile.name,
+        phoneNumber: userProfile.phoneNumber,
+        birthDate: userProfile.birthDate,
+        gender: userProfile.gender,
+        height: userProfile.height,
+        weight: userProfile.weight,
+        goal: userProfile.goal,
+        healthNotes: userProfile.healthNotes,
+        allergies: userProfile.allergies,
+        medications: userProfile.medications,
+        assignedDistributorId: inviteCode.distributorId,
+        profilePhotoUrl: userProfile.profilePhotoUrl,
+        profilePhotoUpdatedAt: userProfile.profilePhotoUpdatedAt,
+        distributorLevel: userProfile.distributorLevel,
+        monthlyVPTarget: userProfile.monthlyVPTarget,
+        isOnboarded: userProfile.isOnboarded,
+        age: userProfile.age,
+        programStartDate: userProfile.programStartDate,
+        userGoal: userProfile.userGoal,
+        wakeTime: userProfile.wakeTime,
+        lunchTime: userProfile.lunchTime,
+        sleepTime: userProfile.sleepTime,
+        earnedBadges: userProfile.earnedBadges,
+        waterDailyGoal: userProfile.waterDailyGoal,
+      );
+
+      // 3. Atomik batch: profil güncelle + davet kodunu "used" yap + CRM bağla
+      await firestoreService.signUpWithInviteCodeBatch(
+        userProfile: updatedProfile,
+        inviteCode: inviteCode,
+        newUserId: uid,
+      );
+
+      // 4. AuthProvider'daki profili yenile
+      await authProvider.refreshProfile();
+
+      if (mounted) {
+        setState(() {
+          _successMessage = 'Danışmanınıza başarıyla bağlandınız!';
+          _codeController.clear();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        final message = e.toString().replaceFirst('Exception: ', '');
+        setState(() => _errorMessage = message);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRedeeming = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // assignedDistributorId boşsa bilgi mesajı göster
-    if (assignedDistributorId == null || assignedDistributorId!.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Distribütörüm',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              const Text('Henüz bir distribütöre bağlı değilsiniz.'),
-            ],
-          ),
-        ),
+    // Eğer distribütör zaten atanmışsa, bilgi kartını göster
+    if (widget.assignedDistributorId != null &&
+        widget.assignedDistributorId!.isNotEmpty) {
+      return _AssignedDistributorView(
+        distributorId: widget.assignedDistributorId!,
       );
     }
 
-    final firestoreService = Provider.of<FirestoreService>(context, listen: false);
+    // Distribütör atanmamışsa, davet kodu giriş alanını göster
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.person_add_alt_1_outlined,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Danışmanıma Bağlan',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Danışmanınızdan aldığınız davet kodunu girerek bağlanabilirsiniz.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: 16),
+
+            // Davet kodu giriş alanı
+            TextField(
+              controller: _codeController,
+              textCapitalization: TextCapitalization.characters,
+              maxLength: 8,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'monospace',
+                letterSpacing: 4,
+              ),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                hintText: 'ABCD1234',
+                hintStyle: TextStyle(
+                  color: Colors.grey.shade400,
+                  fontFamily: 'monospace',
+                  letterSpacing: 4,
+                  fontSize: 20,
+                ),
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 2,
+                  ),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+              ),
+              enabled: !_isRedeeming,
+              onSubmitted: (_) => _redeemInviteCode(),
+            ),
+            const SizedBox(height: 12),
+
+            // Hata mesajı
+            if (_errorMessage != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.error.withAlpha(80)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: AppColors.error, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                          color: AppColors.error,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Başarı mesajı
+            if (_successMessage != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline,
+                        color: Colors.green.shade700, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _successMessage!,
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // Bağlan butonu
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isRedeeming ? null : _redeemInviteCode,
+                icon: _isRedeeming
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.link),
+                label: Text(
+                  _isRedeeming ? 'Bağlanıyor...' : 'Davet Koduyla Bağlan',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.textOnPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Zaten bir distribütöre bağlı olan müşteri için bilgi kartı.
+class _AssignedDistributorView extends StatelessWidget {
+  final String distributorId;
+
+  const _AssignedDistributorView({required this.distributorId});
+
+  @override
+  Widget build(BuildContext context) {
+    final firestoreService =
+        Provider.of<FirestoreService>(context, listen: false);
 
     return FutureBuilder<UserProfileModel?>(
-      future: firestoreService.getDistributorProfile(assignedDistributorId!),
+      future: firestoreService.getDistributorProfile(distributorId),
       builder: (context, snapshot) {
         return Card(
+          elevation: 2,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Distribütörüm',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.verified_outlined,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Danışmanım',
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 _buildContent(context, snapshot),
@@ -85,13 +388,13 @@ class DistributorInfoCard extends StatelessWidget {
 
     // Hata durumu
     if (snapshot.hasError) {
-      return const Text('Distribütör bilgisi yüklenemedi.');
+      return const Text('Danışman bilgisi yüklenemedi.');
     }
 
     // Distribütör bulunamadı
     final distributor = snapshot.data;
     if (distributor == null) {
-      return const Text('Distribütör bilgisi yüklenemedi.');
+      return const Text('Danışman bilgisi yüklenemedi.');
     }
 
     // Distribütör bilgilerini salt okunur olarak göster
@@ -99,11 +402,13 @@ class DistributorInfoCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _ReadOnlyField(
+          icon: Icons.person_outline,
           label: 'Ad Soyad',
           value: distributor.name ?? '-',
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         _ReadOnlyField(
+          icon: Icons.phone_outlined,
           label: 'Telefon',
           value: distributor.phoneNumber ?? '-',
         ),
@@ -114,29 +419,41 @@ class DistributorInfoCard extends StatelessWidget {
 
 /// Salt okunur etiket + değer çifti widget'ı.
 class _ReadOnlyField extends StatelessWidget {
+  final IconData? icon;
   final String label;
   final String value;
 
   const _ReadOnlyField({
+    this.icon,
     required this.label,
     required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey[600],
-              ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyMedium,
+        if (icon != null) ...[
+          Icon(icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+        ],
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ],
         ),
       ],
     );

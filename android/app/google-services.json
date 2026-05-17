@@ -12,7 +12,12 @@
           "package_name": "com.example.customer_tracker"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "433193562880-c85p6i04ghd6ft87r60oovjp1vo7bt5f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mze.pdfToFirebase"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +48,12 @@
           "package_name": "com.herbalife.customer_tracker"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
@@ -39,7 +61,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "433193562880-c85p6i04ghd6ft87r60oovjp1vo7bt5f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mze.pdfToFirebase"
+              }
+            }
+          ]
         }
       }
     },
@@ -50,7 +84,12 @@
           "package_name": "com.mze.customer_track"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
@@ -58,7 +97,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "433193562880-c85p6i04ghd6ft87r60oovjp1vo7bt5f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mze.pdfToFirebase"
+              }
+            }
+          ]
         }
       }
     },
@@ -69,7 +120,20 @@
           "package_name": "com.mze.herbaformix"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "433193562880-b2k472cc1pimpld0aaos5tcg7b41672j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mze.herbaformix",
+            "certificate_hash": "30c3426dcf34a4449b60fc2c9a66edfe44cc404f"
+          }
+        },
+        {
+          "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
@@ -77,7 +141,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "433193562880-c85p6i04ghd6ft87r60oovjp1vo7bt5f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mze.pdfToFirebase"
+              }
+            }
+          ]
         }
       }
     },
@@ -88,7 +164,12 @@
           "package_name": "com.mze.herbaformix_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
@@ -96,7 +177,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "433193562880-c85p6i04ghd6ft87r60oovjp1vo7bt5f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mze.pdfToFirebase"
+              }
+            }
+          ]
         }
       }
     },
@@ -107,7 +200,12 @@
           "package_name": "com.mze.pdf_to_firebase"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCk2OIBziqCzQd3gQKiXbNGLzeKFHHE9vQ"
@@ -115,7 +213,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "433193562880-c85p6i04ghd6ft87r60oovjp1vo7bt5f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mze.pdfToFirebase"
+              }
+            }
+          ]
         }
       }
     }

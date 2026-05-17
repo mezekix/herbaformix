@@ -1,28 +1,20 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../models/customer_model.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
-/// Hem `users/{uid}/customers` alt koleksiyonundan hem de `userProfiles`
-/// koleksiyonundan gelen müşterileri temsil eden birleşik model.
 class CombinedCustomerEntry {
-  /// Müşteri UID'si veya CustomerModel doküman ID'si.
   final String id;
-
-  /// Müşterinin tam adı (ad + soyad).
   final String name;
-
-  /// Telefon numarası.
   final String phoneNumber;
-
-  /// Bağlanma yöntemi: "davet_kodu" (userProfiles kaynağı) veya "manuel" (alt koleksiyon kaynağı).
   final String connectionType;
-
-  /// `userProfiles` kaynağından gelen müşterinin UID'si (varsa).
   final String? userProfileId;
+  final CustomerModel? customerRecord;
+  final bool isLinkedCustomer;
 
   const CombinedCustomerEntry({
     required this.id,
@@ -30,7 +22,17 @@ class CombinedCustomerEntry {
     required this.phoneNumber,
     required this.connectionType,
     this.userProfileId,
+    this.customerRecord,
+    this.isLinkedCustomer = false,
   });
+
+  Timestamp? get activatedAt => customerRecord?.activatedAt;
+
+  bool get isRecentlyActivated {
+    final activated = activatedAt?.toDate();
+    return activated != null &&
+        DateTime.now().difference(activated).inDays < 7;
+  }
 }
 
 class CustomerProvider with ChangeNotifier {
@@ -67,9 +69,22 @@ class CustomerProvider with ChangeNotifier {
 
   List<CustomerModel> get customers => _customers;
   bool get isLoading => _isLoading;
-
-  // Müşteri sayısını döndüren getter
   int get customersCount => _customers.length;
+
+  List<CustomerModel> get recentlyActivatedCustomers {
+    final now = DateTime.now();
+    final list = _customers.where((customer) {
+      final activated = customer.activatedAt?.toDate();
+      return activated != null &&
+          customer.linkedUserId != null &&
+          now.difference(activated).inDays < 7;
+    }).toList();
+    list.sort(
+      (a, b) => (b.activatedAt ?? Timestamp(0, 0))
+          .compareTo(a.activatedAt ?? Timestamp(0, 0)),
+    );
+    return list;
+  }
 
   void fetchCustomers(String userId) {
     if (userId.isEmpty) {
@@ -82,21 +97,19 @@ class CustomerProvider with ChangeNotifier {
     notifyListeners();
 
     _customersSubscription?.cancel();
-    _customersSubscription = _firestoreService
-        .getCustomers(userId)
-        .listen(
-          (customersData) {
-            _customers = customersData;
-            _isLoading = false;
-            notifyListeners();
-          },
-          onError: (error) {
-            debugPrint("CustomerProvider Hata (fetchCustomers): $error");
-            _isLoading = false;
-            _customers = [];
-            notifyListeners();
-          },
-        );
+    _customersSubscription = _firestoreService.getCustomers(userId).listen(
+      (customersData) {
+        _customers = customersData;
+        _isLoading = false;
+        notifyListeners();
+      },
+      onError: (error) {
+        debugPrint("CustomerProvider Hata (fetchCustomers): $error");
+        _isLoading = false;
+        _customers = [];
+        notifyListeners();
+      },
+    );
   }
 
   Future<bool> addCustomer(CustomerModel customer) async {
@@ -105,18 +118,21 @@ class CustomerProvider with ChangeNotifier {
     notifyListeners();
     try {
       final customerToAdd = CustomerModel(
-        id: '', // Firestore ID'yi kendi verecek
+        id: '',
         firstName: customer.firstName,
         lastName: customer.lastName,
         phoneNumber: customer.phoneNumber,
         email: customer.email,
         address: customer.address,
         firstContactDate: customer.firstContactDate,
-        consultantId: _currentUserId!, // Sağlayıcıdaki güncel kullanıcıyı ata
+        consultantId: _currentUserId!,
         isActive: customer.isActive,
         notes: customer.notes,
       );
-      await _firestoreService.addCustomer(_currentUserId!, customerToAdd);
+      await _firestoreService.addCustomerWithInviteCode(
+        distributorId: _currentUserId!,
+        customer: customerToAdd,
+      );
       _isLoading = false;
       notifyListeners();
       return true;
@@ -164,89 +180,123 @@ class CustomerProvider with ChangeNotifier {
     }
   }
 
-  /// Belirtilen ID'ye sahip müşteriyi getirir.
-  /// Önce lokalde yüklü olan listede arar. Bulamazsa, doğrudan
-  /// veritabanından bu tek müşteriyi çekmeyi dener.
-  /// Bu, provider'lar arası zamanlama sorunlarını (race condition) çözer.
   Future<CustomerModel?> getCustomerById(String customerId) async {
     if (_currentUserId == null) return null;
 
-    // 1. Önce lokalde, hafızadaki listede ara.
     try {
-      final customer = _customers.firstWhere((c) => c.id == customerId);
-      return customer;
-    } catch (e) {
-      // Lokal listede bulunamadı, bu beklenen bir durum olabilir.
-      // Şimdi veritabanından çekmeyi deneyeceğiz.
-      debugPrint(
-        "Müşteri lokalde bulunamadı ($customerId), veritabanından çekiliyor...",
-      );
-    }
+      return _customers.firstWhere((c) => c.id == customerId);
+    } catch (_) {}
 
-    // 2. Lokal listede yoksa, doğrudan Firestore'dan çek.
     try {
-      final customer = await _firestoreService.getCustomer(
-        _currentUserId!,
-        customerId,
-      );
-      return customer;
+      return await _firestoreService.getCustomer(_currentUserId!, customerId);
     } catch (e) {
       debugPrint("CustomerProvider Hata (getCustomerById): $e");
       return null;
     }
   }
 
-  /// `users/{uid}/customers` alt koleksiyonu ile `userProfiles` koleksiyonundaki
-  /// müşterileri birleştirerek tekrarsız (deduplicated) bir liste döner.
-  ///
-  /// - `userProfiles` kaynağı önceliklendirilir.
-  /// - Aynı müşteri her iki kaynakta da varsa (UID eşleşmesiyle) yalnızca bir kez gösterilir.
-  /// - `userProfiles` kaynaklı müşteriler → `connectionType: "davet_kodu"`
-  /// - Alt koleksiyon kaynaklı müşteriler → `connectionType: "manuel"`
+  Future<CustomerModel?> getLinkedCustomerFallback(
+    CombinedCustomerEntry entry,
+  ) async {
+    if (_currentUserId == null) return null;
+
+    if (entry.customerRecord != null) {
+      return entry.customerRecord;
+    }
+
+    if (entry.userProfileId != null && entry.userProfileId!.isNotEmpty) {
+      final linkedCustomer = await _firestoreService.getCustomerByLinkedUserId(
+        _currentUserId!,
+        entry.userProfileId!,
+      );
+      if (linkedCustomer != null) {
+        return linkedCustomer;
+      }
+
+      final profile = await _firestoreService.getUserProfile(entry.userProfileId!);
+      if (profile != null) {
+        final createdCustomer =
+            await _firestoreService.createCustomerRecordFromUserProfile(
+          distributorId: _currentUserId!,
+          profile: profile,
+        );
+
+        final existingIndex = _customers.indexWhere(
+          (customer) => customer.id == createdCustomer.id,
+        );
+        if (existingIndex == -1) {
+          _customers = [..._customers, createdCustomer];
+        } else {
+          _customers[existingIndex] = createdCustomer;
+        }
+        notifyListeners();
+        return createdCustomer;
+      }
+    }
+
+    final matchedByPhone = _customers.cast<CustomerModel?>().firstWhere(
+          (customer) => customer != null && customer.phoneNumber == entry.phoneNumber,
+          orElse: () => null,
+        );
+
+    return matchedByPhone;
+  }
+
   Future<List<CombinedCustomerEntry>> getCombinedCustomers() async {
     if (_currentUserId == null) return [];
 
     try {
-      // 1. userProfiles kaynağından müşterileri çek (davet_kodu bağlantısı)
       final userProfileCustomers = await _firestoreService
           .getCustomersByDistributorId(_currentUserId!)
           .first;
+      final subCollectionCustomers =
+          await _firestoreService.getCustomers(_currentUserId!).first;
 
-      // 2. Alt koleksiyon kaynağından müşterileri çek (manuel bağlantı)
-      final subCollectionCustomers = await _firestoreService
-          .getCustomers(_currentUserId!)
-          .first;
-
-      // 3. userProfiles kaynaklı müşterileri önce ekle (öncelikli kaynak)
       final result = <CombinedCustomerEntry>[];
-      // Deduplicate için eklenen UID'leri takip et
       final addedIds = <String>{};
+      final customerRecordsByLinkedUserId = <String, CustomerModel>{
+        for (final customer in subCollectionCustomers)
+          if (customer.linkedUserId != null && customer.linkedUserId!.isNotEmpty)
+            customer.linkedUserId!: customer,
+      };
 
       for (final profile in userProfileCustomers) {
-        final entry = CombinedCustomerEntry(
-          id: profile.id,
-          name: profile.name ?? '',
-          phoneNumber: profile.phoneNumber ?? '',
-          connectionType: 'davet_kodu',
-          userProfileId: profile.id,
+        CustomerModel? customerRecord = customerRecordsByLinkedUserId[profile.id];
+        customerRecord ??= await _firestoreService.getCustomerByLinkedUserId(
+          _currentUserId!,
+          profile.id,
         );
-        result.add(entry);
+        result.add(
+          CombinedCustomerEntry(
+            id: profile.id,
+            name: profile.name ?? '',
+            phoneNumber: profile.phoneNumber ?? '',
+            connectionType: 'davet_kodu',
+            userProfileId: profile.id,
+            customerRecord: customerRecord,
+            isLinkedCustomer: true,
+          ),
+        );
         addedIds.add(profile.id);
       }
 
-      // 4. Alt koleksiyon kaynaklı müşterileri ekle; userProfiles'da zaten varsa atla
       for (final customer in subCollectionCustomers) {
-        // UID eşleşmesi: CustomerModel.id ile userProfile.id karşılaştır
-        if (!addedIds.contains(customer.id)) {
-          final entry = CombinedCustomerEntry(
-            id: customer.id,
-            name: '${customer.firstName} ${customer.lastName}'.trim(),
-            phoneNumber: customer.phoneNumber,
-            connectionType: 'manuel',
-            userProfileId: null,
+        if (customer.linkedUserId == null ||
+            !addedIds.contains(customer.linkedUserId)) {
+          result.add(
+            CombinedCustomerEntry(
+              id: customer.id,
+              name: '${customer.firstName} ${customer.lastName}'.trim(),
+              phoneNumber: customer.phoneNumber,
+              connectionType: 'manuel',
+              userProfileId: customer.linkedUserId,
+              customerRecord: customer,
+              isLinkedCustomer: customer.linkedUserId != null,
+            ),
           );
-          result.add(entry);
-          addedIds.add(customer.id);
+          if (customer.linkedUserId != null) {
+            addedIds.add(customer.linkedUserId!);
+          }
         }
       }
 

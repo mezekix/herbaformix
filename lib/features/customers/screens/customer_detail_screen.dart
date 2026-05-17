@@ -6,20 +6,19 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/customer_model.dart';
+import '../../../models/distributor_customer_insights.dart';
 import '../../../models/follow_up_model.dart';
 import '../../../models/scheduled_follow_up_model.dart';
+import '../../../models/user_profile_model.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../program/models/program_editor_args.dart';
+import '../../program/screens/create_program_screen.dart';
 import '../providers/follow_up_provider.dart';
 
-/// Bir müşterinin detay bilgilerini ve takip geçmişini gösteren ekran.
-/// Bu ekran, kendi state'ini yönetmek ve veri sağlamak için
-/// bir `ChangeNotifierProvider` ile sarmalanır.
 class CustomerDetailScreen extends StatelessWidget {
-  /// Rota adı, go_router tarafından kullanılır.
   static const String routeName = 'customer-detail';
 
-  /// Görüntülenecek olan müşteri nesnesi.
   final CustomerModel customer;
 
   const CustomerDetailScreen({super.key, required this.customer});
@@ -42,8 +41,6 @@ class CustomerDetailScreen extends StatelessWidget {
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: 'Müşteriyi Düzenle',
                   onPressed: () {
-                    // Müşteri düzenleme sayfasına yönlendirme.
-                    // Müşteri nesnesini `extra` parametresi ile gönderiyoruz.
                     context.goNamed(
                       AddEditCustomerScreen.routeName,
                       extra: customer,
@@ -59,18 +56,35 @@ class CustomerDetailScreen extends StatelessWidget {
                 children: [
                   _buildCustomerHeader(context),
                   const SizedBox(height: 16),
-
-                  // --- SAĞLIK BİLGİLERİ BÖLÜMÜ ---
                   Text(
                     'Sağlık Bilgileri',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const Divider(),
                   const SizedBox(height: 8),
-                  _buildHealthInfoCard(context),
+                  _buildHealthSection(context),
+                  const SizedBox(height: 12),
+                  if (customer.linkedUserId != null &&
+                      customer.linkedUserId!.isNotEmpty)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          context.goNamed(
+                            CreateProgramScreen.routeName,
+                            extra: ProgramEditorArgs(
+                              targetUserId: customer.linkedUserId!,
+                              targetCustomerName:
+                                  '${customer.firstName} ${customer.lastName}'.trim(),
+                              isDistributorMode: true,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.edit_calendar_outlined),
+                        label: const Text('Bu Müşteri İçin Program Yaz'),
+                      ),
+                    ),
                   const SizedBox(height: 24),
-
-                  // --- YENİ BÖLÜM: PLANLANMIŞ TAKİPLER ---
                   Text(
                     'Planlanmış Takipler (Yapılacaklar)',
                     style: Theme.of(context).textTheme.titleLarge,
@@ -84,7 +98,6 @@ class CustomerDetailScreen extends StatelessWidget {
                         child: CircularProgressIndicator(),
                       ),
                     ),
-
                   if (!followUpProvider.isLoading &&
                       followUpProvider.pendingScheduledFollowUps.isEmpty)
                     const Center(
@@ -93,17 +106,13 @@ class CustomerDetailScreen extends StatelessWidget {
                         child: Text('Yaklaşan planlanmış takip görevi yok.'),
                       ),
                     ),
-
                   if (followUpProvider.pendingScheduledFollowUps.isNotEmpty)
                     _buildScheduledFollowUpsList(
                       context,
                       followUpProvider.pendingScheduledFollowUps,
                       followUpProvider,
                     ),
-
                   const SizedBox(height: 24),
-
-                  // --- MEVCUT BÖLÜM: GEÇMİŞ GÖRÜŞMELER ---
                   Text(
                     'Geçmiş Görüşmeler',
                     style: Theme.of(context).textTheme.titleLarge,
@@ -117,7 +126,6 @@ class CustomerDetailScreen extends StatelessWidget {
                         child: CircularProgressIndicator(),
                       ),
                     ),
-
                   if (!followUpProvider.isLoading &&
                       followUpProvider.followUps.isEmpty)
                     const Center(
@@ -126,7 +134,6 @@ class CustomerDetailScreen extends StatelessWidget {
                         child: Text('Henüz takip görüşmesi eklenmemiş.'),
                       ),
                     ),
-
                   if (followUpProvider.followUps.isNotEmpty)
                     _buildFollowUpsList(context, followUpProvider.followUps),
                 ],
@@ -134,7 +141,6 @@ class CustomerDetailScreen extends StatelessWidget {
             ),
             floatingActionButton: FloatingActionButton.extended(
               onPressed: () {
-                // `completedScheduledFollowUpId` olmadan çağırıyoruz.
                 _showAddFollowUpSheet(context, customer, followUpProvider);
               },
               label: const Text('Plansız Takip Ekle'),
@@ -146,13 +152,12 @@ class CustomerDetailScreen extends StatelessWidget {
     );
   }
 
-  /// Provider ve context'i parametre olarak alacak şekilde güncellendi.
   void _showAddFollowUpSheet(
     BuildContext context,
     CustomerModel customer,
     FollowUpProvider provider, {
     FollowUpModel? followUp,
-    String? scheduledFollowUpId, // Planlanmış görevin ID'si
+    String? scheduledFollowUpId,
   }) {
     showModalBottomSheet(
       context: context,
@@ -166,14 +171,13 @@ class CustomerDetailScreen extends StatelessWidget {
             customer: customer,
             followUpProvider: provider,
             followUp: followUp,
-            scheduledFollowUpId: scheduledFollowUpId, // ID'yi forma iletiyoruz.
+            scheduledFollowUpId: scheduledFollowUpId,
           ),
         );
       },
     );
   }
 
-  /// Müşterinin temel bilgilerini gösteren bir kart widget'ı oluşturur.
   Widget _buildCustomerHeader(BuildContext context) {
     return Card(
       elevation: 2,
@@ -198,7 +202,6 @@ class CustomerDetailScreen extends StatelessWidget {
             ),
             const Divider(),
             const SizedBox(height: 8),
-            // Müşterinin diğer bilgilerini gösteren satırlar.
             Row(
               children: [
                 const Icon(Icons.email_outlined, size: 16),
@@ -216,6 +219,18 @@ class CustomerDetailScreen extends StatelessWidget {
                 ),
               ],
             ),
+            if (customer.activatedAt != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.verified_user_outlined, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Aktive Oldu: ${DateFormat('dd MMMM yyyy HH:mm', 'tr_TR').format(customer.activatedAt!.toDate())}',
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [
@@ -230,7 +245,6 @@ class CustomerDetailScreen extends StatelessWidget {
                 Text(customer.isActive ? 'Aktif Müşteri' : 'Pasif Müşteri'),
               ],
             ),
-            // Notlar alanı — yalnızca dolu ise göster
             if (customer.notes != null && customer.notes!.trim().isNotEmpty) ...[
               const SizedBox(height: 12),
               const Divider(),
@@ -247,9 +261,7 @@ class CustomerDetailScreen extends StatelessWidget {
                 children: [
                   const Icon(Icons.notes_outlined, size: 16),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(customer.notes!),
-                  ),
+                  Expanded(child: Text(customer.notes!)),
                 ],
               ),
             ],
@@ -259,31 +271,302 @@ class CustomerDetailScreen extends StatelessWidget {
     );
   }
 
-  /// "Sağlık Bilgileri" bilgi kartını oluşturur.
-  Widget _buildHealthInfoCard(BuildContext context) {
+  Widget _buildHealthSection(BuildContext context) {
+    if (customer.linkedUserId == null || customer.linkedUserId!.isEmpty) {
+      return _buildInfoMessage(
+        icon: Icons.link_off_outlined,
+        color: Colors.orange,
+        text:
+            'Bu müşteri henüz hesabını aktive etmedi. Sağlık verileri ve günlük takip bilgileri aktivasyondan sonra görünür.',
+      );
+    }
+
+    final firestoreService = context.read<FirestoreService>();
+
+    return StreamBuilder<UserProfileModel?>(
+      stream: firestoreService.watchUserProfile(customer.linkedUserId!),
+      builder: (context, profileSnapshot) {
+        if (profileSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final profile = profileSnapshot.data;
+        if (profile == null) {
+          return _buildInfoMessage(
+            icon: Icons.info_outline,
+            color: Colors.blue,
+            text: 'Bağlı müşteri profili bulunamadı.',
+          );
+        }
+
+        return FutureBuilder<DistributorCustomerInsights>(
+          future: firestoreService.getDistributorCustomerInsights(
+            customer.linkedUserId!,
+          ),
+          builder: (context, insightsSnapshot) {
+            if (insightsSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final insights = insightsSnapshot.data;
+            if (insights == null) {
+              return _buildInfoMessage(
+                icon: Icons.error_outline,
+                color: Colors.red,
+                text: 'Müşteri içgörüleri yüklenemedi.',
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildProfileSummaryCard(context, profile),
+                const SizedBox(height: 12),
+                _buildInsightsCard(context, profile, insights),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileSummaryCard(
+    BuildContext context,
+    UserProfileModel profile,
+  ) {
+    return Card(
+      elevation: 0,
+      color: Colors.green.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildDataChip(Icons.person_outline, profile.name ?? 'İsim yok'),
+                _buildDataChip(
+                  Icons.phone_outlined,
+                  profile.phoneNumber ?? 'Telefon yok',
+                ),
+                _buildDataChip(
+                  Icons.straighten,
+                  profile.height != null
+                      ? '${profile.height!.toStringAsFixed(0)} cm'
+                      : 'Boy yok',
+                ),
+                _buildDataChip(
+                  Icons.monitor_weight_outlined,
+                  profile.weight != null
+                      ? '${profile.weight!.toStringAsFixed(1)} kg'
+                      : 'Kilo yok',
+                ),
+                _buildDataChip(
+                  Icons.flag_outlined,
+                  _formatGoal(profile.userGoal ?? profile.goal),
+                ),
+                _buildDataChip(
+                  Icons.cake_outlined,
+                  profile.age != null ? '${profile.age} yaş' : 'Yaş yok',
+                ),
+              ],
+            ),
+            if ((profile.healthNotes ?? '').trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Sağlık Notu',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(profile.healthNotes!.trim()),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsightsCard(
+    BuildContext context,
+    UserProfileModel profile,
+    DistributorCustomerInsights insights,
+  ) {
+    final latestProgress = insights.latestProgress;
+    final waterPercent =
+        insights.waterGoalMl == 0 ? 0.0 : insights.todayWaterMl / insights.waterGoalMl;
+    final lastActivityText = insights.lastActivityAt == null
+        ? 'Aktivite yok'
+        : DateFormat('dd.MM.yyyy HH:mm').format(insights.lastActivityAt!);
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Son 7 Gün Özeti',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: insights.isAtRisk
+                        ? Colors.red.shade100
+                        : Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    insights.isAtRisk ? 'Riskli' : 'Takipte',
+                    style: TextStyle(
+                      color: insights.isAtRisk
+                          ? Colors.red.shade900
+                          : Colors.green.shade900,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildMetricCard(
+                  context,
+                  title: 'Son Kilo',
+                  value: latestProgress != null
+                      ? '${latestProgress.weight.toStringAsFixed(1)} kg'
+                      : (profile.weight != null
+                          ? '${profile.weight!.toStringAsFixed(1)} kg'
+                          : 'Yok'),
+                  subtitle: latestProgress != null
+                      ? DateFormat('dd.MM').format(latestProgress.date)
+                      : 'Kayıt yok',
+                ),
+                _buildMetricCard(
+                  context,
+                  title: 'Su Takibi',
+                  value: '${insights.todayWaterMl}/${insights.waterGoalMl} ml',
+                  subtitle: '%${(waterPercent * 100).clamp(0, 100).round()}',
+                ),
+                _buildMetricCard(
+                  context,
+                  title: 'Öğün Tamamlama',
+                  value:
+                      '${insights.completedRoutinesLast7Days}/${insights.totalRoutinesLast7Days}',
+                  subtitle:
+                      '%${(insights.completionRate * 100).clamp(0, 100).round()}',
+                ),
+                _buildMetricCard(
+                  context,
+                  title: 'Son Aktivite',
+                  value: lastActivityText,
+                  subtitle: insights.lastActivityAt == null
+                      ? 'Henüz yok'
+                      : _relativeTime(insights.lastActivityAt!),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required String subtitle,
+  }) {
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey.shade700,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.green.shade100),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.green.shade800),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoMessage({
+    required IconData icon,
+    required MaterialColor color,
+    required String text,
+  }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: color.shade50,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade100),
+        border: Border.all(color: color.shade100),
       ),
       padding: const EdgeInsets.all(16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline,
-            color: Colors.blue.shade700,
-            size: 20,
-          ),
+          Icon(icon, color: color.shade700, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Bu müşteri uygulamaya kayıtlıysa sağlık bilgileri profilinde görünür.',
-              style: TextStyle(
-                color: Colors.blue.shade800,
-                fontSize: 14,
-              ),
+              text,
+              style: TextStyle(color: color.shade800, fontSize: 14),
             ),
           ),
         ],
@@ -291,7 +574,27 @@ class CustomerDetailScreen extends StatelessWidget {
     );
   }
 
-  /// Planlanmış takip görevlerini listeleyen bir widget oluşturur.
+  String _formatGoal(String? goal) {
+    switch (goal) {
+      case 'weight_loss':
+        return 'Zayıflama';
+      case 'weight_gain':
+        return 'Kilo Alma';
+      case 'healthy_living':
+        return 'Sağlıklı Yaşam';
+      default:
+        return goal == null || goal.isEmpty ? 'Hedef yok' : goal;
+    }
+  }
+
+  String _relativeTime(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inDays >= 1) return '${difference.inDays} gün önce';
+    if (difference.inHours >= 1) return '${difference.inHours} saat önce';
+    if (difference.inMinutes >= 1) return '${difference.inMinutes} dk önce';
+    return 'Az önce';
+  }
+
   Widget _buildScheduledFollowUpsList(
     BuildContext context,
     List<ScheduledFollowUpModel> scheduledFollowUps,
@@ -335,7 +638,6 @@ class CustomerDetailScreen extends StatelessWidget {
               ),
               child: const Text('Görüşme Ekle'),
               onPressed: () {
-                // Görüşme ekleme formunu, bu görevin ID'si ile birlikte aç.
                 _showAddFollowUpSheet(
                   context,
                   customer,
@@ -350,7 +652,6 @@ class CustomerDetailScreen extends StatelessWidget {
     );
   }
 
-  /// Takip görüşmelerini listeleyen bir widget oluşturur.
   Widget _buildFollowUpsList(
     BuildContext context,
     List<FollowUpModel> followUps,
@@ -367,7 +668,6 @@ class CustomerDetailScreen extends StatelessWidget {
           margin: const EdgeInsets.symmetric(vertical: 6.0),
           child: ListTile(
             onTap: () {
-              // Düzenleme için formu aç
               _showAddFollowUpSheet(
                 context,
                 customer,
@@ -391,7 +691,6 @@ class CustomerDetailScreen extends StatelessWidget {
               ),
               tooltip: 'Bu Kaydı Sil',
               onPressed: () async {
-                // Silme onayı için bir dialog göster.
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -415,13 +714,10 @@ class CustomerDetailScreen extends StatelessWidget {
                   ),
                 );
 
-                // Eğer kullanıcı "Sil" butonuna bastıysa...
                 if (confirmed == true && context.mounted) {
-                  final success = await followUpProvider.deleteFollowUp(
-                    followUp.id,
-                  );
+                  final success =
+                      await followUpProvider.deleteFollowUp(followUp.id);
                   if (context.mounted && !success) {
-                    // Başarısız olursa kullanıcıya bilgi ver.
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Kayıt silinirken bir hata oluştu.'),
@@ -437,7 +733,6 @@ class CustomerDetailScreen extends StatelessWidget {
     );
   }
 
-  /// Takip türüne göre bir ikon döndürür.
   Widget _getFollowUpIcon(FollowUpType type) {
     switch (type) {
       case FollowUpType.phoneCall:
@@ -452,12 +747,11 @@ class CustomerDetailScreen extends StatelessWidget {
   }
 }
 
-/// Form widget'ı artık opsiyonel bir FollowUpModel alıyor.
 class _AddFollowUpSheet extends StatefulWidget {
   final CustomerModel customer;
   final FollowUpProvider followUpProvider;
-  final FollowUpModel? followUp; // Düzenleme modu için
-  final String? scheduledFollowUpId; // Tamamlanan görev ID'si için
+  final FollowUpModel? followUp;
+  final String? scheduledFollowUpId;
 
   const _AddFollowUpSheet({
     required this.customer,
@@ -472,10 +766,9 @@ class _AddFollowUpSheet extends StatefulWidget {
 
 class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
   final _formKey = GlobalKey<FormState>();
-  bool get _isEditing => widget.followUp != null; // Düzenleme modunda mıyız?
+  bool get _isEditing => widget.followUp != null;
   bool _isLoading = false;
 
-  // Form alanları için state değişkenleri
   FollowUpType _type = FollowUpType.phoneCall;
   DateTime _date = DateTime.now();
   TimeOfDay _time = TimeOfDay.now();
@@ -484,7 +777,6 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
   @override
   void initState() {
     super.initState();
-    // Eğer düzenleme modundaysak, form alanlarını gelen veriyle doldur.
     if (_isEditing) {
       final followUp = widget.followUp!;
       _type = followUp.type;
@@ -500,7 +792,6 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
     super.dispose();
   }
 
-  /// Formu kaydeden metot
   Future<void> _saveForm() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
@@ -518,11 +809,8 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
       _time.minute,
     );
 
-    // Yeni veya güncellenmiş modeli oluştur.
     final followUpData = FollowUpModel(
-      id: _isEditing
-          ? widget.followUp!.id
-          : '', // Düzenlemede mevcut ID'yi koru.
+      id: _isEditing ? widget.followUp!.id : '',
       customerId: widget.customer.id,
       consultantId: _isEditing
           ? widget.followUp!.consultantId
@@ -536,10 +824,8 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
     try {
       bool success;
       if (_isEditing) {
-        // Düzenleme modundaysak güncelle.
         success = await followUpProvider.updateFollowUp(followUpData);
       } else {
-        // Ekleme modundaysak ekle.
         success = await followUpProvider.addFollowUp(
           followUpData,
           completedScheduledFollowUpId: widget.scheduledFollowUpId,
@@ -562,9 +848,9 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Hata: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata: ${e.toString()}')),
+        );
       }
     } finally {
       if (mounted) {
@@ -586,9 +872,7 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              _isEditing
-                  ? 'Takibi Düzenle'
-                  : 'Yeni Takip Ekle', // Duruma göre başlığı değiştir.
+              _isEditing ? 'Takibi Düzenle' : 'Yeni Takip Ekle',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),

@@ -2,93 +2,116 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Ürünler - Global koleksiyon (değiştirilmedi)
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function myProfile() {
+      return get(/databases/$(database)/documents/userProfiles/$(request.auth.uid));
+    }
+
+    function isDistributor() {
+      return signedIn() && myProfile().data.role == 'distributor';
+    }
+
+    function isAssignedDistributor(customerUserId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/userProfiles/$(customerUserId)) &&
+        get(/databases/$(database)/documents/userProfiles/$(customerUserId)).data.assignedDistributorId == request.auth.uid;
+    }
+
     match /products/{productId} {
       allow read, write: if true;
     }
-    
-    // Kullanıcı Profilleri
+
     match /userProfiles/{userId} {
-      // Kullanıcı yalnızca kendi profilini okuyup yazabilir
-      allow read: if request.auth != null && (
-        request.auth.uid == userId ||
-        // Distribütör, assignedDistributorId alanı kendi UID'siyle eşleşen profilleri okuyabilir
-        resource.data.assignedDistributorId == request.auth.uid
+      allow read: if signedIn() && (
+        isOwner(userId) ||
+        resource.data.assignedDistributorId == request.auth.uid ||
+        myProfile().data.assignedDistributorId == userId
       );
-      
-      // Yazma: Kullanıcı yalnızca kendi profilini yazabilir
-      // assignedDistributorId alanı istemci tarafından doğrudan güncellenemez
-      allow create: if request.auth != null &&
-        request.auth.uid == userId &&
-        !('assignedDistributorId' in request.resource.data);
-      
-      allow update: if request.auth != null &&
-        request.auth.uid == userId &&
-        // assignedDistributorId alanı istemci tarafından değiştirilemez
+
+      allow create: if isOwner(userId);
+
+      allow update: if isOwner(userId) &&
         (
           !('assignedDistributorId' in request.resource.data) ||
+          !('assignedDistributorId' in resource.data) ||
           request.resource.data.assignedDistributorId == resource.data.assignedDistributorId
         );
     }
-    
-    // Davet Kodları
+
     match /inviteCodes/{codeId} {
-      // Yalnızca kimliği doğrulanmış kullanıcılar okuyabilir
-      allow read: if request.auth != null;
-      
-      // Yalnızca distribütör rolündeki kullanıcılar yeni doküman oluşturabilir
-      allow create: if request.auth != null &&
-        get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.role == 'distributor' &&
-        // isUsed ve usedByUserId alanları oluşturma sırasında istemci tarafından ayarlanamaz
+      allow read: if true;
+
+      allow create: if isDistributor() &&
         request.resource.data.isUsed == false &&
         !('usedByUserId' in request.resource.data);
-      
-      // isUsed ve usedByUserId alanları yalnızca davet kodu kullanımı sırasında güncellenebilir.
-      // Güncelleme: yalnızca isUsed false→true ve usedByUserId atanıyorsa izin ver.
-      allow update: if request.auth != null &&
+
+      allow update: if signedIn() &&
         resource.data.isUsed == false &&
         request.resource.data.isUsed == true &&
         request.resource.data.usedByUserId == request.auth.uid &&
         request.resource.data.code == resource.data.code &&
         request.resource.data.distributorId == resource.data.distributorId;
-      
+
       allow delete: if false;
     }
-    
-    // Kullanıcıya özel veriler (Müşteriler ve Siparişler) - eski kurallar (üst düzey)
+
     match /users/{userId} {
-      allow read, write: if true;
-      
+      allow read, write: if isOwner(userId);
+
       match /customers/{customerId} {
-        allow read, write: if true;
-        
+        allow read, write: if isOwner(userId);
+
         match /follow_ups/{followUpId} {
-          allow read, write: if true;
+          allow read, write: if isOwner(userId);
         }
       }
-      
+
       match /orders/{orderId} {
-        allow read, write: if true;
+        allow read, write: if isOwner(userId);
+      }
+
+      match /progressEntries/{entryId} {
+        allow read: if isOwner(userId) || isAssignedDistributor(userId);
+        allow write: if isOwner(userId);
+      }
+
+      match /waterLogs/{logId} {
+        allow read: if isOwner(userId) || isAssignedDistributor(userId);
+        allow write: if isOwner(userId);
+      }
+
+      match /Daily_Routines/{routineId} {
+        allow read: if isOwner(userId) || isAssignedDistributor(userId);
+        allow write: if isOwner(userId) || isAssignedDistributor(userId);
+      }
+
+      match /program/{programId} {
+        allow read: if isOwner(userId) || isAssignedDistributor(userId);
+        allow write: if isOwner(userId) || isAssignedDistributor(userId);
+      }
+
+      match /{document=**} {
+        allow read, write: if false;
       }
     }
-    
-    // Kullanıcıya Özel Veriler - tüm alt koleksiyonlar
-    // {document=**} ifadesi tüm alt koleksiyonları (customers, orders, follow_ups) kapsar.
-    match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
 
-    // Planlanmış Takipler - kimliği doğrulanmış kullanıcılar erişebilir
     match /scheduled_follow_ups/{followUpId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if signedIn();
     }
 
     match /careerRoadmap/{levelId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if signedIn();
     }
-    
+
     match /programs/{programId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if signedIn();
     }
   }
 }

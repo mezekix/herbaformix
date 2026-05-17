@@ -4,25 +4,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/customer_model.dart';
-import '../models/follow_up_model.dart'; // Yeni oluşturduğumuz takip modelini buraya ekliyoruz.
+import '../models/distributor_customer_insights.dart';
+import '../models/follow_up_model.dart';
 import '../models/invite_code_model.dart';
-import '../models/order_model.dart'; // OrderModel'i import et
+import '../models/invite_status.dart';
+import '../models/order_model.dart';
 import '../models/product_model.dart';
 import '../models/progress_entry_model.dart';
-import '../models/scheduled_follow_up_model.dart'; // Yeni modelimizi import ediyoruz.
+import '../models/scheduled_follow_up_model.dart';
 import '../models/user_profile_model.dart';
 import '../models/water_log_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // ... (UserProfile, Product, Customer servis metotları aynı kalacak) ...
   CollectionReference<UserProfileModel> get userProfilesRef => _db
       .collection('userProfiles')
       .withConverter<UserProfileModel>(
         fromFirestore: (s, o) => UserProfileModel.fromMap(s.data()!, s.id),
         toFirestore: (m, o) => m.toMap(),
       );
+
   Future<void> setUserProfile(UserProfileModel userProfile) async {
     await userProfilesRef
         .doc(userProfile.id)
@@ -34,12 +36,20 @@ class FirestoreService {
     return d.exists ? d.data() : null;
   }
 
+  Stream<UserProfileModel?> watchUserProfile(String userId) {
+    return userProfilesRef
+        .doc(userId)
+        .snapshots()
+        .map((doc) => doc.exists ? doc.data() : null);
+  }
+
   CollectionReference<ProductModel> get productsRef => _db
       .collection('products')
       .withConverter<ProductModel>(
         fromFirestore: (s, o) => ProductModel.fromMap(s.data()!, s.id),
         toFirestore: (m, o) => m.toMap(),
       );
+
   Stream<List<ProductModel>> getProducts() {
     return productsRef
         .orderBy('name')
@@ -69,6 +79,7 @@ class FirestoreService {
         fromFirestore: (s, o) => CustomerModel.fromMap(s.data()!, s.id),
         toFirestore: (m, o) => m.toMap(),
       );
+
   Future<DocumentReference<CustomerModel>> addCustomer(
     String userId,
     CustomerModel customer,
@@ -83,7 +94,6 @@ class FirestoreService {
         .map((s) => s.docs.map((d) => d.data()).toList());
   }
 
-  /// Veritabanından belirli bir ID'ye sahip tek bir müşteriyi getirir.
   Future<CustomerModel?> getCustomer(String userId, String customerId) async {
     try {
       final docSnapshot = await customersRef(userId).doc(customerId).get();
@@ -97,19 +107,97 @@ class FirestoreService {
     }
   }
 
+  Future<CustomerModel?> getCustomerByLinkedUserId(
+    String distributorId,
+    String linkedUserId,
+  ) async {
+    try {
+      final snapshot = await customersRef(distributorId)
+          .where('linkedUserId', isEqualTo: linkedUserId)
+          .limit(1)
+          .get();
+      if (snapshot.docs.isEmpty) return null;
+      return snapshot.docs.first.data();
+    } catch (e) {
+      debugPrint("FirestoreService Hata (getCustomerByLinkedUserId): $e");
+      return null;
+    }
+  }
+
+  Future<CustomerModel> createCustomerRecordFromUserProfile({
+    required String distributorId,
+    required UserProfileModel profile,
+  }) async {
+    final existing = await getCustomerByLinkedUserId(distributorId, profile.id);
+    if (existing != null) {
+      return existing;
+    }
+
+    final nameParts = (profile.name ?? '').trim().split(RegExp(r'\s+'));
+    final firstName = nameParts.isNotEmpty && nameParts.first.isNotEmpty
+        ? nameParts.first
+        : 'Müşteri';
+    final lastName = nameParts.length > 1
+        ? nameParts.sublist(1).join(' ').trim()
+        : '';
+
+    final customerDocRef = customersRef(distributorId).doc();
+    final customer = CustomerModel(
+      id: customerDocRef.id,
+      firstName: firstName,
+      lastName: lastName,
+      phoneNumber: profile.phoneNumber ?? '',
+      email: profile.email,
+      address: null,
+      firstContactDate: Timestamp.now(),
+      consultantId: distributorId,
+      isActive: true,
+      notes: 'Otomatik oluşturuldu',
+      linkedUserId: profile.id,
+      activatedAt: Timestamp.now(),
+    );
+
+    await customerDocRef.set(customer);
+    return customer;
+  }
+
   Future<void> updateCustomer(String userId, CustomerModel customer) async {
     await customersRef(userId).doc(customer.id).update(customer.toMap());
   }
 
   Future<void> deleteCustomer(String userId, String customerId) async {
-    await customersRef(userId).doc(customerId).delete();
+    final batch = _db.batch();
+
+    // 1. Müşteri dokümanını sil
+    final customerRef = customersRef(userId).doc(customerId);
+    batch.delete(customerRef);
+
+    // 2. Müşteriye ait scheduled_follow_ups'ları sil
+    try {
+      final scheduledSnapshot = await scheduledFollowUpsRef()
+          .where('customerId', isEqualTo: customerId)
+          .where('consultantId', isEqualTo: userId)
+          .get();
+      for (final doc in scheduledSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+    } catch (e) {
+      debugPrint('deleteCustomer: scheduled_follow_ups temizlenirken hata: $e');
+    }
+
+    // 3. Müşteriye ait follow_ups alt koleksiyonunu sil
+    try {
+      final followUpsSnapshot = await followUpsRef(userId, customerId).get();
+      for (final doc in followUpsSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+    } catch (e) {
+      debugPrint('deleteCustomer: follow_ups temizlenirken hata: $e');
+    }
+
+    await batch.commit();
   }
 
-  // --- Follow Ups (Takip Görüşmeleri) ---
-
-  /// Belirli bir müşteriye ait takip görüşmeleri için Koleksiyon Referansı oluşturur.
-  /// Firestore'daki veritabanı yolunu (path) tanımlar:
-  /// users/{danışmanId}/customers/{müşteriId}/follow_ups/{takipId}
   CollectionReference<FollowUpModel> followUpsRef(
     String userId,
     String customerId,
@@ -125,38 +213,32 @@ class FirestoreService {
         toFirestore: (followUp, _) => followUp.toMap(),
       );
 
-  /// Belirli bir müşterinin tüm takip görüşmelerini getiren bir Stream (anlık veri akışı) döndürür.
-  /// Görüşmeler, tarihe göre en yeniden eskiye doğru sıralanır.
   Stream<List<FollowUpModel>> getFollowUps(String userId, String customerId) {
     return followUpsRef(userId, customerId)
         .orderBy('date', descending: true)
-        .snapshots() // Veritabanındaki her değişikliği anlık olarak dinler.
+        .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList())
         .handleError((error) {
           debugPrint(
             "Takip görüşmeleri getirilirken hata oluştu (müşteri: $customerId): $error",
           );
-          return []; // Hata durumunda boş bir liste döndürür.
+          return [];
         });
   }
 
-  /// Veritabanına yeni bir takip görüşmesi ekler.
   Future<void> addFollowUp(
     String userId,
     String customerId,
     FollowUpModel followUp,
   ) async {
     try {
-      // Modeli direkt olarak referansa ekliyoruz. ID'yi Firestore otomatik oluşturacak.
       await followUpsRef(userId, customerId).add(followUp);
     } catch (e) {
       debugPrint("Takip görüşmesi eklerken hata: $e");
-      // Hata olursa, bunu çağıran kodun haberi olması için hatayı tekrar fırlatıyoruz.
       throw Exception("Takip görüşmesi eklenemedi: $e");
     }
   }
 
-  /// Mevcut bir takip görüşmesini günceller.
   Future<void> updateFollowUp(
     String userId,
     String customerId,
@@ -173,7 +255,6 @@ class FirestoreService {
     }
   }
 
-  /// Bir takip görüşmesini ID'sini kullanarak siler.
   Future<void> deleteFollowUp(
     String userId,
     String customerId,
@@ -187,9 +268,6 @@ class FirestoreService {
     }
   }
 
-  // --- Scheduled Follow Ups (Planlanmış Takipler) ---
-
-  /// `scheduled_follow_ups` ana koleksiyonu için bir referans oluşturur.
   CollectionReference<ScheduledFollowUpModel> scheduledFollowUpsRef() => _db
       .collection('scheduled_follow_ups')
       .withConverter<ScheduledFollowUpModel>(
@@ -198,8 +276,6 @@ class FirestoreService {
         toFirestore: (scheduled, _) => scheduled.toMap(),
       );
 
-  /// Belirli bir danışmana ait, tamamlanmamış ve tarihi yaklaşan görevleri getirir.
-  /// Bu, ana sayfadaki "Ajanda" bölümü için kullanılacak.
   Stream<List<ScheduledFollowUpModel>> getUpcomingFollowUpsForConsultant(
     String consultantId,
     DateTime inTheNext,
@@ -213,8 +289,6 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
-  /// Belirli bir müşteriye ait tüm planlanmış görevleri getirir.
-  /// Bu, müşteri detay sayfasındaki "Takip Planı" bölümü için kullanılacak.
   Stream<List<ScheduledFollowUpModel>> getScheduledFollowUpsForCustomer(
     String userId,
     String customerId,
@@ -227,9 +301,6 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
-  /// Veritabanına bir dizi (batch) planlanmış takip görevi ekler.
-  /// Bir sipariş teslim edildiğinde, tüm görevleri (1., 3., 7. gün vb.)
-  /// tek bir işlemde, atomik olarak eklemek için bu metodu kullanacağız.
   Future<void> addScheduledFollowUpBatch(
     List<ScheduledFollowUpModel> followUps,
   ) async {
@@ -237,19 +308,17 @@ class FirestoreService {
       final batch = _db.batch();
 
       for (final followUp in followUps) {
-        final docRef = scheduledFollowUpsRef()
-            .doc(); // Yeni bir doküman referansı oluştur.
-        batch.set(docRef, followUp); // Bu referansa modeli ekle.
+        final docRef = scheduledFollowUpsRef().doc();
+        batch.set(docRef, followUp);
       }
 
-      await batch.commit(); // Tüm işlemleri tek seferde veritabanına gönder.
+      await batch.commit();
     } catch (e) {
       debugPrint("Planlanmış takip grubu eklenirken hata: $e");
       throw Exception("Planlanmış takipler oluşturulamadı: $e");
     }
   }
 
-  /// Belirli bir planlanmış takip görevini tamamlandı olarak işaretler.
   Future<void> markScheduledFollowUpAsCompleted(
     String scheduledFollowUpId,
   ) async {
@@ -263,7 +332,6 @@ class FirestoreService {
     }
   }
 
-  /// Belirli bir planlanmış takip görevini siler.
   Future<void> deleteScheduledFollowUp(String scheduledFollowUpId) async {
     try {
       await scheduledFollowUpsRef().doc(scheduledFollowUpId).delete();
@@ -272,8 +340,6 @@ class FirestoreService {
       throw Exception("Planlanmış takip silinemedi: $e");
     }
   }
-
-  // --- Orders (Siparişler) ---
 
   CollectionReference<OrderModel> ordersRef(String userId) => _db
       .collection('users')
@@ -307,9 +373,6 @@ class FirestoreService {
     await ordersRef(userId).doc(orderId).delete();
   }
 
-  // --- Davet Kodu (Invite Code) ---
-
-  /// `inviteCodes` koleksiyonu için converter'lı referans.
   CollectionReference<InviteCodeModel> get inviteCodesRef => _db
       .collection('inviteCodes')
       .withConverter<InviteCodeModel>(
@@ -317,44 +380,51 @@ class FirestoreService {
         toFirestore: (m, _) => m.toMap(),
       );
 
-  /// 8 karakterlik büyük harf + rakam kodu üretir ([A-Z0-9] charset).
   @visibleForTesting
   String generateCode() {
     const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random.secure();
-    return List.generate(8, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(
+      8,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
-  /// Benzersizlik kontrolü yaparak `inviteCodes` koleksiyonuna yeni bir davet kodu yazar.
-  ///
-  /// Maksimum 5 deneme ile çakışma kontrolü yapar.
-  /// Başarılı olursa oluşturulan [InviteCodeModel]'i döner.
-  /// 5 denemede de çakışma olursa exception fırlatır.
-  Future<InviteCodeModel> createInviteCode(String distributorId) async {
+  Future<InviteCodeModel> createInviteCode(
+    String distributorId, {
+    String? customerRecordId,
+    String? customerName,
+    String? customerPhone,
+    String? customerEmail,
+  }) async {
     const maxAttempts = 5;
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       final code = generateCode();
 
-      // Çakışma kontrolü: aynı kod var mı?
       final existing = await inviteCodesRef
           .where('code', isEqualTo: code)
           .limit(1)
           .get();
 
       if (existing.docs.isNotEmpty) {
-        // Çakışma var, yeni kod dene
         continue;
       }
 
-      // Benzersiz kod bulundu, Firestore'a yaz
+      final now = DateTime.now();
       final model = InviteCodeModel(
-        id: '', // Firestore otomatik ID atayacak
+        id: '',
         code: code,
         distributorId: distributorId,
-        createdAt: DateTime.now(),
+        createdAt: now,
+        expiresAt: now.add(kInviteCodeDefaultValidity),
+        status: InviteStatus.pending,
         isUsed: false,
         usedByUserId: null,
+        customerRecordId: customerRecordId,
+        customerName: customerName,
+        customerPhone: customerPhone,
+        customerEmail: customerEmail,
       );
 
       final docRef = await inviteCodesRef.add(model);
@@ -362,15 +432,150 @@ class FirestoreService {
       return snapshot.data()!;
     }
 
-    throw Exception(
-      'Benzersiz davet kodu üretilemedi. Lütfen tekrar deneyin.',
-    );
+    throw Exception('Benzersiz davet kodu üretilemedi. Lütfen tekrar deneyin.');
   }
 
-  /// `inviteCodes` koleksiyonunda verilen kodu arar.
-  ///
-  /// Kod bulunamazsa `null` döner.
-  /// Kod `isUsed: true` ise exception fırlatır.
+  Future<({CustomerModel customer, InviteCodeModel inviteCode})>
+  addCustomerWithInviteCode({
+    required String distributorId,
+    required CustomerModel customer,
+  }) async {
+    const maxAttempts = 5;
+
+    String? code;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      final candidate = generateCode();
+      final existing = await inviteCodesRef
+          .where('code', isEqualTo: candidate)
+          .limit(1)
+          .get();
+      if (existing.docs.isEmpty) {
+        code = candidate;
+        break;
+      }
+    }
+    if (code == null) {
+      throw Exception('Benzersiz davet kodu üretilemedi. Lütfen tekrar deneyin.');
+    }
+
+    final customerDocRef = _db
+        .collection('users')
+        .doc(distributorId)
+        .collection('customers')
+        .doc();
+    final inviteDocRef = _db.collection('inviteCodes').doc();
+
+    final now = DateTime.now();
+
+    final customerToWrite = CustomerModel(
+      id: customerDocRef.id,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      phoneNumber: customer.phoneNumber,
+      email: customer.email,
+      address: customer.address,
+      firstContactDate: customer.firstContactDate,
+      consultantId: distributorId,
+      isActive: customer.isActive,
+      notes: customer.notes,
+      linkedUserId: null,
+      inviteCodeId: inviteDocRef.id,
+    );
+
+    final inviteToWrite = InviteCodeModel(
+      id: inviteDocRef.id,
+      code: code,
+      distributorId: distributorId,
+      createdAt: now,
+      expiresAt: now.add(kInviteCodeDefaultValidity),
+      status: InviteStatus.pending,
+      isUsed: false,
+      usedByUserId: null,
+      customerRecordId: customerDocRef.id,
+      customerName: '${customer.firstName} ${customer.lastName}'.trim(),
+      customerPhone: customer.phoneNumber,
+      customerEmail: customer.email,
+    );
+
+    final batch = _db.batch();
+    batch.set(customerDocRef, customerToWrite.toMap());
+    batch.set(inviteDocRef, inviteToWrite.toMap());
+
+    try {
+      await batch.commit();
+    } catch (e) {
+      debugPrint('addCustomerWithInviteCode batch hatası: $e');
+      throw Exception('Müşteri ve davet kodu oluşturulamadı: $e');
+    }
+
+    return (customer: customerToWrite, inviteCode: inviteToWrite);
+  }
+
+  Future<InviteCodeModel> regenerateInviteCode({
+    required String distributorId,
+    required String customerRecordId,
+    required String oldInviteCodeId,
+    required String customerName,
+    required String customerPhone,
+    String? customerEmail,
+  }) async {
+    const maxAttempts = 5;
+
+    String? code;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      final candidate = generateCode();
+      final existing = await inviteCodesRef
+          .where('code', isEqualTo: candidate)
+          .limit(1)
+          .get();
+      if (existing.docs.isEmpty) {
+        code = candidate;
+        break;
+      }
+    }
+    if (code == null) {
+      throw Exception('Benzersiz davet kodu üretilemedi. Lütfen tekrar deneyin.');
+    }
+
+    final newInviteDocRef = _db.collection('inviteCodes').doc();
+    final oldInviteDocRef = _db.collection('inviteCodes').doc(oldInviteCodeId);
+    final customerDocRef = _db
+        .collection('users')
+        .doc(distributorId)
+        .collection('customers')
+        .doc(customerRecordId);
+
+    final now = DateTime.now();
+    final newInvite = InviteCodeModel(
+      id: newInviteDocRef.id,
+      code: code,
+      distributorId: distributorId,
+      createdAt: now,
+      expiresAt: now.add(kInviteCodeDefaultValidity),
+      status: InviteStatus.pending,
+      isUsed: false,
+      usedByUserId: null,
+      customerRecordId: customerRecordId,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      customerEmail: customerEmail,
+    );
+
+    final batch = _db.batch();
+    batch.update(oldInviteDocRef, {'status': 'expired'});
+    batch.set(newInviteDocRef, newInvite.toMap());
+    batch.update(customerDocRef, {'inviteCodeId': newInviteDocRef.id});
+
+    try {
+      await batch.commit();
+    } catch (e) {
+      debugPrint('regenerateInviteCode batch hatası: $e');
+      throw Exception('Yeni davet kodu üretilemedi: $e');
+    }
+
+    return newInvite;
+  }
+
   Future<InviteCodeModel?> validateInviteCode(String code) async {
     final snapshot = await inviteCodesRef
         .where('code', isEqualTo: code)
@@ -382,37 +587,51 @@ class FirestoreService {
     }
 
     final inviteCode = snapshot.docs.first.data();
+    final effective = inviteCode.effectiveStatus;
 
-    if (inviteCode.isUsed) {
+    if (effective == InviteStatus.used || inviteCode.isUsed) {
       throw Exception('Bu davet kodu daha önce kullanılmış.');
+    }
+    if (effective == InviteStatus.expired) {
+      throw Exception(
+        'Davet kodu süresi dolmuş. Lütfen distribütörünüzden yeni bir kod isteyin.',
+      );
     }
 
     return inviteCode;
   }
 
-  /// `WriteBatch` ile atomik yazma: kullanıcı profili oluşturma + davet kodu güncelleme.
-  ///
-  /// - `userProfiles/{newUserId}` dokümanını batch'e ekler.
-  /// - `inviteCodes/{inviteCodeId}` dokümanını `isUsed: true, usedByUserId: newUserId` ile batch'e ekler.
-  /// - `batch.commit()` ile atomik olarak yazar.
   Future<void> signUpWithInviteCodeBatch({
     required UserProfileModel userProfile,
-    required String inviteCodeId,
+    required InviteCodeModel inviteCode,
     required String newUserId,
   }) async {
     try {
       final batch = _db.batch();
 
-      // userProfiles/{uid} dokümanını batch'e ekle
       final userProfileRef = userProfilesRef.doc(newUserId);
       batch.set(userProfileRef, userProfile, SetOptions(merge: true));
 
-      // inviteCodes/{codeId} dokümanını güncelle
-      final inviteCodeRef = inviteCodesRef.doc(inviteCodeId);
+      final inviteCodeRef = inviteCodesRef.doc(inviteCode.id);
       batch.update(inviteCodeRef, {
         'isUsed': true,
+        'status': 'used',
         'usedByUserId': newUserId,
       });
+
+      if (inviteCode.customerRecordId != null &&
+          inviteCode.customerRecordId!.isNotEmpty &&
+          inviteCode.distributorId.isNotEmpty) {
+        final customerDocRef = _db
+            .collection('users')
+            .doc(inviteCode.distributorId)
+            .collection('customers')
+            .doc(inviteCode.customerRecordId);
+        batch.update(customerDocRef, {
+          'linkedUserId': newUserId,
+          'activatedAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       await batch.commit();
     } catch (e) {
@@ -421,9 +640,6 @@ class FirestoreService {
     }
   }
 
-  /// `userProfiles/{distributorId}` dokümanını okur.
-  ///
-  /// Doküman bulunamazsa `null` döner.
   Future<UserProfileModel?> getDistributorProfile(String distributorId) async {
     try {
       final doc = await userProfilesRef.doc(distributorId).get();
@@ -434,8 +650,6 @@ class FirestoreService {
     }
   }
 
-  /// `assignedDistributorId == distributorId` olan `userProfiles` dokümanlarını
-  /// stream olarak döner.
   Stream<List<UserProfileModel>> getCustomersByDistributorId(
     String distributorId,
   ) {
@@ -445,9 +659,38 @@ class FirestoreService {
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
   }
 
-  // --- Progress Entries (İlerleme Kayıtları) ---
+  Stream<List<InviteCodeModel>> getInviteCodesForDistributor(
+    String distributorId,
+  ) {
+    return inviteCodesRef
+        .where('distributorId', isEqualTo: distributorId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList())
+        .handleError((error) {
+          debugPrint('getInviteCodesForDistributor hatası: $error');
+          return <InviteCodeModel>[];
+        });
+  }
 
-  /// `users/{userId}/progressEntries` koleksiyonu için referans.
+  Future<InviteCodeModel?> getInviteCodeForCustomer(
+    String customerRecordId,
+  ) async {
+    try {
+      final snapshot = await inviteCodesRef
+          .where('customerRecordId', isEqualTo: customerRecordId)
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+      return snapshot.docs.first.data();
+    } catch (e) {
+      debugPrint('getInviteCodeForCustomer hatası: $e');
+      return null;
+    }
+  }
+
   CollectionReference<ProgressEntryModel> progressEntriesRef(String userId) =>
       _db
           .collection('users')
@@ -459,7 +702,6 @@ class FirestoreService {
             toFirestore: (m, _) => m.toMap(),
           );
 
-  /// Son [limitDays] günlük ilerleme kayıtlarını stream olarak döner.
   Stream<List<ProgressEntryModel>> getProgressEntries(
     String userId, {
     int limitDays = 90,
@@ -472,7 +714,6 @@ class FirestoreService {
         .map((s) => s.docs.map((d) => d.data()).toList());
   }
 
-  /// Yeni bir ilerleme kaydı ekler.
   Future<DocumentReference<ProgressEntryModel>> addProgressEntry(
     String userId,
     ProgressEntryModel entry,
@@ -480,7 +721,6 @@ class FirestoreService {
     return await progressEntriesRef(userId).add(entry);
   }
 
-  /// Mevcut bir ilerleme kaydını günceller.
   Future<void> updateProgressEntry(
     String userId,
     ProgressEntryModel entry,
@@ -488,29 +728,22 @@ class FirestoreService {
     await progressEntriesRef(userId).doc(entry.id).update(entry.toMap());
   }
 
-  /// Bir ilerleme kaydını siler.
   Future<void> deleteProgressEntry(String userId, String entryId) async {
     await progressEntriesRef(userId).doc(entryId).delete();
   }
 
-  /// Kullanıcının kazandığı rozet ID'lerini Firestore'a kaydeder.
   Future<void> saveEarnedBadges(String userId, List<String> badgeIds) async {
     await userProfilesRef.doc(userId).update({'earnedBadges': badgeIds});
   }
 
-  // --- Water Logs (Su Takibi) ---
-
-  /// `users/{userId}/waterLogs` koleksiyonu için referans.
   CollectionReference<Map<String, dynamic>> _waterLogsRef(String userId) =>
       _db.collection('users').doc(userId).collection('waterLogs');
 
-  /// Belirli bir günün su loglarını stream olarak döner.
   Stream<List<WaterLogModel>> getWaterLogs(String userId, DateTime date) {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
     return _waterLogsRef(userId)
-        .where('time',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('time', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
         .where('time', isLessThan: Timestamp.fromDate(endOfDay))
         .orderBy('time', descending: false)
         .snapshots()
@@ -519,8 +752,6 @@ class FirestoreService {
             .toList());
   }
 
-  /// Kullanıcının günlük su hedefini döner (userProfiles'dan).
-  /// Hedef `waterDailyGoal` alanında saklanır.
   Future<int?> getWaterDailyGoal(String userId) async {
     final doc = await userProfilesRef.doc(userId).get();
     if (!doc.exists) return null;
@@ -528,28 +759,23 @@ class FirestoreService {
     return data?['waterDailyGoal'] as int?;
   }
 
-  /// Günlük su hedefini günceller.
   Future<void> setWaterDailyGoal(String userId, int goal) async {
     await userProfilesRef.doc(userId).update({'waterDailyGoal': goal});
   }
 
-  /// Yeni bir su logu ekler.
   Future<void> addWaterLog(String userId, WaterLogModel log) async {
     await _waterLogsRef(userId).add(log.toMap());
   }
 
-  /// Belirli bir su logunu siler.
   Future<void> deleteWaterLog(String userId, String logId) async {
     await _waterLogsRef(userId).doc(logId).delete();
   }
 
-  /// Belirli bir günün tüm su loglarını siler.
   Future<void> clearWaterLogs(String userId, DateTime date) async {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
     final snapshot = await _waterLogsRef(userId)
-        .where('time',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('time', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
         .where('time', isLessThan: Timestamp.fromDate(endOfDay))
         .get();
     final batch = _db.batch();
@@ -557,5 +783,127 @@ class FirestoreService {
       batch.delete(doc.reference);
     }
     await batch.commit();
+  }
+
+  Future<DistributorCustomerInsights> getDistributorCustomerInsights(
+    String customerUserId,
+  ) async {
+    try {
+      final now = DateTime.now();
+      final startOfToday = DateTime(now.year, now.month, now.day);
+      final endOfToday = startOfToday.add(const Duration(days: 1));
+      final sevenDaysAgo = startOfToday.subtract(const Duration(days: 6));
+
+      final latestProgressFuture = progressEntriesRef(customerUserId)
+          .orderBy('date', descending: true)
+          .limit(1)
+          .get();
+      final todayWaterFuture = _waterLogsRef(customerUserId)
+          .where('time', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
+          .where('time', isLessThan: Timestamp.fromDate(endOfToday))
+          .get();
+      final recentRoutinesFuture = _db
+          .collection('users')
+          .doc(customerUserId)
+          .collection('Daily_Routines')
+          .where(
+            'scheduled_time',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(sevenDaysAgo),
+          )
+          .where('scheduled_time', isLessThan: Timestamp.fromDate(endOfToday))
+          .get();
+      final userProfileFuture = getUserProfile(customerUserId);
+
+      final results = await Future.wait([
+        latestProgressFuture,
+        todayWaterFuture,
+        recentRoutinesFuture,
+        userProfileFuture,
+      ]);
+
+      final latestProgressSnapshot =
+          results[0] as QuerySnapshot<ProgressEntryModel>;
+      final todayWaterSnapshot = results[1] as QuerySnapshot<Map<String, dynamic>>;
+      final recentRoutinesSnapshot =
+          results[2] as QuerySnapshot<Map<String, dynamic>>;
+      final userProfile = results[3] as UserProfileModel?;
+
+      final latestProgress = latestProgressSnapshot.docs.isNotEmpty
+          ? latestProgressSnapshot.docs.first.data()
+          : null;
+
+      final todayWaterMl = todayWaterSnapshot.docs.fold<int>(
+        0,
+        (totalAmount, doc) =>
+            totalAmount + ((doc.data()['amount'] as num?)?.toInt() ?? 0),
+      );
+
+      final routines = recentRoutinesSnapshot.docs.map((doc) => doc.data()).toList();
+      final completedRoutines =
+          routines.where((routine) => routine['is_completed'] == true);
+
+      DateTime? latestRoutineAt;
+      if (recentRoutinesSnapshot.docs.isNotEmpty) {
+        latestRoutineAt = recentRoutinesSnapshot.docs
+            .map((doc) => (doc.data()['scheduled_time'] as Timestamp).toDate())
+            .fold<DateTime?>(
+              null,
+              (latest, current) =>
+                  latest == null || current.isAfter(latest) ? current : latest,
+            );
+      }
+
+      DateTime? latestWaterAt;
+      if (todayWaterSnapshot.docs.isNotEmpty) {
+        latestWaterAt = todayWaterSnapshot.docs
+            .map((doc) => (doc.data()['time'] as Timestamp).toDate())
+            .fold<DateTime?>(
+              null,
+              (latest, current) =>
+                  latest == null || current.isAfter(latest) ? current : latest,
+            );
+      }
+
+      final lastActivityCandidates = [
+        latestProgress?.date,
+        latestRoutineAt,
+        latestWaterAt,
+      ].whereType<DateTime>().toList()
+        ..sort((a, b) => b.compareTo(a));
+
+      return DistributorCustomerInsights(
+        latestProgress: latestProgress,
+        todayWaterMl: todayWaterMl,
+        waterGoalMl: userProfile?.waterDailyGoal ?? 2000,
+        completedRoutinesLast7Days: completedRoutines.length,
+        totalRoutinesLast7Days: routines.length,
+        lastActivityAt:
+            lastActivityCandidates.isEmpty ? null : lastActivityCandidates.first,
+      );
+    } catch (e) {
+      debugPrint('getDistributorCustomerInsights hatası: $e');
+      return const DistributorCustomerInsights(
+        latestProgress: null,
+        todayWaterMl: 0,
+        waterGoalMl: 2000,
+        completedRoutinesLast7Days: 0,
+        totalRoutinesLast7Days: 0,
+        lastActivityAt: null,
+      );
+    }
+  }
+
+  Future<int> getAtRiskCustomerCount(String distributorId) async {
+    try {
+      final customers = await getCustomersByDistributorId(distributorId).first;
+      if (customers.isEmpty) return 0;
+      final insights = await Future.wait(
+        customers.map((customer) => getDistributorCustomerInsights(customer.id)),
+      );
+      return insights.where((item) => item.isAtRisk).length;
+    } catch (e) {
+      debugPrint('getAtRiskCustomerCount hatası: $e');
+      return 0;
+    }
   }
 }

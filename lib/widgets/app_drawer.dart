@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../core/app_colors.dart'; // Renkler için
+import '../core/app_colors.dart';
+import '../core/avatar_color_helper.dart';
 import '../features/auth/providers/auth_provider.dart';
 import '../features/calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../features/customers/screens/customer_list_screen.dart';
@@ -16,18 +17,54 @@ import '../models/user_role.dart';
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
+  /// Mevcut tam route path'ini döndürür.
+  /// GoRouter'ın `routerDelegate.currentConfiguration.fullPath` bazen
+  /// named route'larda segment adı döndürebilir; bu yüzden
+  /// `GoRouterState.of(context).uri.toString()` daha güvenilir.
+  String _currentPath(BuildContext context) {
+    try {
+      return GoRouterState.of(context).uri.toString();
+    } catch (_) {
+      return GoRouter.of(context)
+          .routerDelegate
+          .currentConfiguration
+          .fullPath;
+    }
+  }
+
+  /// Bir drawer öğesinin aktif olup olmadığını belirler.
+  ///
+  /// [pathSegment]: URL'de aranacak segment, örn. '/customers'
+  /// Tam eşleşme veya o segment ile başlayan alt route'lar için true döner.
+  /// Örn: '/home/customers' ve '/home/customers/customer-detail' ikisi de
+  /// 'customers' segmenti için true döner.
+  bool _isActive(BuildContext context, String pathSegment) {
+    final path = _currentPath(context);
+    // Tam eşleşme veya alt route kontrolü
+    return path == pathSegment ||
+        path.contains('/$pathSegment') &&
+            // Yanlış eşleşmeyi önle: '/customers-archive' gibi durumlar
+            (path.contains('/$pathSegment/') ||
+                path.endsWith('/$pathSegment'));
+  }
+
   Widget _buildDrawerHeader(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.firebaseUser;
     final userProfile = authProvider.userProfile;
 
-    String displayName = userProfile?.name ?? "Kullanıcı Adı";
-    String displayEmail = user?.email ?? "E-posta adresi";
-    // İsim boşsa ve e-posta varsa, e-postanın @ işaretinden öncesini al
+    String displayName = userProfile?.name ?? 'Kullanıcı Adı';
+    String displayEmail = user?.email ?? 'E-posta adresi';
     if ((userProfile?.name == null || userProfile!.name!.isEmpty) &&
         (user?.email != null && user!.email!.isNotEmpty)) {
       displayName = user.email!.split('@')[0];
     }
+
+    final initials = displayName.trim().split(' ').take(2)
+        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+        .join();
+    final bgColor = AvatarColorHelper.forUser(userProfile?.id);
+    final textColor = AvatarColorHelper.textColorFor(bgColor);
 
     return UserAccountsDrawerHeader(
       accountName: Text(
@@ -40,15 +77,17 @@ class AppDrawer extends StatelessWidget {
       ),
       accountEmail: Text(
         displayEmail,
-        style: TextStyle(
-          color: AppColors.textOnPrimary.withAlpha(204),
-        ), // 0.8 * 255 = ~204
+        style: TextStyle(color: AppColors.textOnPrimary.withAlpha(204)),
       ),
       currentAccountPicture: CircleAvatar(
-        backgroundColor: AppColors.white.withAlpha(230), // 0.9 * 255 = ~230
+        backgroundColor: bgColor,
         child: Text(
-          displayName.isNotEmpty ? displayName[0].toUpperCase() : "K",
-          style: const TextStyle(fontSize: 40.0, color: AppColors.primary),
+          initials.isNotEmpty ? initials : 'K',
+          style: TextStyle(
+            fontSize: 28.0,
+            fontWeight: FontWeight.bold,
+            color: textColor,
+          ),
         ),
       ),
       decoration: const BoxDecoration(color: AppColors.primary),
@@ -60,19 +99,10 @@ class AppDrawer extends StatelessWidget {
     required IconData icon,
     required String title,
     required String routeName,
-    bool isNamedRoute = true,
+    required String pathSegment,
     Map<String, String>? pathParameters,
   }) {
-    final currentRoute = GoRouter.of(
-      context,
-    ).routerDelegate.currentConfiguration.fullPath;
-    // Rota adları '/home/products' gibi olabilir, bu yüzden karşılaştırmayı buna göre yapmalıyız.
-    // Ancak, GoRouter'da child rotaların tam yolu parent ile başlar.
-    // Şimdilik basit bir kontrol yapalım, daha sonra iyileştirilebilir.
-    bool isSelected =
-        currentRoute.endsWith(routeName) ||
-        (routeName == HomeScreen.routeName &&
-            currentRoute == HomeScreen.routeName);
+    final isSelected = _isActive(context, pathSegment);
 
     return ListTile(
       leading: Icon(
@@ -87,14 +117,11 @@ class AppDrawer extends StatelessWidget {
         ),
       ),
       selected: isSelected,
-      selectedTileColor: AppColors.primary.withAlpha(26), // 0.1 * 255 = ~26
+      selectedTileColor: AppColors.primary.withAlpha(26),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       onTap: () {
-        Navigator.of(context).pop(); // Drawer'ı kapat
-        if (isNamedRoute) {
-          context.goNamed(routeName, pathParameters: pathParameters ?? {});
-        } else {
-          context.go(routeName);
-        }
+        Navigator.of(context).pop();
+        context.goNamed(routeName, pathParameters: pathParameters ?? {});
       },
     );
   }
@@ -109,27 +136,29 @@ class AppDrawer extends StatelessWidget {
         padding: EdgeInsets.zero,
         children: <Widget>[
           _buildDrawerHeader(context),
+          const SizedBox(height: 8),
           _buildListTile(
             context,
             icon: Icons.home_outlined,
             title: 'Ana Sayfa',
             routeName: HomeScreen.routeName.substring(1), // 'home'
-            isNamedRoute: true,
+            pathSegment: 'home',
           ),
           _buildListTile(
             context,
             icon: Icons.person_outline,
             title: 'Profilim',
-            routeName: ProfileScreen
-                .routeName, // 'profile' (alt rota olduğu için / yok)
-            isNamedRoute: true,
+            routeName: ProfileScreen.routeName, // 'profile'
+            pathSegment: 'profile',
           ),
           _buildListTile(
             context,
             icon: Icons.shopping_bag_outlined,
-            title: userProfile?.role == UserRole.customer ? 'Ürün Kataloğu' : 'Ürünler',
+            title: userProfile?.role == UserRole.customer
+                ? 'Ürün Kataloğu'
+                : 'Ürünler',
             routeName: ProductListScreen.routeName.substring(1), // 'products'
-            isNamedRoute: true,
+            pathSegment: 'products',
           ),
           if (userProfile?.role != UserRole.customer)
             _buildListTile(
@@ -137,7 +166,7 @@ class AppDrawer extends StatelessWidget {
               icon: Icons.people_alt_outlined,
               title: 'Müşterilerim',
               routeName: CustomerListScreen.routeName.substring(1), // 'customers'
-              isNamedRoute: true,
+              pathSegment: 'customers',
             ),
           if (userProfile?.role != UserRole.customer)
             _buildListTile(
@@ -145,37 +174,34 @@ class AppDrawer extends StatelessWidget {
               icon: Icons.receipt_long_outlined,
               title: 'Siparişlerim',
               routeName: OrderListScreen.routeName.substring(1), // 'orders'
-              isNamedRoute: true,
+              pathSegment: 'orders',
             ),
-          // Müşteriler için "Siparişlerim" kısmını ayrı bir ekranda veya filtrelenmiş halde gösterebiliriz.
-          // Şimdilik Müşteri tarafında Siparişlerim listesini de gizleyelim veya 
-          // OrderListScreen'i müşteri rolüne göre filtreleyecek şekilde güncelleyelim.
           if (userProfile?.role == UserRole.customer)
             _buildListTile(
               context,
               icon: Icons.receipt_long_outlined,
               title: 'Sipariş Geçmişim',
               routeName: OrderListScreen.routeName.substring(1),
-              isNamedRoute: true,
+              pathSegment: 'orders',
             ),
-          const Divider(),
+          const Divider(indent: 16, endIndent: 16),
           _buildListTile(
             context,
             icon: Icons.water_drop_outlined,
             title: 'Su Takip',
-            routeName:
-                WaterTrackerScreen.routeName, // 'water-tracker' rotasını kullan
-            isNamedRoute: true,
+            routeName: WaterTrackerScreen.routeName, // 'water-tracker'
+            pathSegment: 'water-tracker',
           ),
           _buildListTile(
             context,
             icon: Icons.local_fire_department_outlined,
             title: 'Kalori Sayacı',
             routeName: CalorieTrackerScreen.routeName,
-            isNamedRoute: true,
+            pathSegment: 'calorie-tracker',
           ),
-          const Divider(),
+          const Divider(indent: 16, endIndent: 16),
           ListTile(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             leading: Icon(Icons.exit_to_app_outlined, color: AppColors.error),
             title: Text(
               'Çıkış Yap',
@@ -185,11 +211,11 @@ class AppDrawer extends StatelessWidget {
               ),
             ),
             onTap: () async {
-              Navigator.of(context).pop(); // Drawer'ı kapat
+              Navigator.of(context).pop();
               await authProvider.signOut();
-              // GoRouter'ın redirect'i zaten LoginScreen'e yönlendirecektir.
             },
           ),
+          const SizedBox(height: 8),
         ],
       ),
     );

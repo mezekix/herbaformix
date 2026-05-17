@@ -6,27 +6,35 @@ import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/products/providers/product_provider.dart';
+import '../../../models/user_role.dart';
+import '../models/program_editor_args.dart';
 import '../models/program_model.dart';
 import '../providers/program_provider.dart';
 
 class ProgramSummaryStep extends StatelessWidget {
-  const ProgramSummaryStep({super.key});
+  final ProgramEditorArgs? editorArgs;
+
+  const ProgramSummaryStep({super.key, this.editorArgs});
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ProgramProvider>();
     final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.firebaseUser?.uid ?? '';
     final allProducts = context.read<ProductProvider>().products;
+    final authUserId = authProvider.firebaseUser?.uid ?? '';
+    final userId = editorArgs?.targetUserId ?? authUserId;
+    final isDistributorMode =
+        editorArgs?.isDistributorMode == true &&
+        authProvider.userProfile?.role == UserRole.distributor;
 
     if (userId.isEmpty) {
       return const Center(child: Text('Kullanıcı oturumu bulunamadı.'));
     }
 
     final goalLabels = {
-      'weight_loss': '🔥 Kilo Ver',
-      'healthy_living': '🌿 Sağlıklı Yaşa',
-      'weight_gain': '💪 Kilo Al',
+      'weight_loss': 'Kilo Ver',
+      'healthy_living': 'Sağlıklı Yaşa',
+      'weight_gain': 'Kilo Al',
     };
 
     final today = DateFormat('d MMMM yyyy', 'tr_TR').format(DateTime.now());
@@ -37,7 +45,6 @@ class ProgramSummaryStep extends StatelessWidget {
     );
     final endDateStr = DateFormat('d MMMM yyyy', 'tr_TR').format(endDate);
 
-    // Sıralı slotlar
     final sortedSlots = List<MealSlot>.from(provider.slots)
       ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
 
@@ -46,9 +53,9 @@ class ProgramSummaryStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Programın Hazır!',
-            style: TextStyle(
+          Text(
+            isDistributorMode ? 'Müşteri Programı Hazır' : 'Programın Hazır!',
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: AppColors.nightSky,
@@ -56,51 +63,59 @@ class ProgramSummaryStep extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Detayları kontrol et ve programını başlat.',
+            isDistributorMode
+                ? '${editorArgs?.targetCustomerName ?? 'Müşteri'} için programı kontrol et ve kaydet.'
+                : 'Detayları kontrol et ve programını başlat.',
             style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 20),
-
-          // Hedef & süre kartı
-          _Card(children: [
-            _Row(icon: Icons.flag_outlined,
-                label: 'Hedef',
-                value: goalLabels[provider.selectedGoal] ?? '-'),
-            _Row(icon: Icons.calendar_month,
-                label: 'Süre',
-                value: '${provider.durationMonths} ay'),
-            _Row(icon: Icons.play_circle_outline,
-                label: 'Başlangıç',
-                value: today),
-            _Row(icon: Icons.stop_circle_outlined,
-                label: 'Bitiş',
-                value: endDateStr),
-            if (provider.selectedGoal == 'weight_loss' &&
-                provider.currentWeight != null &&
-                provider.targetWeight != null) ...[
-              _Row(icon: Icons.monitor_weight_outlined,
-                  label: 'Mevcut Kilo',
-                  value: '${provider.currentWeight} kg'),
-              _Row(icon: Icons.flag,
-                  label: 'Hedef Kilo',
-                  value: '${provider.targetWeight} kg'),
-            ],
-          ]),
-
-          const SizedBox(height: 14),
-
-          // Öğün planı kartı
           _Card(
-            title: '🍽️ Günlük Program',
+            children: [
+              _Row(
+                icon: Icons.flag_outlined,
+                label: 'Hedef',
+                value: goalLabels[provider.selectedGoal] ?? '-',
+              ),
+              _Row(
+                icon: Icons.calendar_month,
+                label: 'Süre',
+                value: '${provider.durationMonths} ay',
+              ),
+              _Row(
+                icon: Icons.play_circle_outline,
+                label: 'Başlangıç',
+                value: today,
+              ),
+              _Row(
+                icon: Icons.stop_circle_outlined,
+                label: 'Bitiş',
+                value: endDateStr,
+              ),
+              if (provider.selectedGoal == 'weight_loss' &&
+                  provider.currentWeight != null &&
+                  provider.targetWeight != null) ...[
+                _Row(
+                  icon: Icons.monitor_weight_outlined,
+                  label: 'Mevcut Kilo',
+                  value: '${provider.currentWeight} kg',
+                ),
+                _Row(
+                  icon: Icons.flag,
+                  label: 'Hedef Kilo',
+                  value: '${provider.targetWeight} kg',
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          _Card(
+            title: 'Günlük Program',
             children: sortedSlots.map((slot) {
               final waterTime = calculateWaterStepTime(slot.scheduledTime);
               return _SlotSummaryRow(slot: slot, waterTime: waterTime);
             }).toList(),
           ),
-
           const SizedBox(height: 14),
-
-          // Su & bildirim bilgisi
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -114,14 +129,14 @@ class ProgramSummaryStep extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Her ana öğününden 30 dk önce 500ml su hatırlatması eklenecek.',
-                    style: TextStyle(fontSize: 12, color: Colors.cyan.shade800),
+                    'Her ana öğünden 30 dk önce 500ml su hatırlatması eklenir.',
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.cyan.shade800),
                   ),
                 ),
               ],
             ),
           ),
-
           if (provider.errorMessage != null) ...[
             const SizedBox(height: 12),
             Container(
@@ -130,34 +145,37 @@ class ProgramSummaryStep extends StatelessWidget {
                 color: AppColors.error.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                    color: AppColors.error.withValues(alpha: 0.3)),
+                  color: AppColors.error.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline,
-                      color: AppColors.error, size: 18),
+                  const Icon(
+                    Icons.error_outline,
+                    color: AppColors.error,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(provider.errorMessage!,
-                        style: const TextStyle(
-                            color: AppColors.error, fontSize: 13)),
+                    child: Text(
+                      provider.errorMessage!,
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ],
-
           const SizedBox(height: 28),
-
           ElevatedButton(
             onPressed: provider.isLoading
                 ? null
                 : () async {
-                    debugPrint('[Summary] saveProgram başlatılıyor, userId=$userId, slots=${provider.slots.length}');
-                    
-                    // Validasyon: en az bir slotta ürün olmalı
                     final hasProducts = provider.slots.any(
-                      (s) => !s.isNormalMeal && s.products.isNotEmpty,
+                      (slot) => !slot.isNormalMeal && slot.products.isNotEmpty,
                     );
                     if (!hasProducts) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -169,17 +187,29 @@ class ProgramSummaryStep extends StatelessWidget {
                       return;
                     }
 
-                    final success =
-                        await provider.saveProgram(userId, allProducts);
-                    debugPrint('[Summary] saveProgram sonucu: $success, error: ${provider.errorMessage}');
+                    final success = await provider.saveProgram(
+                      userId,
+                      allProducts,
+                      scheduleNotifications: !isDistributorMode,
+                    );
+
                     if (success && context.mounted) {
-                      // Program başladığında gün sayacını sıfırla
                       final userProfile = authProvider.userProfile;
-                      if (userProfile != null) {
+                      if (!isDistributorMode && userProfile != null) {
                         userProfile.programStartDate = DateTime.now();
                         await authProvider.updateUserProfile(userProfile);
                       }
+
                       if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              isDistributorMode
+                                  ? 'Program müşteriye kaydedildi.'
+                                  : 'Program başarıyla oluşturuldu.',
+                            ),
+                          ),
+                        );
                         context.pop();
                       }
                     }
@@ -189,7 +219,8 @@ class ProgramSummaryStep extends StatelessWidget {
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
               disabledBackgroundColor: Colors.grey.shade300,
             ),
             child: provider.isLoading
@@ -197,15 +228,19 @@ class ProgramSummaryStep extends StatelessWidget {
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
-                : const Text('🚀 Programı Başlat',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                : Text(
+                    isDistributorMode ? 'Programı Kaydet' : 'Programı Başlat',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
-
           const SizedBox(height: 10),
-
           TextButton(
             onPressed: provider.isLoading ? null : () => provider.previousStep(),
             child: const Text('← Geri Dön'),
@@ -235,9 +270,10 @@ class _SlotSummaryRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(slot.label,
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade500)),
+                Text(
+                  slot.label,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                ),
                 Text(
                   slot.isNormalMeal ? 'Normal Yemek' : slot.summary,
                   style: TextStyle(
@@ -250,9 +286,9 @@ class _SlotSummaryRow extends StatelessWidget {
                 ),
                 if (!slot.isNormalMeal && slot.products.isNotEmpty)
                   Text(
-                    '💧 Su: $waterTime',
-                    style: TextStyle(
-                        fontSize: 11, color: Colors.cyan.shade600),
+                    'Su: $waterTime',
+                    style:
+                        TextStyle(fontSize: 11, color: Colors.cyan.shade600),
                   ),
               ],
             ),
@@ -310,11 +346,14 @@ class _Card extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (title != null) ...[
-              Text(title!,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppColors.nightSky)),
+              Text(
+                title!,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: AppColors.nightSky,
+                ),
+              ),
               const SizedBox(height: 8),
               const Divider(height: 1),
               const SizedBox(height: 6),
@@ -332,8 +371,11 @@ class _Row extends StatelessWidget {
   final String label;
   final String value;
 
-  const _Row(
-      {required this.icon, required this.label, required this.value});
+  const _Row({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -344,14 +386,19 @@ class _Row extends StatelessWidget {
           Icon(icon, size: 16, color: AppColors.primary),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(label,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            ),
           ),
-          Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: AppColors.nightSky)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: AppColors.nightSky,
+            ),
+          ),
         ],
       ),
     );

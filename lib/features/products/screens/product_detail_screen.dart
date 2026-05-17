@@ -278,20 +278,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
 
-  Widget _buildProductInfo() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _product!.name,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
   Widget _buildSectionTitle(String title) {
     return Text(
       title,

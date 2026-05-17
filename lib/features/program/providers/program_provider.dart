@@ -195,7 +195,11 @@ class ProgramProvider with ChangeNotifier {
   }
 
   // ── Program Kaydetme ──────────────────────────────────────────────────────
-  Future<bool> saveProgram(String userId, List<ProductModel> allProducts) async {
+  Future<bool> saveProgram(
+    String userId,
+    List<ProductModel> allProducts, {
+    bool scheduleNotifications = true,
+  }) async {
     debugPrint('[ProgramProvider] saveProgram başlıyor: userId=$userId, slots=${_slots.length}, goal=$_selectedGoal');
     for (final s in _slots) {
       debugPrint('  slot: ${s.id} | ${s.label} | products=${s.products.length} | normalMeal=${s.isNormalMeal}');
@@ -205,7 +209,9 @@ class ProgramProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _notificationService.cancelAllProgramNotifications();
+      if (scheduleNotifications) {
+        await _notificationService.cancelAllProgramNotifications();
+      }
 
       final now = DateTime.now();
       final program = ProgramModel(
@@ -221,7 +227,9 @@ class ProgramProvider with ChangeNotifier {
       );
 
       await _programService.saveProgram(userId, program, allProducts);
-      await _scheduleNotifications(program);
+      if (scheduleNotifications) {
+        await _scheduleNotifications(program);
+      }
 
       _activeProgram = program;
       _isLoading = false;
@@ -318,8 +326,9 @@ class ProgramProvider with ChangeNotifier {
   Future<bool> addSlotToActiveProgram(
     String userId,
     MealSlot newSlot,
-    List<ProductModel> allProducts,
-  ) async {
+    List<ProductModel> allProducts, {
+    bool scheduleNotifications = true,
+  }) async {
     // _activeProgram null ise Firestore'dan çek
     if (_activeProgram == null) {
       debugPrint('[ProgramProvider] _activeProgram null, Firestore\'dan çekiliyor...');
@@ -337,8 +346,10 @@ class ProgramProvider with ChangeNotifier {
       );
       await _programService.saveProgram(userId, updated, allProducts);
       
-      await _notificationService.cancelAllProgramNotifications();
-      await _scheduleNotifications(updated);
+      if (scheduleNotifications) {
+        await _notificationService.cancelAllProgramNotifications();
+        await _scheduleNotifications(updated);
+      }
 
       _activeProgram = updated;
       _isLoading = false;
@@ -357,8 +368,9 @@ class ProgramProvider with ChangeNotifier {
   Future<bool> removeSlotFromActiveProgram(
     String userId,
     String slotId,
-    List<ProductModel> allProducts,
-  ) async {
+    List<ProductModel> allProducts, {
+    bool scheduleNotifications = true,
+  }) async {
     // _activeProgram null ise Firestore'dan çek
     if (_activeProgram == null) {
       _activeProgram = await _programService.getActiveProgram(userId);
@@ -372,8 +384,10 @@ class ProgramProvider with ChangeNotifier {
       
       await _programService.saveProgram(userId, updated, allProducts);
       
-      await _notificationService.cancelAllProgramNotifications();
-      await _scheduleNotifications(updated);
+      if (scheduleNotifications) {
+        await _notificationService.cancelAllProgramNotifications();
+        await _scheduleNotifications(updated);
+      }
 
       _activeProgram = updated;
       _isLoading = false;
