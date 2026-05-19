@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
+import '../../../core/avatar_color_helper.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../models/user_role.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -27,11 +31,14 @@ class DistributorProfileView extends StatefulWidget {
 class _DistributorProfileViewState extends State<DistributorProfileView> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
+  late TextEditingController _phoneController;
   late TextEditingController _vpGoalController;
 
   String? _distributorLevel;
   UserRole? _selectedRole;
 
+  File? _selectedPhotoFile;
+  bool _isPhotoUploading = false;
   bool _isLoading = false;
   bool _isInitialized = false;
 
@@ -48,6 +55,7 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
   void initState() {
     super.initState();
     _nameController = TextEditingController();
+    _phoneController = TextEditingController();
     _vpGoalController = TextEditingController();
   }
 
@@ -59,6 +67,7 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
       final userProfile = authProvider.userProfile;
       if (userProfile != null) {
         _nameController.text = userProfile.name ?? '';
+        _phoneController.text = userProfile.phoneNumber ?? '';
         _vpGoalController.text = userProfile.monthlyVPTarget?.toString() ?? '';
         _distributorLevel = userProfile.distributorLevel;
         _selectedRole = userProfile.role;
@@ -70,6 +79,7 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
     _vpGoalController.dispose();
     super.dispose();
   }
@@ -77,52 +87,72 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isPhotoUploading = _selectedPhotoFile != null;
+    });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentFirebaseUser = authProvider.firebaseUser;
 
     if (currentFirebaseUser == null) {
       _showSnackBar('Kullanıcı bulunamadı. Lütfen tekrar giriş yapın.', isError: true);
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _isPhotoUploading = false;
+      });
       return;
     }
 
-    final existingProfile = authProvider.userProfile;
-    final updatedProfile = UserProfileModel(
-      id: currentFirebaseUser.uid,
-      email: currentFirebaseUser.email!,
-      role: _selectedRole ?? existingProfile?.role ?? UserRole.distributor,
-      name: _nameController.text.trim(),
-      distributorLevel: _distributorLevel,
-      monthlyVPTarget: int.tryParse(_vpGoalController.text.trim()),
-      // Mevcut diğer alanları koru
-      isOnboarded: existingProfile?.isOnboarded ?? false,
-      age: existingProfile?.age,
-      phoneNumber: existingProfile?.phoneNumber,
-      weight: existingProfile?.weight,
-      height: existingProfile?.height,
-      goal: existingProfile?.goal,
-      programStartDate: existingProfile?.programStartDate,
-      userGoal: existingProfile?.userGoal,
-      wakeTime: existingProfile?.wakeTime,
-      lunchTime: existingProfile?.lunchTime,
-      sleepTime: existingProfile?.sleepTime,
-      birthDate: existingProfile?.birthDate,
-      gender: existingProfile?.gender,
-      healthNotes: existingProfile?.healthNotes,
-      allergies: existingProfile?.allergies,
-      medications: existingProfile?.medications,
-      assignedDistributorId: existingProfile?.assignedDistributorId,
-      profilePhotoUrl: existingProfile?.profilePhotoUrl,
-    );
-
+    String? newPhotoUrl;
     try {
+      if (_selectedPhotoFile != null) {
+        newPhotoUrl = await authProvider.uploadProfilePhoto(_selectedPhotoFile!);
+        if (!mounted) return;
+        setState(() => _isPhotoUploading = false);
+
+        if (newPhotoUrl == null) {
+          _showSnackBar('Fotoğraf yüklenemedi, diğer bilgiler kaydedilecek.', isError: false);
+        }
+      }
+
+      final existingProfile = authProvider.userProfile;
+      final updatedProfile = UserProfileModel(
+        id: currentFirebaseUser.uid,
+        email: currentFirebaseUser.email!,
+        role: _selectedRole ?? existingProfile?.role ?? UserRole.distributor,
+        name: _nameController.text.trim(),
+        distributorLevel: _distributorLevel,
+        monthlyVPTarget: int.tryParse(_vpGoalController.text.trim()),
+        // Mevcut diğer alanları koru
+        isOnboarded: existingProfile?.isOnboarded ?? false,
+        age: existingProfile?.age,
+        phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        weight: existingProfile?.weight,
+        height: existingProfile?.height,
+        goal: existingProfile?.goal,
+        programStartDate: existingProfile?.programStartDate,
+        userGoal: existingProfile?.userGoal,
+        wakeTime: existingProfile?.wakeTime,
+        lunchTime: existingProfile?.lunchTime,
+        sleepTime: existingProfile?.sleepTime,
+        birthDate: existingProfile?.birthDate,
+        gender: existingProfile?.gender,
+        healthNotes: existingProfile?.healthNotes,
+        allergies: existingProfile?.allergies,
+        medications: existingProfile?.medications,
+        assignedDistributorId: existingProfile?.assignedDistributorId,
+        profilePhotoUrl: newPhotoUrl ?? existingProfile?.profilePhotoUrl,
+      );
+
       final success = await authProvider.updateUserProfile(updatedProfile);
       if (!mounted) return;
 
       if (success) {
         _showSnackBar('Profil başarıyla güncellendi!');
+        if (newPhotoUrl != null) {
+          setState(() => _selectedPhotoFile = null);
+        }
       } else {
         _showSnackBar('Profil güncellenemedi.', isError: true);
       }
@@ -131,7 +161,10 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
       _showSnackBar('Bir hata oluştu: $e', isError: true);
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _isPhotoUploading = false;
+        });
       }
     }
   }
@@ -172,6 +205,198 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
     return result ?? false;
   }
 
+  Widget _buildProfileAvatar(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final userProfile = authProvider.userProfile;
+    final photoUrl = userProfile?.profilePhotoUrl;
+    final userName = userProfile?.name;
+    final userId = userProfile?.id;
+    final initials = _getInitials(userName);
+    final bgColor = AvatarColorHelper.forUser(userId);
+    final textColor = AvatarColorHelper.textColorFor(bgColor);
+    const size = 110.0;
+
+    return GestureDetector(
+      onTap: _isPhotoUploading ? null : () => _showPhotoPicker(context),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size + 6,
+            height: size + 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, Color(0xFF81C784)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withAlpha(60),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: size,
+            height: size,
+            decoration: const BoxDecoration(shape: BoxShape.circle),
+            child: ClipOval(
+              child: _buildAvatarContent(photoUrl, initials, bgColor, textColor, size),
+            ),
+          ),
+          if (_isPhotoUploading)
+            SizedBox(
+              width: size,
+              height: size,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary.withAlpha(200)),
+              ),
+            ),
+          if (!_isPhotoUploading)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(30),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.camera_alt, size: 14, color: AppColors.white),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarContent(
+    String? photoUrl, String initials, Color bgColor, Color textColor, double size,
+  ) {
+    // 1. Seçilmiş yerel dosya
+    if (_selectedPhotoFile != null) {
+      return Image.file(
+        _selectedPhotoFile!,
+        width: size, height: size, fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _buildInitialsBox(initials, bgColor, textColor, size),
+      );
+    }
+
+    // 2. Kaydedilmiş fotoğraf
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      final isLocalPath = photoUrl.startsWith('/') || photoUrl.startsWith('file://');
+      if (isLocalPath) {
+        return Image.file(
+          File(photoUrl.replaceFirst('file://', '')),
+          width: size, height: size, fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _buildInitialsBox(initials, bgColor, textColor, size),
+        );
+      }
+      return Image.network(
+        photoUrl, width: size, height: size, fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _buildInitialsBox(initials, bgColor, textColor, size),
+      );
+    }
+
+    // 3. Baş harf avatarı
+    return _buildInitialsBox(initials, bgColor, textColor, size);
+  }
+
+  Widget _buildInitialsBox(String initials, Color bgColor, Color textColor, double size) {
+    return Container(
+      width: size, height: size, color: bgColor,
+      child: Center(
+        child: Text(
+          initials,
+          style: TextStyle(fontSize: size * 0.35, fontWeight: FontWeight.bold, color: textColor),
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String? name) {
+    if (name == null || name.trim().isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    return parts.first[0].toUpperCase();
+  }
+
+  void _showPhotoPicker(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40, height: 4, margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: Text('Fotoğraf Seç', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+                  title: const Text('Kameradan Çek'),
+                  onTap: () { Navigator.of(sheetContext).pop(); _pickImage(ImageSource.camera); },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
+                  title: const Text('Galeriden Seç'),
+                  subtitle: const Text('JPG, PNG, WEBP • Maks. 5 MB', style: TextStyle(fontSize: 11)),
+                  onTap: () { Navigator.of(sheetContext).pop(); _pickImage(ImageSource.gallery); },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    try {
+      final XFile? pickedFile = await picker.pickImage(source: source, imageQuality: 85);
+      if (pickedFile == null) return;
+
+      final file = File(pickedFile.path);
+      final fileSizeBytes = await file.length();
+      if (fileSizeBytes > 5 * 1024 * 1024) {
+        _showSnackBar('Dosya 5 MB sınırını aşıyor.', isError: true);
+        return;
+      }
+
+      setState(() => _selectedPhotoFile = file);
+    } catch (e) {
+      _showSnackBar('Fotoğraf seçilirken hata: $e', isError: true);
+    }
+  }
+
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -191,6 +416,12 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Profil fotoğrafı
+            Center(
+              child: _buildProfileAvatar(context),
+            ),
+            const SizedBox(height: 20),
+
             // E-posta (salt okunur)
             Consumer<AuthProvider>(
               builder: (context, authProvider, _) => Text(
@@ -217,6 +448,19 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
                 }
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+
+            // Telefon numarası
+            TextFormField(
+              controller: _phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Telefon Numarası',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.phone_outlined),
+                hintText: '+90 5XX XXX XX XX',
+              ),
+              keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 16),
 

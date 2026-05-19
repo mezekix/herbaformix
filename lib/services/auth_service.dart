@@ -72,6 +72,16 @@ class AuthService {
     await _firebaseAuth.signOut();
   }
 
+  // Şifre sıfırlama e-postası gönder
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      debugPrint('Şifre sıfırlama hatası: $e');
+      rethrow;
+    }
+  }
+
   // Mevcut kullanıcıyı al
   User? getCurrentUser() {
     return _firebaseAuth.currentUser;

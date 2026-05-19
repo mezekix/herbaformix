@@ -691,6 +691,41 @@ class FirestoreService {
     }
   }
 
+  Future<void> deleteInviteCode(String inviteCodeId) async {
+    try {
+      await _db.collection('inviteCodes').doc(inviteCodeId).delete();
+      debugPrint('deleteInviteCode başarılı: $inviteCodeId');
+    } catch (e) {
+      debugPrint('deleteInviteCode hatası: $e');
+      throw Exception('Davet kodu silinemedi: $e');
+    }
+  }
+
+  Future<int> deleteExpiredInviteCodes(String distributorId) async {
+    try {
+      final now = DateTime.now();
+      final snapshot = await _db
+          .collection('inviteCodes')
+          .where('distributorId', isEqualTo: distributorId)
+          .where('isUsed', isEqualTo: false)
+          .where('expiresAt', isLessThan: Timestamp.fromDate(now))
+          .get();
+
+      if (snapshot.docs.isEmpty) return 0;
+
+      final batch = _db.batch();
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+      debugPrint('deleteExpiredInviteCodes: ${snapshot.docs.length} kod silindi');
+      return snapshot.docs.length;
+    } catch (e) {
+      debugPrint('deleteExpiredInviteCodes hatası: $e');
+      return 0;
+    }
+  }
+
   CollectionReference<ProgressEntryModel> progressEntriesRef(String userId) =>
       _db
           .collection('users')
@@ -892,6 +927,99 @@ class FirestoreService {
       );
     }
   }
+
+  // ──────────────── Motivations ────────────────
+
+  /// Get today's distributor message for a customer (if any)
+  Future<String?> getDistributorMotivationMessage(String customerId) async {
+    try {
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final snapshot = await _db
+          .collection('motivations')
+          .doc(customerId)
+          .collection('daily_messages')
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('timestamp', isLessThan: Timestamp.fromDate(endOfDay))
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) return null;
+      return snapshot.docs.first.data()['distributor_mesaji'] as String?;
+    } catch (e) {
+      debugPrint('getDistributorMotivationMessage hatası: $e');
+      return null;
+    }
+  }
+
+  /// Save today's distributor message for a customer
+  Future<void> saveDistributorMotivationMessage(
+    String customerId,
+    String message,
+  ) async {
+    try {
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+
+      await _db
+          .collection('motivations')
+          .doc(customerId)
+          .collection('daily_messages')
+          .doc('today')
+          .set({
+        'distributor_mesaji': message,
+        'distributor_mesaji_tarihi': Timestamp.fromDate(startOfDay),
+        'sistem_soz_index': now.millisecondsSinceEpoch ~/ 86400000 % 100,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('saveDistributorMotivationMessage hatası: $e');
+    }
+  }
+
+  /// Save today's motivation score (1-10)
+  Future<void> saveMotivationScore(String customerId, int score) async {
+    try {
+      final now = DateTime.now();
+      final docId = '${customerId}_${now.year}_${now.month}_${now.day}';
+
+      await _db
+          .collection('motivation_scores')
+          .doc(docId)
+          .set({
+        'skor': score,
+        'tarih': Timestamp.now(),
+        'musteri_id': customerId,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('saveMotivationScore hatası: $e');
+    }
+  }
+
+  /// Get motivation scores for the last N days
+  Future<List<int>> getMotivationScoresLastDays(String customerId, int days) async {
+    try {
+      final now = DateTime.now();
+      final startDate = DateTime(now.year, now.month, now.day).subtract(Duration(days: days - 1));
+      final endDate = now.add(const Duration(days: 1));
+
+      final snapshot = await _db
+          .collection('motivation_scores')
+          .where('musteri_id', isEqualTo: customerId)
+          .where('tarih', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('tarih', isLessThan: Timestamp.fromDate(endDate))
+          .orderBy('tarih', descending: true)
+          .get();
+
+      return snapshot.docs.map((d) => (d.data()['skor'] as num?)?.toInt() ?? 0).toList();
+    } catch (e) {
+      debugPrint('getMotivationScoresLastDays hatası: $e');
+      return [];
+    }
+  }
+
+  // ──────────────── Water & Daily Routines ────────────────
 
   Future<int> getAtRiskCustomerCount(String distributorId) async {
     try {

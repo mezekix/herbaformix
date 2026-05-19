@@ -4,6 +4,39 @@ import 'package:provider/provider.dart';
 import 'core/app_colors.dart'; // Yeni renk dosyamızı import ediyoruz
 import 'core/router.dart';
 import 'features/auth/providers/auth_provider.dart';
+import 'features/calorie_tracker/providers/calorie_provider.dart';
+import 'features/customers/providers/customer_provider.dart';
+import 'features/home/providers/home_provider.dart';
+import 'features/orders/providers/order_provider.dart';
+import 'features/products/providers/product_provider.dart';
+import 'features/program/providers/program_provider.dart';
+import 'features/program/services/notification_service.dart';
+import 'features/progress/providers/progress_provider.dart';
+import 'features/water_tracker/providers/water_provider.dart';
+import 'services/firestore_service.dart';
+
+/// GoRouter'ın [refreshListenable]'ı olarak kullanılır.
+///
+/// [AuthProvider.notifyListeners] doğrudan GoRouter'a bağlandığında,
+/// aynı build frame'inde hem Provider dependentları hem de MaterialApp.router
+/// dirty olarak işaretlenir. Bu iki rebuild farklı build scope'larda
+/// gerçekleştiği için Flutter `_dependents.isEmpty` assertion fırlatır.
+///
+/// Bu sarmalayıcı, AuthProvider bildirimlerini [addPostFrameCallback] ile
+/// build fazı **sonrasına** erteler ve scope çakışmasını önler.
+class _GoRouterRefreshNotifier extends ChangeNotifier {
+  _GoRouterRefreshNotifier(AuthProvider authProvider) {
+    authProvider.addListener(_onAuthChanged);
+  }
+
+  void _onAuthChanged() {
+    // Build fazı sırasında GoRouter refresh tetiklenmesini engelle.
+    // Mevcut frame tamamlandıktan sonra güvenli bir şekilde bildirim gönder.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
+  }
+}
 
 class App extends StatefulWidget {
   const App({super.key});
@@ -14,12 +47,20 @@ class App extends StatefulWidget {
 
 class _AppState extends State<App> {
   late final AppRouter _appRouter;
+  late final _GoRouterRefreshNotifier _refreshNotifier;
 
   @override
   void initState() {
     super.initState();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    _appRouter = AppRouter(authProvider);
+    _refreshNotifier = _GoRouterRefreshNotifier(authProvider);
+    _appRouter = AppRouter(authProvider, refreshListenable: _refreshNotifier);
+  }
+
+  @override
+  void dispose() {
+    _refreshNotifier.dispose();
+    super.dispose();
   }
 
   @override
@@ -198,6 +239,69 @@ class _AppState extends State<App> {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       routerConfig: _appRouter.router,
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider<ProductProvider>(
+              create: (context) =>
+                  ProductProvider(context.read<FirestoreService>()),
+            ),
+            ChangeNotifierProvider<CustomerProvider>(
+              create: (context) => CustomerProvider(
+                context.read<FirestoreService>(),
+                context.read<AuthProvider>(),
+              ),
+            ),
+            ChangeNotifierProvider<OrderProvider>(
+              create: (context) => OrderProvider(
+                context.read<FirestoreService>(),
+                context.read<AuthProvider>(),
+                context.read<CustomerProvider>(),
+              ),
+            ),
+            ChangeNotifierProvider<HomeProvider>(
+              create: (context) => HomeProvider(
+                context.read<FirestoreService>(),
+                context.read<AuthProvider>(),
+              ),
+            ),
+            ChangeNotifierProxyProvider<AuthProvider, WaterProvider>(
+              create: (context) =>
+                  WaterProvider(context.read<FirestoreService>()),
+              update: (context, auth, previous) {
+                final provider = previous ??
+                    WaterProvider(context.read<FirestoreService>());
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (auth.status == AuthStatus.authenticated &&
+                      auth.firebaseUser?.uid != null) {
+                    provider.startListening(auth.firebaseUser!.uid);
+                  } else {
+                    provider.stopListening();
+                  }
+                });
+                return provider;
+              },
+            ),
+            ChangeNotifierProvider<CalorieProvider>(
+              create: (context) => CalorieProvider(),
+            ),
+            ChangeNotifierProvider<ProgramProvider>(
+              create: (context) => ProgramProvider(
+                notificationService: NotificationService(),
+              ),
+            ),
+            ChangeNotifierProvider<ProgressProvider>(
+              create: (context) => ProgressProvider(
+                context.read<FirestoreService>(),
+              ),
+            ),
+          ],
+          child: child,
+        );
+      },
     );
   }
 }
+

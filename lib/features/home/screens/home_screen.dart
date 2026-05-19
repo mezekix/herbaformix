@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'package:animated_list_plus/animated_list_plus.dart';
+import 'package:animated_list_plus/transitions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +39,7 @@ import '../../program/providers/program_provider.dart';
 import '../../water_tracker/screens/water_tracker_screen.dart';
 import '../../water_tracker/providers/water_provider.dart';
 import 'package:intl/intl.dart';
+import '../widgets/motivation_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   static const String routeName = '/home';
@@ -448,6 +451,8 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildCustomerWaterTracker(context),
               const SizedBox(height: 16),
               _buildCustomerDailyChecklist(context),
+              const SizedBox(height: 16),
+              const MotivationWidget(),
               const SizedBox(height: 96),
             ],
           ),
@@ -894,9 +899,20 @@ class _HomeScreenState extends State<HomeScreen> {
           StreamBuilder<List<DailyRoutineModel>>(
             stream: _routinesStream ?? const Stream.empty(),
             builder: (context, snapshot) {
-              final routines = snapshot.data ?? [];
-              final completedCount = routines.where((r) => r.isCompleted).length;
-              final totalCount = routines.length;
+              final rawRoutines = snapshot.data ?? [];
+              final incompleteRoutines = rawRoutines.where((r) => !r.isCompleted).toList()
+                ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+              final completedRoutines = rawRoutines.where((r) => r.isCompleted).toList()
+                ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+              
+              final routines = <DailyRoutineModel>[];
+              if (incompleteRoutines.isNotEmpty) {
+                routines.add(incompleteRoutines.first);
+              }
+              routines.addAll(completedRoutines);
+
+              final completedCount = rawRoutines.where((r) => r.isCompleted).length;
+              final totalCount = rawRoutines.length;
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1034,11 +1050,16 @@ class _HomeScreenState extends State<HomeScreen> {
   ) {
     final timeFormat = DateFormat('HH:mm');
 
-    return Column(
-      children: routines.map((routine) {
+    return ImplicitlyAnimatedList<DailyRoutineModel>(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      items: routines,
+      areItemsTheSame: (a, b) => a.id == b.id,
+      itemBuilder: (context, animation, routine, i) {
+        Widget child;
         // Su adımı için özel tile
         if (routine.isWaterStep) {
-          return _buildStitchChecklistTile(
+          child = _buildStitchChecklistTile(
             context: context,
             timeLabel: timeFormat.format(routine.scheduledTime),
             title: 'Su İç (500 ml)',
@@ -1078,8 +1099,8 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // Normal Öğün adımı (Sağlıklı Tabak, vs.)
-        if (routine.isNormalMealStep) {
-          return _buildStitchChecklistTile(
+        else if (routine.isNormalMealStep) {
+          child = _buildStitchChecklistTile(
             context: context,
             timeLabel: timeFormat.format(routine.scheduledTime),
             title: routine.productId, // Biz burada "Sağlıklı Tabak" vb. etiketi productId'de saklıyoruz.
@@ -1117,48 +1138,48 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           );
-        }
+        } else {
 
-        // Ürün adımı
-        final product = context.read<ProductProvider>().products.firstWhere(
-          (p) => p.id == routine.productId,
-          orElse: () => ProductModel(id: '', name: 'Silinmiş Ürün', vp: 0),
-        );
+          // Ürün adımı
+          final product = context.read<ProductProvider>().products.firstWhere(
+            (p) => p.id == routine.productId,
+            orElse: () => ProductModel(id: '', name: 'Silinmiş Ürün', vp: 0),
+          );
 
-        return _buildStitchChecklistTile(
-          context: context,
-          timeLabel: timeFormat.format(routine.scheduledTime),
-          title: product.name,
-          isCompleted: routine.isCompleted,
-          isNext: !routine.isCompleted && routines
-              .where((r) => !r.isCompleted)
-              .firstOrNull
-              ?.id == routine.id,
-          onChanged: (val) async {
-            if (val != null && context.mounted) {
-              await context.read<RoutineService>().updateRoutineStatus(
-                userProfile.id, routine.id, val,
+          child = _buildStitchChecklistTile(
+            context: context,
+            timeLabel: timeFormat.format(routine.scheduledTime),
+            title: product.name,
+            isCompleted: routine.isCompleted,
+            isNext: !routine.isCompleted && routines
+                .where((r) => !r.isCompleted)
+                .firstOrNull
+                ?.id == routine.id,
+            onChanged: (val) async {
+              if (val != null && context.mounted) {
+                await context.read<RoutineService>().updateRoutineStatus(
+                  userProfile.id, routine.id, val,
+                );
+              }
+            },
+            onTimeTap: () async {
+              final newTime = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.fromDateTime(routine.scheduledTime),
               );
-            }
-          },
-          onTimeTap: () async {
-            final newTime = await showTimePicker(
-              context: context,
-              initialTime: TimeOfDay.fromDateTime(routine.scheduledTime),
-            );
-            if (!context.mounted || newTime == null) return;
-            final now = DateTime.now();
-            await context.read<RoutineService>().updateRoutineTime(
-              userProfile.id, routine.id,
-              DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
-            );
-          },
-          onTap: () {
-            // Tarif göster
-            final instruction = product.instructionsByGoal?[userProfile.userGoal ?? '']
-                ?? product.usageInfo
-                ?? 'Özel bir tarif bulunamadı.';
-            showModalBottomSheet(
+              if (!context.mounted || newTime == null) return;
+              final now = DateTime.now();
+              await context.read<RoutineService>().updateRoutineTime(
+                userProfile.id, routine.id,
+                DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
+              );
+            },
+            onTap: () {
+              // Tarif göster
+              final instruction = product.instructionsByGoal?[userProfile.userGoal ?? '']
+                  ?? product.usageInfo
+                  ?? 'Kullanım bilgisi bulunamadı.';
+              showModalBottomSheet(
               context: context,
               isScrollControlled: true,
               shape: const RoundedRectangleBorder(
@@ -1215,7 +1236,15 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         );
-      }).toList(),
+      }
+
+      return SizeFadeTransition(
+          sizeFraction: 0.7,
+          curve: Curves.easeInOut,
+          animation: animation,
+          child: child,
+        );
+      },
     );
   }
 
@@ -1485,19 +1514,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (context) {
                       final rawName = userProfile?.name ?? authProvider.firebaseUser?.email?.split('@')[0] ?? '';
                       final firstName = rawName.trim().split(' ').first;
-                      final streak = context.watch<HomeProvider>().completionStreak;
-                      final greeting = _getGreeting(firstName, userProfile: userProfile, streak: streak);
-                      final (prefix, rest) = _splitGreeting(greeting);
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (prefix.isNotEmpty)
-                            Text(prefix, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
-                          Text(
-                            prefix.isNotEmpty ? rest : greeting,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-                          ),
-                        ],
+                      return Text(
+                        'Merhaba, $firstName',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       );
                     },
                   ),
@@ -1698,16 +1719,8 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildFilterDivider(),
             _buildFilterTab(
               context,
-              label: 'İade',
-              count: homeProvider.returnRiskCount,
-              isActive: active == ActionFilter.returnRisk,
-              activeColor: Colors.orange,
-              onTap: () => homeProvider.setFilter(ActionFilter.returnRisk),
-            ),
-            _buildFilterDivider(),
-            _buildFilterTab(
-              context,
               label: 'Ölçüm',
+
               count: homeProvider.measurementCount,
               isActive: active == ActionFilter.measurement,
               activeColor: Colors.teal,
@@ -1788,7 +1801,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStitchKritikAksiyonlarList(BuildContext context, HomeProvider provider, CustomerProvider customerProvider) {
     if (provider.isLoading) return const Center(child: CircularProgressIndicator());
-    if (provider.upcomingFollowUps.isEmpty) {
+
+    final customerCounts = <String, int>{};
+    final filteredTasks = provider.upcomingFollowUps.where((task) {
+      final count = customerCounts[task.customerId] ?? 0;
+      if (count < 2) {
+        customerCounts[task.customerId] = count + 1;
+        return true;
+      }
+      return false;
+    }).toList();
+
+    if (filteredTasks.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.0),
         child: Text('Harika! Şu an için kritik bir aksiyon yok.'),
@@ -1798,9 +1822,9 @@ class _HomeScreenState extends State<HomeScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: provider.upcomingFollowUps.length,
+      itemCount: filteredTasks.length,
       itemBuilder: (context, index) {
-        final task = provider.upcomingFollowUps[index];
+        final task = filteredTasks[index];
         final isOverdue = task.dueDate.toDate().isBefore(DateTime.now());
         final color = isOverdue ? AppColors.error : AppColors.laguna;
         return Container(

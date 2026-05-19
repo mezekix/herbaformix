@@ -1,0 +1,890 @@
+[
+  {
+    "id": "TC001",
+    "title": "Sign in and reach the home dashboard",
+    "description": "A user can sign in with valid credentials and arrive at the authenticated home dashboard.",
+    "category": "Kullanıcı Girişi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the home dashboard is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Track water intake by adding and removing entries",
+    "description": "A signed-in user can add water intake entries, remove an entry, and see the daily total update.",
+    "category": "Günlük Su Takibi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/water-tracker"
+      },
+      {
+        "type": "action",
+        "description": "Add a water intake entry"
+      },
+      {
+        "type": "action",
+        "description": "Add another water intake entry"
+      },
+      {
+        "type": "action",
+        "description": "Remove one water intake entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the remaining water entry is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the daily water total is updated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Add one glass of water and see progress update",
+    "description": "An authenticated user can add a glass of water and see the daily hydration progress update.",
+    "category": "Su Takipçisi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/water-tracker"
+      },
+      {
+        "type": "action",
+        "description": "Add a glass of water"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the daily hydration progress updates"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the water intake record is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Track calories by adding and deleting food entries",
+    "description": "A signed-in user can add calorie entries, delete an entry, and see the remaining daily food log.",
+    "category": "Kalori Takibi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/calorie-tracker"
+      },
+      {
+        "type": "action",
+        "description": "Add a food entry to the daily log"
+      },
+      {
+        "type": "action",
+        "description": "Add another food entry to the daily log"
+      },
+      {
+        "type": "action",
+        "description": "Delete one food entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the remaining food entry is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the daily calorie log is updated"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Remove a glass of water and see progress decrease",
+    "description": "An authenticated user can remove a previously added glass of water and see the daily hydration progress decrease.",
+    "category": "Su Takipçisi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/water-tracker"
+      },
+      {
+        "type": "action",
+        "description": "Add a glass of water"
+      },
+      {
+        "type": "action",
+        "description": "Remove a glass of water"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the daily hydration progress decreases"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the added water record is no longer displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Complete onboarding after login and update profile goals",
+    "description": "A new user can complete onboarding after signing in and then update profile and health goals from the profile area.",
+    "category": "Kullanıcı Profili",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Complete the onboarding form with valid values"
+      },
+      {
+        "type": "action",
+        "description": "Submit the onboarding form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/profile"
+      },
+      {
+        "type": "action",
+        "description": "Open personal information settings"
+      },
+      {
+        "type": "action",
+        "description": "Update the personal information with valid values"
+      },
+      {
+        "type": "action",
+        "description": "Save the personal information"
+      },
+      {
+        "type": "action",
+        "description": "Open health goals settings"
+      },
+      {
+        "type": "action",
+        "description": "Update the health goals with valid values"
+      },
+      {
+        "type": "action",
+        "description": "Save the health goals"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated profile information is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated health goals are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Add a food entry and review calorie total",
+    "description": "An authenticated user can log a consumed food item with calories and see the daily calorie total update.",
+    "category": "Kalori Takipçisi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/calorie-tracker"
+      },
+      {
+        "type": "action",
+        "description": "Add a consumed food item with a valid name and calorie value"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the daily calorie total updates"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the food entry is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Create a program through the full planning flow",
+    "description": "A coach can build a customer-specific program from target selection through meal planning and save it successfully.",
+    "category": "Beslenme ve Egzersiz Programlayıcı",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/create-program"
+      },
+      {
+        "type": "action",
+        "description": "Select the target and program goal"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the starting weight with a valid value"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the target weight with a valid value"
+      },
+      {
+        "type": "action",
+        "description": "Continue to meal planning"
+      },
+      {
+        "type": "action",
+        "description": "Select days and meal slots"
+      },
+      {
+        "type": "action",
+        "description": "Mark the meals as normal meals or product-based meals"
+      },
+      {
+        "type": "action",
+        "description": "Add food items to the selected meals"
+      },
+      {
+        "type": "action",
+        "description": "Continue to the review screen"
+      },
+      {
+        "type": "action",
+        "description": "Save the program"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the program summary is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the saved program is shown"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Delete a food entry and review calorie total decrease",
+    "description": "An authenticated user can delete a consumed food record and see the daily calorie total update.",
+    "category": "Kalori Takipçisi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/calorie-tracker"
+      },
+      {
+        "type": "action",
+        "description": "Add a consumed food item with a valid name and calorie value"
+      },
+      {
+        "type": "action",
+        "description": "Delete the consumed food record"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the daily calorie total decreases"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the deleted food entry is no longer displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Add a new customer and see it in the list",
+    "description": "A coach can create a new customer record and confirm it appears in the customer list.",
+    "category": "Danışan Yönetimi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/customers"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new customer"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the customer name with a unique test name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the customer profile details with valid values"
+      },
+      {
+        "type": "action",
+        "description": "Save the customer record"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new customer appears in the customer list"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Add a new product to the catalog",
+    "description": "A coach or admin user can create a new product and confirm it appears in the catalog.",
+    "category": "Ürün Kataloğu",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/products"
+      },
+      {
+        "type": "action",
+        "description": "Start adding a new product"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the product name with a unique test name"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the product details with valid values"
+      },
+      {
+        "type": "action",
+        "description": "Save the product"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new product appears in the catalog"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC012",
+    "title": "View active customer list",
+    "description": "A coach can open the customer management area and see the active customer list.",
+    "category": "Danışan Yönetimi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/customers"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the customer list is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify active customers are shown"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC013",
+    "title": "Open a customer profile and review progress data",
+    "description": "A coach can open a customer profile from the list and view the customer’s progress graphs.",
+    "category": "Danışan Yönetimi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/customers"
+      },
+      {
+        "type": "action",
+        "description": "Open a customer profile from the customer list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the customer detail view is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify progress graphs are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC014",
+    "title": "Edit an existing product and view the updated details",
+    "description": "A coach or admin user can update an existing product and return to the product detail view with the changes applied.",
+    "category": "Ürün Kataloğu",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/products"
+      },
+      {
+        "type": "action",
+        "description": "Open an existing product for editing"
+      },
+      {
+        "type": "action",
+        "description": "Update the product information with valid values"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the product detail view is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated product information is shown"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC015",
+    "title": "Search products and open a product detail",
+    "description": "A user can browse the product catalog, search for a product by name, and open its details.",
+    "category": "Ürün Kataloğu",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the username field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/products"
+      },
+      {
+        "type": "action",
+        "description": "Search for a specific product by name"
+      },
+      {
+        "type": "action",
+        "description": "Open the matching product details"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the product detail view is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected product information is shown"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC016",
+    "title": "Open the measurements history screen from the home experience",
+    "description": "An authenticated user can navigate to the measurements history screen and view progress history content.",
+    "category": "Progress history and photos",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/measurements-history"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify measurement history content is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC017",
+    "title": "Open the progress photos screen from the home experience",
+    "description": "An authenticated user can navigate to the progress photos screen and view the photo gallery or empty state.",
+    "category": "Progress history and photos",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/progress-photos"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify progress photos content is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC018",
+    "title": "Stay on login when credentials are invalid",
+    "description": "A user entering invalid credentials remains on the login screen and sees a sign-in error.",
+    "category": "Kullanıcı Girişi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with invalid@example.com"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with incorrect-password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a sign-in error is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the login screen is still displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC019",
+    "title": "Remain on water tracker when no water entries exist to remove",
+    "description": "An authenticated user who has not added water can open the water tracker and see the empty state for removing entries.",
+    "category": "Su Takipçisi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/water-tracker"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the water tracker empty state is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no water entries are available to remove"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC020",
+    "title": "Remain on calorie tracker when no food entries exist to delete",
+    "description": "An authenticated user who has not logged foods can open the calorie tracker and see the empty state for deleted entries.",
+    "category": "Kalori Takipçisi",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /home/calorie-tracker"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the calorie tracker empty state is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify no food entries are available to delete"
+      }
+    ],
+    "priority": "Low"
+  }
+]

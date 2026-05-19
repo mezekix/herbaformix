@@ -120,23 +120,28 @@ class _SplashScreenState extends State<SplashScreen>
     // Animasyon bittikten sonra navigasyon
     _controller.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (!mounted) return;
-          final authProvider = Provider.of<AuthProvider>(
-            context,
-            listen: false,
-          );
-          final bool isLoggedIn =
-              authProvider.status == AuthStatus.authenticated;
-
-          if (isLoggedIn) {
-            context.go(HomeScreen.routeName);
-          } else {
-            context.go(LoginScreen.routeName);
-          }
-        });
+        Future.delayed(const Duration(milliseconds: 500), _checkAndNavigate);
       }
     });
+  }
+
+  void _checkAndNavigate() {
+    if (!mounted) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Durum henüz netleşmediyse (yükleniyorsa), 100ms gecikmeyle tekrar dene
+    if (authProvider.status == AuthStatus.uninitialized ||
+        authProvider.status == AuthStatus.authenticating) {
+      Future.delayed(const Duration(milliseconds: 100), _checkAndNavigate);
+      return;
+    }
+
+    final bool isLoggedIn = authProvider.status == AuthStatus.authenticated;
+    if (isLoggedIn) {
+      context.go(HomeScreen.routeName);
+    } else {
+      context.go(LoginScreen.routeName);
+    }
   }
 
   @override

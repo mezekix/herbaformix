@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -79,18 +82,51 @@ class AppDrawer extends StatelessWidget {
         displayEmail,
         style: TextStyle(color: AppColors.textOnPrimary.withAlpha(204)),
       ),
-      currentAccountPicture: CircleAvatar(
-        backgroundColor: bgColor,
-        child: Text(
-          initials.isNotEmpty ? initials : 'K',
-          style: TextStyle(
-            fontSize: 28.0,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
-        ),
-      ),
+      currentAccountPicture: _buildAvatar(userProfile, initials, bgColor, textColor),
       decoration: const BoxDecoration(color: AppColors.primary),
+    );
+  }
+
+  Widget _buildAvatar(dynamic userProfile, String initials, Color bgColor, Color textColor) {
+    final photoUrl = userProfile?.profilePhotoUrl;
+
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      final isLocalPath = photoUrl.startsWith('/') || photoUrl.startsWith('file://');
+      if (isLocalPath && !kIsWeb) {
+        return CircleAvatar(
+          backgroundColor: bgColor,
+          child: ClipOval(
+            child: Image.file(
+              File(photoUrl.replaceFirst('file://', '')),
+              width: 80, height: 80, fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _buildInitialsAvatar(initials, bgColor, textColor),
+            ),
+          ),
+        );
+      }
+      if (!isLocalPath) {
+        return CircleAvatar(
+          backgroundColor: bgColor,
+          child: ClipOval(
+            child: Image.network(
+              photoUrl, width: 80, height: 80, fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _buildInitialsAvatar(initials, bgColor, textColor),
+            ),
+          ),
+        );
+      }
+    }
+
+    return _buildInitialsAvatar(initials, bgColor, textColor);
+  }
+
+  Widget _buildInitialsAvatar(String initials, Color bgColor, Color textColor) {
+    return CircleAvatar(
+      backgroundColor: bgColor,
+      child: Text(
+        initials.isNotEmpty ? initials : 'K',
+        style: TextStyle(fontSize: 28.0, fontWeight: FontWeight.bold, color: textColor),
+      ),
     );
   }
 

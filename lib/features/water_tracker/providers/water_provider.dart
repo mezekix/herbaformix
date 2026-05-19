@@ -15,8 +15,15 @@ class WaterProvider with ChangeNotifier {
   List<WaterLogModel> _todayLogs = [];
   bool _isLoading = false;
   StreamSubscription<List<WaterLogModel>>? _logsSubscription;
+  bool _isDisposed = false;
 
   WaterProvider(this._firestoreService);
+
+  void safeNotifyListeners() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
 
   // ── Getter'lar ────────────────────────────────────────────────────────────
 
@@ -37,7 +44,7 @@ class WaterProvider with ChangeNotifier {
     if (_userId == userId) return; // Aynı kullanıcı, tekrar başlatma
     _userId = userId;
     _isLoading = true;
-    notifyListeners();
+    scheduleMicrotask(() => safeNotifyListeners());
 
     _logsSubscription?.cancel();
     _logsSubscription = _firestoreService
@@ -46,12 +53,12 @@ class WaterProvider with ChangeNotifier {
           (logs) {
             _todayLogs = logs;
             _isLoading = false;
-            notifyListeners();
+            safeNotifyListeners();
           },
           onError: (e) {
             debugPrint('WaterProvider stream hatası: $e');
             _isLoading = false;
-            notifyListeners();
+            safeNotifyListeners();
           },
         );
 
@@ -61,13 +68,14 @@ class WaterProvider with ChangeNotifier {
 
   /// Kullanıcı çıkış yaptığında çağrılır.
   void stopListening() {
+    if (_userId == null) return;
     _logsSubscription?.cancel();
     _logsSubscription = null;
     _userId = null;
     _todayLogs = [];
     _dailyGoal = defaultGoal;
     _isLoading = false;
-    notifyListeners();
+    scheduleMicrotask(() => safeNotifyListeners());
   }
 
   Future<void> _loadGoal(String userId) async {
@@ -75,7 +83,7 @@ class WaterProvider with ChangeNotifier {
       final goal = await _firestoreService.getWaterDailyGoal(userId);
       if (goal != null && goal > 0) {
         _dailyGoal = goal;
-        notifyListeners();
+        safeNotifyListeners();
       }
     } catch (e) {
       debugPrint('WaterProvider hedef yüklenirken hata: $e');
@@ -145,7 +153,7 @@ class WaterProvider with ChangeNotifier {
     try {
       await _firestoreService.setWaterDailyGoal(_userId!, newGoal);
       _dailyGoal = newGoal;
-      notifyListeners();
+      safeNotifyListeners();
     } catch (e) {
       debugPrint('WaterProvider setDailyGoal hatası: $e');
     }
@@ -163,6 +171,7 @@ class WaterProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _logsSubscription?.cancel();
     super.dispose();
   }

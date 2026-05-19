@@ -12,7 +12,7 @@ class ProductModel {
   final String? features; // New field (String)
   final String? ingredients; // New field (String)
   final int? recommendedOffsetMins; // Uyanma saatinden kaç dakika sonra kullanılacağı
-  final Map<String, String>? instructionsByGoal; // Hedefe göre değişen tarifler
+  final Map<String, String>? instructionsByGoal; // Hedefe göre değişen kullanım bilgileri
 
   ProductModel({
     required this.id,

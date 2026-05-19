@@ -59,7 +59,8 @@ service cloud.firestore {
         request.resource.data.code == resource.data.code &&
         request.resource.data.distributorId == resource.data.distributorId;
 
-      allow delete: if false;
+      allow delete: if isDistributor() &&
+        resource.data.distributorId == request.auth.uid;
     }
 
     match /users/{userId} {

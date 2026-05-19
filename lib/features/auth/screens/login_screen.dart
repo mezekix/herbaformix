@@ -117,6 +117,13 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  Future<void> _showForgotPasswordDialog() async {
+    await showDialog(
+      context: context,
+      builder: (context) => const _ForgotPasswordDialog(),
+    );
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -359,7 +366,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {},
+                            onPressed: _showForgotPasswordDialog,
                             style: TextButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
                             ),
@@ -540,6 +547,97 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ForgotPasswordDialog extends StatefulWidget {
+  const _ForgotPasswordDialog();
+
+  @override
+  State<_ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
+}
+
+class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
+  final _emailController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF181e14)
+          : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      title: const Text('Şifre Sıfırlama'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          decoration: InputDecoration(
+            hintText: 'E-posta adresinizi girin',
+            prefixIcon: const Icon(Icons.email_outlined),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty || !value.contains('@')) {
+              return 'Geçerli bir e-posta girin.';
+            }
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('İptal'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            if (!_formKey.currentState!.validate()) return;
+
+            final authProvider =
+                Provider.of<AuthProvider>(context, listen: false);
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+            Navigator.of(context).pop();
+
+            final success = await authProvider.sendPasswordResetEmail(
+              _emailController.text.trim(),
+            );
+
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  success
+                      ? 'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.'
+                      : (authProvider.errorMessage ??
+                          'Şifre sıfırlama bağlantısı gönderilemedi.'),
+                ),
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
+          ),
+          child: const Text('Gönder'),
+        ),
+      ],
     );
   }
 }

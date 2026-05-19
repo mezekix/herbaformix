@@ -1,0 +1,266 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
+import '../../../core/app_colors.dart';
+import '../../../services/firestore_service.dart';
+import '../../../features/auth/providers/auth_provider.dart';
+
+class MotivationWidget extends StatefulWidget {
+  const MotivationWidget({super.key});
+
+  @override
+  State<MotivationWidget> createState() => _MotivationWidgetState();
+}
+
+class _MotivationWidgetState extends State<MotivationWidget> {
+  List<String> _quotes = [
+    'Başlamak için mükemmel olmak zorunda değilsin.',
+    'Her sabah yeniden doğarsın.',
+    'Küçük adımlar büyük değişimlerin tohumudur.',
+    'Başarı, küçük zaferlerin birikimidir.',
+    'Bugün attığın her adım yarınki senini şekillendirir.',
+  ];
+  int _currentIndex = 0;
+  int _sessionSwitches = 0;
+  static const int _maxSwitches = 5;
+  final bool _isLoading = false; // keeping for future async load
+  String? _distributorMessage;
+  String? _distributorName;
+  double _sliderValue = 7;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuotes();
+    _loadDistributorMessage();
+    _loadInitialScore();
+  }
+
+  Future<void> _loadQuotes() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/motivations.json');
+      final List<dynamic> data = json.decode(jsonString);
+      if (!mounted) return;
+      setState(() {
+        _quotes = data.cast<String>();
+        final dayIndex = DateTime.now().millisecondsSinceEpoch ~/ 86400000 % _quotes.length;
+        _currentIndex = dayIndex;
+      });
+    } catch (e) {
+      debugPrint('loadQuotes hatası: $e');
+    }
+  }
+
+  Future<void> _loadDistributorMessage() async {
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.userProfile?.id;
+    if (userId == null) return;
+
+    final distributorId = authProvider.userProfile?.assignedDistributorId;
+    if (distributorId == null) return;
+
+    try {
+      final message = await context.read<FirestoreService>().getDistributorMotivationMessage(userId);
+      if (mounted && message != null) {
+        final distributor = await context.read<FirestoreService>().getDistributorProfile(distributorId);
+        if (mounted) {
+          setState(() {
+            _distributorMessage = message;
+            _distributorName = distributor?.name ?? 'Distribütörün';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('loadDistributorMessage hatası: $e');
+    }
+  }
+
+  Future<void> _loadInitialScore() async {
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.userProfile?.id;
+    if (userId == null) return;
+
+    try {
+      final scores = await context.read<FirestoreService>().getMotivationScoresLastDays(userId, 1);
+      if (mounted && scores.isNotEmpty) {
+        setState(() => _sliderValue = scores.first.toDouble());
+      }
+    } catch (e) {
+      debugPrint('loadInitialScore hatası: $e');
+    }
+  }
+
+  Future<void> _checkLowMotivationAlert() async {
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.userProfile?.id;
+    if (userId == null) return;
+
+    try {
+      final scores = await context.read<FirestoreService>().getMotivationScoresLastDays(userId, 3);
+      if (scores.length >= 3 && scores.every((s) => s <= 3) && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('[${authProvider.userProfile?.name ?? "Müşteri"}] son 3 gündür düşük motivasyon bildiriyor.'),
+            backgroundColor: AppColors.papaya,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('checkLowMotivationAlert hatası: $e');
+    }
+  }
+
+  Future<void> _onSliderChangeEnd(double value) async {
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.userProfile?.id;
+    if (userId == null) return;
+
+    setState(() => _sliderValue = value);
+    await context.read<FirestoreService>().saveMotivationScore(userId, value.round());
+    await _checkLowMotivationAlert();
+  }
+
+  void _switchQuote() {
+    if (_sessionSwitches >= _maxSwitches) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Yarın yeni sözler seni bekliyor'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _sessionSwitches++;
+      _currentIndex = (_currentIndex + 1) % _quotes.length;
+    });
+  }
+
+  String get _displayedQuote => _quotes.isEmpty ? '' : _quotes[_currentIndex];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF42A146), Color(0xFF266431)],
+        ),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF266431).withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Söz bölümü
+          Text(
+            _distributorMessage ?? _displayedQuote,
+            style: TextStyle(
+              fontSize: 18,
+              fontStyle: FontStyle.italic,
+              color: Colors.white.withValues(alpha: 0.95),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _switchQuote,
+            child: Row(
+              children: [
+                Icon(Icons.refresh, color: Colors.white.withValues(alpha: 0.6), size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  '✦ Başka bir söz için dokun',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (_sessionSwitches > 0) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '(${_maxSwitches - _sessionSwitches} hak)',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Divider(color: Colors.white.withValues(alpha: 0.15)),
+          const SizedBox(height: 16),
+          // Slider bölümü
+          Text(
+            'Motivasyonun bugün?',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Text('😔', style: TextStyle(fontSize: 20)),
+              Expanded(
+                child: Slider(
+                  value: _sliderValue,
+                  min: 1,
+                  max: 10,
+                  divisions: 9,
+                  activeColor: AppColors.primary,
+                  inactiveColor: Colors.white.withValues(alpha: 0.2),
+                  thumbColor: Colors.white,
+                  onChanged: (v) => setState(() => _sliderValue = v),
+                  onChangeEnd: _onSliderChangeEnd,
+                ),
+              ),
+              const Text('💪', style: TextStyle(fontSize: 20)),
+            ],
+          ),
+          Center(
+            child: Text(
+              '${_sliderValue.round()} / 10',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          if (_distributorName != null) ...[
+            const SizedBox(height: 16),
+            Divider(color: Colors.white.withValues(alpha: 0.15)),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '— ${_distributorName!.split(' ').first} (Distribütörün)',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}

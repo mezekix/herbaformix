@@ -1,3 +1,5 @@
+import 'package:animated_list_plus/animated_list_plus.dart';
+import 'package:animated_list_plus/transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -116,9 +118,16 @@ class _ActiveView extends StatelessWidget {
           .read<RoutineService>()
           .getDailyRoutines(userId, DateTime.now()),
       builder: (context, snap) {
-        final routines = snap.data ?? [];
-        final completed = routines.where((r) => r.isCompleted).length;
-        final total = routines.length;
+        final rawRoutines = snap.data ?? [];
+        final incompleteRoutines = rawRoutines.where((r) => !r.isCompleted).toList()
+          ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+        final completedRoutines = rawRoutines.where((r) => r.isCompleted).toList()
+          ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+        
+        final routines = [...incompleteRoutines, ...completedRoutines];
+        
+        final completed = rawRoutines.where((r) => r.isCompleted).length;
+        final total = rawRoutines.length;
         final progress = total > 0 ? completed / total : 0.0;
 
         return CustomScrollView(
@@ -265,36 +274,33 @@ class _ActiveView extends StatelessWidget {
             else
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) {
-                      final routine = routines[i];
-                      final isLast = i == routines.length - 1;
+                sliver: SliverImplicitlyAnimatedList<DailyRoutineModel>(
+                  items: routines,
+                  areItemsTheSame: (a, b) => a.id == b.id,
+                  itemBuilder: (context, animation, routine, i) {
+                    final isLast = i == routines.length - 1;
+                    Widget child;
 
-                      if (routine.isWaterStep) {
-                        return WaterStepTile(
-                          routine: routine,
-                          userId: userId,
-                          isLast: isLast,
-                        );
-                      }
-
-                      // Normal öğün adımı — productId aslında label metni
-                      if (routine.isNormalMealStep) {
-                        return _ProductTile(
-                          routine: routine,
-                          product: ProductModel(
-                            id: '',
-                            name: routine.productId, // label metni
-                            vp: 0,
-                          ),
-                          userId: userId,
-                          userGoal: program.userGoal,
-                          isLast: isLast,
-                          isNormalMeal: true,
-                        );
-                      }
-
+                    if (routine.isWaterStep) {
+                      child = WaterStepTile(
+                        routine: routine,
+                        userId: userId,
+                        isLast: isLast,
+                      );
+                    } else if (routine.isNormalMealStep) {
+                      child = _ProductTile(
+                        routine: routine,
+                        product: ProductModel(
+                          id: '',
+                          name: routine.productId, // label metni
+                          vp: 0,
+                        ),
+                        userId: userId,
+                        userGoal: program.userGoal,
+                        isLast: isLast,
+                        isNormalMeal: true,
+                      );
+                    } else {
                       final product = context
                           .read<ProductProvider>()
                           .products
@@ -304,16 +310,22 @@ class _ActiveView extends StatelessWidget {
                                 id: '', name: 'Silinmiş Ürün', vp: 0),
                           );
 
-                      return _ProductTile(
+                      child = _ProductTile(
                         routine: routine,
                         product: product,
                         userId: userId,
                         userGoal: program.userGoal,
                         isLast: isLast,
                       );
-                    },
-                    childCount: routines.length,
-                  ),
+                    }
+
+                    return SizeFadeTransition(
+                      sizeFraction: 0.7,
+                      curve: Curves.easeInOut,
+                      animation: animation,
+                      child: child,
+                    );
+                  },
                 ),
               ),
 
@@ -768,7 +780,7 @@ class _ProductTile extends StatelessWidget {
                               const Icon(Icons.touch_app_outlined,
                                   size: 12, color: Colors.grey),
                               const SizedBox(width: 2),
-                              Text('Tarifi gör',
+                              Text('Nasıl Kullanılır?',
                                   style: TextStyle(
                                       fontSize: 11,
                                       color: Colors.grey.shade400)),

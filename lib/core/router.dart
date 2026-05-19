@@ -33,12 +33,13 @@ import '../features/program/models/program_editor_args.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
-  AppRouter(this.authProvider);
+  final Listenable refreshListenable;
+  AppRouter(this.authProvider, {required this.refreshListenable});
 
   late final GoRouter router = GoRouter(
     debugLogDiagnostics: true,
     refreshListenable:
-        authProvider, // Auth durumu değiştiğinde rotaları yeniden değerlendirir.
+        refreshListenable, // Auth durumu değiştiğinde rotaları yeniden değerlendirir.
     initialLocation: SplashScreen.routeName, // Başlangıç her zaman Splash
     routes: <RouteBase>[
       GoRoute(

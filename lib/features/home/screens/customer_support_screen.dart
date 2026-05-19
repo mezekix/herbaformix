@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app_colors.dart';
+import '../../../models/user_profile_model.dart';
+import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
 /// Müşteri "Destek" sekmesi — distribütöre ulaşma ve SSS
@@ -40,75 +42,94 @@ class CustomerSupportScreen extends StatelessWidget {
             ],
 
             // Danışman iletişim kartı
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.support_agent_rounded,
-                      color: AppColors.primary,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Danışmanınız',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.nightSky,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Sorularınız için iletişime geçebilirsiniz',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.chat_rounded,
-                          label: 'WhatsApp',
-                          color: const Color(0xFF25D366),
-                          onTap: () => _openWhatsApp(context),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ActionButton(
-                          icon: Icons.phone_rounded,
-                          label: 'Ara',
-                          color: AppColors.primary,
-                          onTap: () => _makeCall(context),
-                        ),
+            FutureBuilder<UserProfileModel?>(
+              future: _getDistributorProfile(context),
+              builder: (context, snapshot) {
+                final distributor = snapshot.data;
+                final distName = distributor?.name ?? 'Danışmanınız';
+                final distPhone = distributor?.phoneNumber;
+
+                return Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                ],
-              ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.support_agent_rounded,
+                          color: AppColors.primary,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        distName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.nightSky,
+                        ),
+                      ),
+                      if (distPhone != null && distPhone.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          distPhone,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Sorularınız için iletişime geçebilirsiniz',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.chat_rounded,
+                              label: 'WhatsApp',
+                              color: const Color(0xFF25D366),
+                              onTap: () => _openWhatsApp(context, distPhone),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _ActionButton(
+                              icon: Icons.phone_rounded,
+                              label: 'Ara',
+                              color: AppColors.primary,
+                              onTap: () => _makeCall(context, distPhone),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 24),
 
@@ -149,18 +170,22 @@ class CustomerSupportScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _openWhatsApp(BuildContext context) async {
+  Future<UserProfileModel?> _getDistributorProfile(BuildContext context) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final phone = authProvider.userProfile?.phoneNumber;
+    final distributorId = authProvider.userProfile?.assignedDistributorId;
+    if (distributorId == null) return null;
+    return context.read<FirestoreService>().getDistributorProfile(distributorId);
+  }
+
+  Future<void> _openWhatsApp(BuildContext context, String? phone) async {
     if (phone == null || phone.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Telefon numarası bulunamadı.')),
+          const SnackBar(content: Text('Danışman telefon numarası bulunamadı.')),
         );
       }
       return;
     }
-    // Numarayı temizle: +, boşluk, tire gibi karakterleri kaldır
     final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
     final url = Uri.parse('https://wa.me/$cleanPhone');
     if (await canLaunchUrl(url)) {
@@ -172,13 +197,11 @@ class CustomerSupportScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _makeCall(BuildContext context) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final phone = authProvider.userProfile?.phoneNumber;
+  Future<void> _makeCall(BuildContext context, String? phone) async {
     if (phone == null || phone.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Telefon numarası bulunamadı.')),
+          const SnackBar(content: Text('Danışman telefon numarası bulunamadı.')),
         );
       }
       return;

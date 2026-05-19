@@ -12,6 +12,8 @@ class ProductProvider with ChangeNotifier {
   StreamSubscription<List<ProductModel>>?
   _productsSubscription; // Stream'i dinlemek için
 
+  bool _isDisposed = false;
+
   ProductProvider(this._firestoreService) {
     fetchProducts(); // Provider oluşturulduğunda ürünleri çekmeye başla
   }
@@ -19,9 +21,15 @@ class ProductProvider with ChangeNotifier {
   List<ProductModel> get products => _products;
   bool get isLoading => _isLoading;
 
+  void safeNotifyListeners() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
   void fetchProducts() {
     _isLoading = true;
-    notifyListeners();
+    scheduleMicrotask(() => safeNotifyListeners());
 
     // Önceki dinleyiciyi iptal et (varsa)
     _productsSubscription?.cancel();
@@ -31,13 +39,13 @@ class ProductProvider with ChangeNotifier {
       (productsData) {
         _products = productsData;
         _isLoading = false;
-        notifyListeners(); // UI'ı güncelle
+        safeNotifyListeners(); // UI'ı güncelle
       },
       onError: (error) {
         debugPrint("ProductProvider Hata: $error");
         _isLoading = false;
         _products = []; // Hata durumunda listeyi boşalt
-        notifyListeners();
+        safeNotifyListeners();
       },
     );
   }
@@ -78,6 +86,7 @@ class ProductProvider with ChangeNotifier {
   // Provider yok edildiğinde StreamSubscription'ı iptal etmeyi unutma!
   @override
   void dispose() {
+    _isDisposed = true;
     _productsSubscription?.cancel();
     super.dispose();
   }

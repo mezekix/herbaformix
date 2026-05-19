@@ -1,23 +1,14 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../models/invite_code_model.dart';
+import '../../../models/invite_status.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 
-/// Distribütör profil ekranında davet kodu oluşturma ve listeleme bölümü.
-///
-/// - "Davet Kodu Oluştur" butonu ile yeni kod üretir.
-/// - Oluşturulan kodu büyük, monospace fontla gösterir.
-/// - Tek dokunuşla panoya kopyalama (SnackBar bildirimi ile).
-/// - Distribütörün kullanılmamış (`isUsed: false`) kodlarını
-///   oluşturulma tarihine göre sıralı listeler.
-/// - Hata durumunda SnackBar ile bildirim gösterir.
-/// - Yükleme sırasında buton devre dışı + CircularProgressIndicator.
+/// Distribütör profil ekranındaki davet kodları bölümü.
 class InviteCodeSection extends StatefulWidget {
   const InviteCodeSection({super.key});
 
@@ -26,288 +17,331 @@ class InviteCodeSection extends StatefulWidget {
 }
 
 class _InviteCodeSectionState extends State<InviteCodeSection> {
-  bool _isCreating = false;
+  bool _isGenerating = false;
+  bool _isCleaningExpired = false;
 
-  /// Yeni davet kodu oluşturur ve hata durumunda SnackBar gösterir.
-  Future<void> _createInviteCode() async {
-    final firestoreService = context.read<FirestoreService>();
-    final authProvider = context.read<AuthProvider>();
-
-    final uid = authProvider.firebaseUser?.uid;
-    if (uid == null) {
-      _showErrorSnackBar('Kullanıcı oturumu bulunamadı.');
-      return;
-    }
-
-    setState(() => _isCreating = true);
-
+  Future<void> _generateCode() async {
+    setState(() => _isGenerating = true);
     try {
-      await firestoreService.createInviteCode(uid);
-      // Başarı: stream otomatik olarak listeyi güncelleyecek.
-      // Ek bir bildirim göstermiyoruz; yeni kod listenin başında görünecek.
+      final authProvider = context.read<AuthProvider>();
+      final distributorId = authProvider.userProfile?.id;
+      if (distributorId == null) return;
+
+      await context.read<FirestoreService>().createInviteCode(distributorId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Yeni davet kodu oluşturuldu'),
+            backgroundColor: AppColors.primary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Davet kodu oluşturulamadı: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isCreating = false);
+      if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  Future<void> _deleteCode(InviteCodeModel code) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Kodu Sil'),
+        content: Text('${code.code} kodunu silmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await context.read<FirestoreService>().deleteInviteCode(code.id);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Silinemedi: $e'), backgroundColor: Colors.red),
+          );
+        }
       }
     }
   }
 
-  /// Kodu panoya kopyalar ve SnackBar ile bildirim gösterir.
-  Future<void> _copyToClipboard(String code) async {
-    await Clipboard.setData(ClipboardData(text: code));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('"$code" panoya kopyalandı.'),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
+  Future<void> _cleanExpiredCodes() async {
+    setState(() => _isCleaningExpired = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final distributorId = authProvider.userProfile?.id;
+      if (distributorId == null) return;
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+      final count = await context
+          .read<FirestoreService>()
+          .deleteExpiredInviteCodes(distributorId);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(count > 0
+                ? '$count süresi geçmiş kod temizlendi'
+                : 'Süresi geçmiş kod bulunamadı'),
+            backgroundColor: AppColors.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCleaningExpired = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final firestoreService = context.read<FirestoreService>();
-    final uid = authProvider.firebaseUser?.uid;
+    final distributorId = authProvider.userProfile?.id;
+    if (distributorId == null) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Bölüm başlığı
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Text(
-            'Davet Kodları',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+    return StreamBuilder<List<InviteCodeModel>>(
+      stream: context
+          .read<FirestoreService>()
+          .getInviteCodesForDistributor(distributorId),
+      builder: (context, snapshot) {
+        final codes = snapshot.data ?? [];
+        final hasExpired = codes.any((c) => c.effectiveStatus == InviteStatus.expired);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Başlık satırı
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Davet Kodlarım',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // "Davet Kodu Oluştur" butonu
-        ElevatedButton.icon(
-          onPressed: _isCreating ? null : _createInviteCode,
-          icon: _isCreating
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : const Icon(Icons.add_circle_outline),
-          label: Text(_isCreating ? 'Oluşturuluyor...' : 'Davet Kodu Oluştur'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: AppColors.textOnPrimary,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            textStyle: const TextStyle(fontSize: 16),
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        // Kullanılmamış davet kodları listesi (stream)
-        if (uid != null)
-          StreamBuilder<QuerySnapshot<InviteCodeModel>>(
-            stream: firestoreService.inviteCodesRef
-                .where('distributorId', isEqualTo: uid)
-                .where('isUsed', isEqualTo: false)
-                .orderBy('createdAt', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return _ErrorMessage(
-                  message: 'Kodlar yüklenirken hata oluştu: ${snapshot.error}',
-                );
-              }
-
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-
-              final docs = snapshot.data?.docs ?? [];
-
-              if (docs.isEmpty) {
-                return const _EmptyCodesMessage();
-              }
-
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Kullanılmamış Kodlarınız (${docs.length})',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  ...docs.map(
-                    (doc) => _InviteCodeCard(
-                      inviteCode: doc.data(),
-                      onCopy: _copyToClipboard,
-                    ),
-                  ),
-                ],
-              );
-            },
-          )
-        else
-          const _ErrorMessage(message: 'Kullanıcı oturumu bulunamadı.'),
-      ],
-    );
-  }
-}
-
-/// Tek bir davet kodunu büyük, okunabilir biçimde gösteren kart.
-class _InviteCodeCard extends StatelessWidget {
-  final InviteCodeModel inviteCode;
-  final Future<void> Function(String code) onCopy;
-
-  const _InviteCodeCard({
-    required this.inviteCode,
-    required this.onCopy,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final dateStr = DateFormat('dd.MM.yyyy HH:mm').format(inviteCode.createdAt);
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => onCopy(inviteCode.code),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            children: [
-              // Kod metni — büyük, monospace
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
-                    Text(
-                      inviteCode.code,
-                      style: const TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
-                        letterSpacing: 4,
-                        color: AppColors.primary,
+                    if (hasExpired)
+                      _smallButton(
+                        icon: Icons.cleaning_services_outlined,
+                        label: 'Süresi Geçenleri Temizle',
+                        isLoading: _isCleaningExpired,
+                        onTap: _cleanExpiredCodes,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Oluşturulma: $dateStr',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                    const SizedBox(width: 8),
+                    _smallButton(
+                      icon: Icons.add_circle_outline,
+                      label: 'Yeni Kod',
+                      isLoading: _isGenerating,
+                      onTap: _generateCode,
+                      primary: true,
                     ),
                   ],
                 ),
-              ),
-              // Kopyala ikonu
-              Tooltip(
-                message: 'Panoya kopyala',
-                child: Icon(
-                  Icons.copy_outlined,
-                  color: AppColors.primary,
-                  size: 22,
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Liste
+            if (codes.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'Henüz davet kodunuz yok',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              )
+            else
+              ...codes.map((code) => _buildCodeTile(code)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildCodeTile(InviteCodeModel code) {
+    final effectiveStatus = code.effectiveStatus;
+    final isUsed = effectiveStatus == InviteStatus.used;
+    final isExpired = effectiveStatus == InviteStatus.expired;
+    final isActive = !isUsed && !isExpired;
+
+    final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isActive
+            ? AppColors.primary.withValues(alpha: 0.08)
+            : AppColors.nightSky.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isActive
+              ? AppColors.primary.withValues(alpha: 0.3)
+              : Colors.grey.withValues(alpha: 0.2),
         ),
       ),
-    );
-  }
-}
-
-/// Kullanılmamış kod yokken gösterilen bilgi mesajı.
-class _EmptyCodesMessage extends StatelessWidget {
-  const _EmptyCodesMessage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: AppColors.textSecondary, size: 20),
-          const SizedBox(width: 10),
+          // Kod
           Expanded(
-            child: Text(
-              'Henüz kullanılmamış davet kodunuz yok.\n"Davet Kodu Oluştur" butonuna basarak yeni bir kod oluşturabilirsiniz.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      code.code,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'monospace',
+                        color: isActive
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildStatusChip(effectiveStatus),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isUsed
+                      ? '${code.customerName ?? "Bir müşteri"} tarafından kullanıldı'
+                      : 'Son kullanma: ${dateFormat.format(code.expiresAt)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary.withValues(alpha: 0.8),
                   ),
+                ),
+              ],
             ),
           ),
+
+          // Sil butonu (sadece aktif kodlarda)
+          if (isActive)
+            IconButton(
+              icon: Icon(Icons.delete_outline,
+                  color: Colors.red.withValues(alpha: 0.6), size: 20),
+              onPressed: () => _deleteCode(code),
+              tooltip: 'Kodu Sil',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
         ],
       ),
     );
   }
-}
 
-/// Hata durumunda gösterilen mesaj widget'ı.
-class _ErrorMessage extends StatelessWidget {
-  final String message;
-
-  const _ErrorMessage({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.error.withAlpha(20),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.error.withAlpha(80)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.error_outline, color: AppColors.error, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.error,
-                  ),
+  Widget _buildStatusChip(InviteStatus status) {
+    switch (status) {
+      case InviteStatus.used:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Text(
+            'Kullanıldı',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
             ),
           ),
-        ],
+        );
+      case InviteStatus.expired:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.grey.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Text(
+            'Süresi Geçti',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey,
+            ),
+          ),
+        );
+      case InviteStatus.pending:
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.papaya.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            'Aktif',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.papaya,
+            ),
+          ),
+        );
+    }
+  }
+
+  Widget _smallButton({
+    required IconData icon,
+    required String label,
+    required bool isLoading,
+    required VoidCallback onTap,
+    bool primary = false,
+  }) {
+    return SizedBox(
+      height: 36,
+      child: ElevatedButton.icon(
+        icon: isLoading
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white))
+            : Icon(icon, size: 16),
+        label: Text(label, style: const TextStyle(fontSize: 12)),
+        onPressed: isLoading ? null : onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary ? AppColors.primary : AppColors.nightSky,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
       ),
     );
   }

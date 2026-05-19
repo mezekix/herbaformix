@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth; // Alias ekledik
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../models/user_profile_model.dart'; // UserProfileModel'i import et
@@ -24,12 +24,41 @@ class AuthProvider with ChangeNotifier {
   UserProfileModel? _userProfile; // Kendi UserProfileModel'imiz
   AuthStatus _status = AuthStatus.uninitialized;
   String? _errorMessage; // Hata mesajlarını tutmak için
+  bool _notifyScheduled = false;
+
+  /// notifyListeners'ı güvenli bir şekilde erteler.
+  ///
+  /// AuthProvider, MultiProvider altında MaterialApp'ın **üstünde** yer alır.
+  /// Doğrudan notifyListeners çağrıldığında, MaterialApp'ın alt ağacındaki
+  /// bağımlı widget'lar farklı build scope'unda dirty olarak işaretlenir.
+  /// Eğer aynı frame'de MediaQuery güncellemesi (klavye kapanması vb.)
+  /// gerçekleşirse, iki farklı scope'taki rebuild'ler çakışır ve
+  /// `_dependents.isEmpty` assertion hatası fırlatılır.
+  ///
+  /// Bu override, bildirimleri [addPostFrameCallback] ile mevcut frame
+  /// sonrasına erteler ve birden fazla hızlı çağrıyı tek bir bildirime
+  /// birleştirir (debounce).
+  @override
+  void notifyListeners() {
+    if (_notifyScheduled) return;
+    _notifyScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _notifyScheduled = false;
+      super.notifyListeners();
+    });
+  }
 
   AuthProvider(this._authService, this._firestoreService) {
     // Constructor'a FirestoreService'i ekle
-    _authService.authStateChanges.listen(_onAuthStateChanged);
     _firebaseUser = _authService.getCurrentUser();
-    _onAuthStateChanged(_firebaseUser);
+    if (_firebaseUser != null) {
+      _status = AuthStatus.authenticating;
+      // Build aşamasında synchronous notifyListeners tetiklememesi için microtask ile asenkron başlatıyoruz
+      Future.microtask(() => _onAuthStateChanged(_firebaseUser));
+    } else {
+      _status = AuthStatus.unauthenticated;
+    }
+    _authService.authStateChanges.listen(_onAuthStateChanged);
   }
 
   fb_auth.User? get firebaseUser => _firebaseUser;
@@ -40,10 +69,18 @@ class AuthProvider with ChangeNotifier {
   Future<void> _onAuthStateChanged(fb_auth.User? firebaseUser) async {
     try {
       if (firebaseUser == null) {
+        if (_firebaseUser == null && _status == AuthStatus.unauthenticated) {
+          return;
+        }
         _firebaseUser = null;
         _userProfile = null; // Kullanıcı çıkış yapınca profili temizle
         _status = AuthStatus.unauthenticated;
       } else {
+        if (_firebaseUser?.uid == firebaseUser.uid &&
+            _status == AuthStatus.authenticated &&
+            _userProfile != null) {
+          return;
+        }
         _firebaseUser = firebaseUser;
         _status = AuthStatus.authenticating; // Profil çekilirken de bu durumda kalabiliriz
         notifyListeners();
@@ -378,6 +415,31 @@ class AuthProvider with ChangeNotifier {
       debugPrint('AuthProvider signUpWithInviteCode hatası: $e');
       _status = AuthStatus.unauthenticated;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> sendPasswordResetEmail(String email) async {
+    _errorMessage = null;
+    // notifyListeners burada çağrılmaz — dialog pop() sırasında
+    // senkron rebuild tetikleyip _dependents.isEmpty hatasına yol açar.
+
+    try {
+      await _authService.sendPasswordResetEmail(email.trim());
+      return true;
+    } on fb_auth.FirebaseAuthException catch (e) {
+      _errorMessage = switch (e.code) {
+        'invalid-email' => 'Geçerli bir e-posta adresi girin.',
+        'missing-email' => 'Lütfen e-posta adresinizi girin.',
+        'user-not-found' =>
+          'Bu e-posta ile kayıtlı bir kullanıcı bulunamadı.',
+        _ => e.message ?? 'Şifre sıfırlama bağlantısı gönderilemedi.',
+      };
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = 'Şifre sıfırlama bağlantısı gönderilemedi.';
       notifyListeners();
       return false;
     }
