@@ -66,12 +66,13 @@ graph TD
 ## 🚀 3. FONKSİYONEL GEREKSİNİMLER
 
 ### 3.1. Üyelik, Giriş ve Davet Yönetimi
-* **Giriş Yöntemleri:** Google Sign-In ve E-posta/Şifre ile entegre Firebase Authentication.
+* **Giriş Yöntemleri:** Google Sign-In ve E-posta/Şifre ile entegre Firebase Authentication. (`lib/features/auth/`)
 * **Distribütör-Müşteri Bağlantısı:** 
   * Distribütör, sistemde 8 haneli alfanümerik benzersiz bir davet kodu üretir (Örn: `A3BX9K2M`). Bu kod WhatsApp üzerinden doğrudan danışana gönderilebilir.
   * Danışan uygulamaya kaydolurken bu davet kodunu girer.
   * Sistem otomatik olarak danışanı bu distribütörün altına kaydeder (`assignedDistributorId`).
   * Davet kodlarının geçerlilik süresi varsayılan olarak **7 gündür**. Süresi dolan veya kullanılan kodlar pasif duruma geçer.
+  * Davet kodu modeli `InviteCodeModel` olup `/invite_codes/{inviteCodeId}` koleksiyonunda tutulur. Yönetim mantığı `lib/features/auth/` modülü içindedir.
 
 ### 3.2. Müşteri Oryantasyonu (Customer Onboarding)
 * İlk kez giriş yapan danışanlar için zorunlu bir sihirbazdır.
@@ -118,6 +119,11 @@ Program kaydedildiğinde veya güncellendiğinde arka planda yerel bildirimler (
 ### 3.7. Ürün Kataloğu ve Sipariş Takibi
 * **Ürün Kataloğu:** Uygulama içinde Herbalife ürünlerinin listelendiği, arama ve filtreleme yapılabilen bir katalogdur.
 * **Sipariş Ekranı:** Distribütörler, danışanları için hangi ürünleri sipariş ettiklerini sisteme girerek sipariş durumunu (Hazırlanıyor, Kargoda, Teslim Edildi) takip eder.
+
+### 3.8. Distribütör Ürün Kullanım İstatistikleri (`DistributorProductUsageScreen`)
+* Distribütörlerin kendi müşteri portföyündeki ürün kullanım verilerini özet olarak görebildiği analiz ekranıdır.
+* Hangi ürünlerin kaç müşteri tarafından aktif programlarda kullanıldığını listeler.
+* Ana sayfadan (`/home/distributor-usage`) erişilir, yalnızca distribütör rolüne açıktır.
 
 ---
 
@@ -258,3 +264,13 @@ Gelecek sürümlerde (v2.0.0+) eklenmesi planlanan vizyoner özellikler:
 2. **Yapay Zeka Destekli Diyet Asistanı (Gemini Integration):** Danışanın hedefine, alerjilerine ve evdeki malzemelerine göre günlük alternatif sağlıklı tarifler üreten yapay zeka modülü.
 3. **Detaylı Distribütör Analiz Paneli:** Koçlar için aylık Kişisel Hacim Puanı (VP) gelişimini, en çok sipariş edilen ürünleri ve danışan başarı oranlarını gösteren gelişmiş iş zekası (BI) raporları.
 4. **Grup Meydan Okumaları (Challenges):** Birden fazla danışanın katılabileceği, su veya adım hedeflerinde birbirleriyle yarışarak motive oldukları sosyal topluluk modülü.
+
+---
+
+## 📋 8. MEVCUT EKSİKLİKLER / GELİŞTİRİLECEK ALANLAR
+
+v1.0.0 kapsamında henüz tamamlanmamış veya kısmen implemente edilmiş alanlar:
+* **Kalori Takibi:** `CalorieProvider` şu an yerel state'te çalışmaktadır; Firestore'a kalıcı kayıt henüz yapılmamaktadır. Sayfa yenilendiğinde veriler sıfırlanır.
+* **Gelişim Fotoğrafları:** `ProgressPhotosScreen` mevcut olmakla birlikte Firebase Storage upload entegrasyonunun tamamlanması gerekmektedir.
+* **Rozet / Oyunlaştırma Sistemi:** `earnedBadges` modeli tanımlanmış olup ödül mantığının UI ile tam entegrasyonu planlanmaktadır.
+* **Google Sign-In:** Firebase Auth altyapısı hazır; Google Sign-In akışının uçtan uca test edilmesi gerekmektedir.
