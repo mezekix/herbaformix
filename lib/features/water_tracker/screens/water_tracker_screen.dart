@@ -40,6 +40,8 @@ class WaterTrackerScreen extends StatelessWidget {
               children: [
                 _buildProgressCircle(context, waterProvider),
                 const SizedBox(height: 24),
+                _buildExerciseSelector(context, waterProvider),
+                const SizedBox(height: 24),
                 _buildQuickAddButtons(context, waterProvider),
                 const SizedBox(height: 24),
                 _buildHistoryList(context, waterProvider),
@@ -58,58 +60,132 @@ class WaterTrackerScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final progress = waterProvider.progress;
 
-    return AspectRatio(
-      aspectRatio: 1.0,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: theme.colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              spreadRadius: 2,
-              blurRadius: 10,
-            ),
-          ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: 280,
+          maxHeight: 280,
         ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 12,
-              backgroundColor: Colors.grey.shade300,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Color.lerp(AppColors.aqua, AppColors.mango, progress) ??
-                    AppColors.aqua,
-              ),
+        child: AspectRatio(
+          aspectRatio: 1.0,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  spreadRadius: 2,
+                  blurRadius: 10,
+                ),
+              ],
             ),
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.water_drop,
-                    color: AppColors.primary,
-                    size: 36,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 12,
+                  backgroundColor: Colors.grey.shade300,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Color.lerp(AppColors.aqua, AppColors.mango, progress) ??
+                        AppColors.aqua,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${waterProvider.totalConsumed} ml',
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
+                ),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.water_drop,
+                        color: AppColors.primary,
+                        size: 36,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${waterProvider.totalConsumed} ml',
+                        style: theme.textTheme.headlineLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '/ ${waterProvider.dailyGoal} ml',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            onTap: () => _showTargetDetailsBottomSheet(context, waterProvider),
+                            child: const Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  Text(
-                    '/ ${waterProvider.dailyGoal} ml',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExerciseSelector(BuildContext context, WaterProvider waterProvider) {
+    final currentLevel = waterProvider.todaySummary?.exerciseLevel ?? 'sedentary';
+    final theme = Theme.of(context);
+
+    final levels = [
+      {'key': 'sedentary', 'label': 'Hareketsiz'},
+      {'key': 'light', 'label': 'Hafif'},
+      {'key': 'moderate', 'label': 'Orta'},
+      {'key': 'heavy', 'label': 'Yoğun'},
+    ];
+
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+        child: Column(
+          children: [
+            Text(
+              'Bugünkü Aktivite Seviyen',
+              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: levels.map((lvl) {
+                final isSelected = currentLevel == lvl['key'];
+                return ChoiceChip(
+                  label: Text(lvl['label'] as String),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      waterProvider.setExerciseLevel(lvl['key'] as String);
+                    }
+                  },
+                  selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                  labelStyle: TextStyle(
+                    color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
-                ],
-              ),
+                );
+              }).toList(),
             ),
           ],
         ),
@@ -130,26 +206,35 @@ class WaterTrackerScreen extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 12),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 12.0,
-          runSpacing: 12.0,
+        Row(
           children: [
-            _buildWaterButton(context, 250, waterProvider),
-            _buildWaterButton(context, 330, waterProvider),
-            _buildWaterButton(context, 500, waterProvider),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.add_task_outlined),
-              label: const Text('Özel Miktar'),
-              onPressed: () => _showAddCustomWaterDialog(context),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 15,
+            Expanded(child: _buildWaterButton(context, 250, waterProvider)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildWaterButton(context, 330, waterProvider)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _buildWaterButton(context, 500, waterProvider)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.add_task_outlined),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Özel Miktar'),
                 ),
-                textStyle: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                onPressed: () => _showAddCustomWaterDialog(context),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 15,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -183,7 +268,10 @@ class WaterTrackerScreen extends StatelessWidget {
   ) {
     return ElevatedButton.icon(
       icon: const Icon(Icons.add_circle_outline),
-      label: Text('$amount ml'),
+      label: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text('$amount ml'),
+      ),
       onPressed: () {
         waterProvider.addWater(amount);
         ScaffoldMessenger.of(context)
@@ -196,7 +284,7 @@ class WaterTrackerScreen extends StatelessWidget {
           );
       },
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
@@ -298,55 +386,7 @@ class WaterTrackerScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Özel Miktar Ekle'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Miktar (ml)',
-                suffixText: 'ml',
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Lütfen bir miktar girin.';
-                }
-                final amount = int.tryParse(value);
-                if (amount == null || amount <= 0) {
-                  return 'Geçerli bir miktar girin.';
-                }
-                return null;
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('İptal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (formKey.currentState?.validate() ?? false) {
-                  final amount = int.parse(amountController.text);
-                  waterProvider.addWater(amount);
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context)
-                    ..removeCurrentSnackBar()
-                    ..showSnackBar(
-                      SnackBar(
-                        content: Text('$amount ml su eklendi!'),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                }
-              },
-              child: const Text('Ekle'),
-            ),
-          ],
-        );
+        return CustomWaterDialog(formKey: formKey, amountController: amountController, waterProvider: waterProvider);
       },
     );
   }
@@ -391,6 +431,236 @@ class WaterTrackerScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  void _showTargetDetailsBottomSheet(BuildContext context, WaterProvider waterProvider) {
+    final profile = waterProvider.userProfile;
+    final summary = waterProvider.todaySummary;
+    final program = waterProvider.activeProgram;
+    final theme = Theme.of(context);
+
+    if (profile == null || summary == null) return;
+
+    final double weight = profile.weight ?? 70.0;
+    final double baseWater = weight * 33.0;
+
+    final isFemale = (profile.gender ?? 'Erkek').toLowerCase() == 'kadın';
+    final double genderEffect = isFemale ? (baseWater * -0.10) : 0.0;
+
+    final int age = profile.age ?? 25;
+    double ageEffect = 0.0;
+    if (age > 30 && age <= 55) {
+      ageEffect = (baseWater + genderEffect) * -0.05;
+    } else if (age > 55) {
+      ageEffect = (baseWater + genderEffect) * -0.10;
+    }
+
+    int exerciseEffect = 0;
+    switch (summary.exerciseLevel) {
+      case 'light': exerciseEffect = 350; break;
+      case 'moderate': exerciseEffect = 600; break;
+      case 'heavy': exerciseEffect = 1000; break;
+    }
+
+    int weatherEffect = 0;
+    final temp = summary.weatherTemp;
+    if (temp != null) {
+      if (temp < 15) {
+        weatherEffect += -200;
+      } else if (temp > 25 && temp <= 30) weatherEffect += 300;
+      else if (temp > 30 && temp <= 35) weatherEffect += 500;
+      else if (temp > 35) weatherEffect += 700;
+    }
+
+    int humidityEffect = 0;
+    final hum = summary.weatherHumidity;
+    if (hum != null) {
+      if (hum < 60) {
+        humidityEffect += 200;
+      } else if (hum > 75) humidityEffect += 150;
+    }
+
+    int herbalifeEffect = 0;
+    int shakeCount = 0;
+    bool hasAloe = false;
+    bool hasTea = false;
+    bool hasFiber = false;
+    int totalProducts = 0;
+
+    if (program != null && program.isActive) {
+      for (final slot in program.slots) {
+        if (slot.isNormalMeal) continue;
+        for (final product in slot.products) {
+          final name = product.productName.toLowerCase();
+          totalProducts++;
+          if (name.contains('shake') || name.contains('formul 1') || name.contains('formül 1')) {
+            shakeCount++;
+          } else if (name.contains('aloe')) hasAloe = true;
+          else if (name.contains('çay') || name.contains('cay') || name.contains('bitkisel konsantre')) hasTea = true;
+          else if (name.contains('fiber') || name.contains('lif')) hasFiber = true;
+        }
+      }
+      herbalifeEffect += shakeCount * 200;
+      if (hasAloe) herbalifeEffect += 100;
+      if (hasTea) herbalifeEffect += -100;
+      if (hasFiber) herbalifeEffect += 150;
+      if (totalProducts >= 4) herbalifeEffect += 300;
+    }
+
+    final String healthNotesLower = (profile.healthNotes ?? '').toLowerCase();
+    int healthEffect = 0;
+    if (healthNotesLower.contains('diyabet') || healthNotesLower.contains('seker') || healthNotesLower.contains('şeker')) {
+      healthEffect = 200;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '💧 Hedef Hesaplama Detayı',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              _buildDetailRow('Temel İhtiyaç (${weight.toStringAsFixed(0)} kg × 33 ml)', '${baseWater.round()} ml'),
+              if (isFemale) _buildDetailRow('Cinsiyet Düzeltmesi (Kadın -%10)', '${genderEffect.round()} ml', isNegative: true),
+              if (ageEffect != 0) _buildDetailRow('Yaş Düzeltmesi ($age yaş)', '${ageEffect.round()} ml', isNegative: true),
+              if (exerciseEffect != 0) _buildDetailRow('Egzersiz Etkisi', '+$exerciseEffect ml'),
+              if (weatherEffect != 0) _buildDetailRow('Hava Durumu (${temp?.toStringAsFixed(1)}°C)', weatherEffect > 0 ? '+$weatherEffect ml' : '$weatherEffect ml', isNegative: weatherEffect < 0),
+              if (humidityEffect != 0) _buildDetailRow('Nem Oranı (%${hum?.toStringAsFixed(0)})', '+$humidityEffect ml'),
+              if (herbalifeEffect != 0) _buildDetailRow('Herbalife Ürünleri Etkisi', herbalifeEffect > 0 ? '+$herbalifeEffect ml' : '$herbalifeEffect ml', isNegative: herbalifeEffect < 0),
+              if (healthEffect != 0) _buildDetailRow('Sağlık Durumu Düzeltmesi (Diyabet)', '+$healthEffect ml'),
+              const Divider(),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Bugünkü Su Hedefin',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '${waterProvider.dailyGoal} ml',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                summary.isWeatherFetched 
+                    ? '☀️ Anlık konum hava durumuna göre otomatik güncellenmiştir.' 
+                    : '☁️ Hava durumuna ulaşılamadı, standart hesaplama uygulandı.',
+                style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String title, String value, {bool isNegative = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(color: AppColors.textSecondary)),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: isNegative ? AppColors.error : (value.startsWith('+') ? AppColors.primary : AppColors.textPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CustomWaterDialog extends StatefulWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController amountController;
+  final WaterProvider waterProvider;
+
+  const CustomWaterDialog({
+    super.key,
+    required this.formKey,
+    required this.amountController,
+    required this.waterProvider,
+  });
+
+  @override
+  State<CustomWaterDialog> createState() => _CustomWaterDialogState();
+}
+
+class _CustomWaterDialogState extends State<CustomWaterDialog> {
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Özel Miktar Ekle'),
+      content: Form(
+        key: widget.formKey,
+        child: TextFormField(
+          controller: widget.amountController,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Miktar (ml)',
+            suffixText: 'ml',
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Lütfen bir miktar girin.';
+            }
+            final amount = int.tryParse(value);
+            if (amount == null || amount <= 0) {
+              return 'Geçerli bir miktar girin.';
+            }
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('İptal'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (widget.formKey.currentState?.validate() ?? false) {
+              final amount = int.parse(widget.amountController.text);
+              widget.waterProvider.addWater(amount);
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context)
+                ..removeCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text('$amount ml su eklendi!'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+            }
+          },
+          child: const Text('Ekle'),
+        ),
+      ],
     );
   }
 }

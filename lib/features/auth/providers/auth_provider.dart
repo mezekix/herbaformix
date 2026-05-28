@@ -66,6 +66,14 @@ class AuthProvider with ChangeNotifier {
   AuthStatus get status => _status;
   String? get errorMessage => _errorMessage; // Hata mesajını dışa aç
 
+  bool _isCustomerModeActive = false;
+  bool get isCustomerModeActive => _isCustomerModeActive;
+
+  void toggleCustomerMode() {
+    _isCustomerModeActive = !_isCustomerModeActive;
+    notifyListeners();
+  }
+
   Future<void> _onAuthStateChanged(fb_auth.User? firebaseUser) async {
     try {
       if (firebaseUser == null) {
@@ -86,8 +94,11 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
 
         // Kullanıcı giriş yaptığında veya uygulama açıldığında profilini Firestore'dan çek
-        _userProfile = await _firestoreService.getUserProfile(firebaseUser.uid);
-        if (_userProfile == null) {
+        final profile = await _firestoreService.getUserProfile(firebaseUser.uid);
+        if (profile != null) {
+          _userProfile = profile;
+        } else if (_userProfile?.id != firebaseUser.uid) {
+          _userProfile = null;
           debugPrint("Firestore'da profil bulunamadı: ${firebaseUser.uid}");
           // Profil yoksa null kalacak, signUp veya Login sonrası işlemler halledebilir
         }
@@ -189,8 +200,14 @@ class AuthProvider with ChangeNotifier {
           } else {
             await _firestoreService.setUserProfile(newProfile);
           }
+          _userProfile = newProfile;
+          notifyListeners();
           debugPrint("Google ile giriş sonrası yeni profil oluşturuldu: ${userCredential.user!.uid}");
+        } else {
+          _userProfile = existingProfile;
+          debugPrint("Google ile giriş sonrası mevcut profil yüklendi: ${userCredential.user!.uid}");
         }
+        notifyListeners();
       }
 
       // _onAuthStateChanged durumu ve profili güncelleyecek
@@ -216,13 +233,15 @@ class AuthProvider with ChangeNotifier {
       if (userCredential?.user != null) {
         // Yeni kullanıcı için Firestore'da bir profil dokümanı oluştur
         final newUser = userCredential!.user!;
-        _userProfile = UserProfileModel(
+        final newProfile = UserProfileModel(
           id: newUser.uid,
           email: newUser.email ?? "E-posta yok",
           role: role,
         );
-        await _firestoreService.setUserProfile(_userProfile!);
+        await _firestoreService.setUserProfile(newProfile);
+        _userProfile = newProfile;
         debugPrint("Kayıt sonrası yeni profil oluşturuldu: ${newUser.uid}");
+        notifyListeners();
         // _onAuthStateChanged zaten dinlendiği için durumu o güncelleyecek
         return true;
       }
@@ -402,6 +421,7 @@ class AuthProvider with ChangeNotifier {
       debugPrint(
         'Davet koduyla kayıt başarılı: ${newUser.uid}, distribütör: ${inviteCodeModel.distributorId}',
       );
+      notifyListeners();
 
       // _onAuthStateChanged durumu güncelleyecek
       return true;

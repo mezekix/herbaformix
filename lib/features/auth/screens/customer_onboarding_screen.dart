@@ -28,6 +28,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
+  final TextEditingController _targetWeightController = TextEditingController();
 
   String _selectedGoal = ''; // weight_loss, healthy_living, weight_gain
   TimeOfDay? _wakeTime;
@@ -55,6 +56,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
       userProfile.phoneNumber = _phoneController.text.trim();
       userProfile.weight = double.tryParse(_weightController.text.trim());
       userProfile.height = double.tryParse(_heightController.text.trim());
+      userProfile.targetWeight = double.tryParse(_targetWeightController.text.trim());
       userProfile.userGoal = _selectedGoal;
       userProfile.wakeTime = _wakeTime != null ? '${_wakeTime!.hour.toString().padLeft(2, '0')}:${_wakeTime!.minute.toString().padLeft(2, '0')}' : null;
       userProfile.lunchTime = _lunchTime != null ? '${_lunchTime!.hour.toString().padLeft(2, '0')}:${_lunchTime!.minute.toString().padLeft(2, '0')}' : null;
@@ -84,6 +86,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     _phoneController.dispose();
     _weightController.dispose();
     _heightController.dispose();
+    _targetWeightController.dispose();
     super.dispose();
   }
 
@@ -394,6 +397,8 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
           _buildPhysicalInput('Mevcut Kilo', _weightController, 'kg', Icons.monitor_weight, Colors.green.shade100),
           const SizedBox(height: 16),
           _buildPhysicalInput('Boy', _heightController, 'cm', Icons.height, Colors.blue.shade100),
+          const SizedBox(height: 16),
+          _buildPhysicalInput('Hedef Kilo', _targetWeightController, 'kg', Icons.flag, Colors.orange.shade100),
           const Spacer(),
           _buildNextButton(),
         ],

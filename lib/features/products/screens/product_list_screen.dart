@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart'; // GoRouter import'u
 import 'package:provider/provider.dart';
 
+import '../../../core/app_colors.dart';
 import '../../../models/product_model.dart';
 import '../../../models/user_role.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../orders/providers/cart_provider.dart';
 import '../providers/product_provider.dart';
 import './add_edit_product_screen.dart'; // AddEditProductScreen'i import et
 import './product_detail_screen.dart'; // ProductDetailScreen'i import et
@@ -160,6 +162,21 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   });
                 },
               ),
+              Consumer<CartProvider>(
+                builder: (context, cart, child) {
+                  return Badge(
+                    label: Text('${cart.itemCount}'),
+                    isLabelVisible: cart.itemCount > 0,
+                    backgroundColor: AppColors.accent,
+                    child: IconButton(
+                      icon: const Icon(Icons.shopping_cart),
+                      onPressed: () {
+                        context.push('/home/cart');
+                      },
+                    ),
+                  );
+                },
+              ),
               if (!isCustomer)
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
@@ -310,7 +327,25 @@ class _ProductListScreenState extends State<ProductListScreen> {
           'Fiyat: ${(product.price ?? 0).toStringAsFixed(2)} ₺',
           style: TextStyle(color: Theme.of(context).primaryColor),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.add_shopping_cart, color: AppColors.primary),
+              onPressed: () {
+                context.read<CartProvider>().addItem(product);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${product.name} sepete eklendi!'),
+                    backgroundColor: AppColors.primary,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+          ],
+        ),
         onTap: () {
           context.pushNamed(
             ProductDetailScreen.routeName,
@@ -403,6 +438,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_shopping_cart, size: 20, color: AppColors.primary),
+                        onPressed: () {
+                          context.read<CartProvider>().addItem(product);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${product.name} sepete eklendi!'),
+                              backgroundColor: AppColors.primary,
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

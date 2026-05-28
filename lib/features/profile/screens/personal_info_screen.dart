@@ -140,6 +140,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       height: userProfile?.height,
       weight: userProfile?.weight,
       goal: userProfile?.goal,
+      targetWeight: userProfile?.targetWeight,
       healthNotes: userProfile?.healthNotes,
       allergies: userProfile?.allergies,
       medications: userProfile?.medications,

@@ -14,6 +14,7 @@ import '../models/progress_entry_model.dart';
 import '../models/scheduled_follow_up_model.dart';
 import '../models/user_profile_model.dart';
 import '../models/water_log_model.dart';
+import '../models/water_summary_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -162,10 +163,34 @@ class FirestoreService {
   }
 
   Future<void> updateCustomer(String userId, CustomerModel customer) async {
-    await customersRef(userId).doc(customer.id).update(customer.toMap());
+    final batch = _db.batch();
+
+    // 1. Müşteri dokümanını güncelle
+    final customerRef = customersRef(userId).doc(customer.id);
+    batch.update(customerRef, customer.toMap());
+
+    // 2. Eğer bağlı kullanıcı varsa, onun profilindeki bilgileri de güncelle
+    if (customer.linkedUserId != null && customer.linkedUserId!.isNotEmpty) {
+      final profileRef = userProfilesRef.doc(customer.linkedUserId);
+      final profileUpdates = <String, dynamic>{
+        'name': '${customer.firstName} ${customer.lastName}'.trim(),
+        'phoneNumber': customer.phoneNumber,
+      };
+      if (customer.email != null) {
+        profileUpdates['email'] = customer.email;
+      }
+      batch.update(profileRef, profileUpdates);
+    }
+
+    await batch.commit();
   }
 
   Future<void> deleteCustomer(String userId, String customerId) async {
+    // Önce müşteri dokümanını oku
+    final customerDoc = await customersRef(userId).doc(customerId).get();
+    final customerData = customerDoc.data();
+    final linkedUserId = customerData?.linkedUserId;
+
     final batch = _db.batch();
 
     // 1. Müşteri dokümanını sil
@@ -195,7 +220,23 @@ class FirestoreService {
       debugPrint('deleteCustomer: follow_ups temizlenirken hata: $e');
     }
 
+    // 4. Eğer bağlı bir kullanıcı varsa, distribütör ilişkisini kes (assignedDistributorId alanını sil)
+    if (linkedUserId != null && linkedUserId.isNotEmpty) {
+      final profileRef = userProfilesRef.doc(linkedUserId);
+      batch.update(profileRef, {'assignedDistributorId': FieldValue.delete()});
+    }
+
     await batch.commit();
+  }
+
+  Future<void> disconnectDistributor(String customerUserId) async {
+    try {
+      final profileRef = userProfilesRef.doc(customerUserId);
+      await profileRef.update({'assignedDistributorId': FieldValue.delete()});
+    } catch (e) {
+      debugPrint('disconnectDistributor hatası: $e');
+      throw Exception('Distribütör bağlantısı kesilemedi: $e');
+    }
   }
 
   CollectionReference<FollowUpModel> followUpsRef(
@@ -833,6 +874,9 @@ class FirestoreService {
           .orderBy('date', descending: true)
           .limit(1)
           .get();
+      final allProgressFuture = progressEntriesRef(customerUserId)
+          .orderBy('date', descending: false)
+          .get();
       final todayWaterFuture = _waterLogsRef(customerUserId)
           .where('time', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfToday))
           .where('time', isLessThan: Timestamp.fromDate(endOfToday))
@@ -851,6 +895,7 @@ class FirestoreService {
 
       final results = await Future.wait([
         latestProgressFuture,
+        allProgressFuture,
         todayWaterFuture,
         recentRoutinesFuture,
         userProfileFuture,
@@ -858,10 +903,12 @@ class FirestoreService {
 
       final latestProgressSnapshot =
           results[0] as QuerySnapshot<ProgressEntryModel>;
-      final todayWaterSnapshot = results[1] as QuerySnapshot<Map<String, dynamic>>;
+      final allProgressSnapshot =
+          results[1] as QuerySnapshot<ProgressEntryModel>;
+      final todayWaterSnapshot = results[2] as QuerySnapshot<Map<String, dynamic>>;
       final recentRoutinesSnapshot =
-          results[2] as QuerySnapshot<Map<String, dynamic>>;
-      final userProfile = results[3] as UserProfileModel?;
+          results[3] as QuerySnapshot<Map<String, dynamic>>;
+      final userProfile = results[4] as UserProfileModel?;
 
       final latestProgress = latestProgressSnapshot.docs.isNotEmpty
           ? latestProgressSnapshot.docs.first.data()
@@ -906,8 +953,16 @@ class FirestoreService {
       ].whereType<DateTime>().toList()
         ..sort((a, b) => b.compareTo(a));
 
+      // Son 90 günlük progress entries
+      final cutoff = DateTime.now().subtract(const Duration(days: 90));
+      final progressEntries = allProgressSnapshot.docs
+          .map((doc) => doc.data())
+          .where((e) => e.date.isAfter(cutoff))
+          .toList();
+
       return DistributorCustomerInsights(
         latestProgress: latestProgress,
+        progressEntries: progressEntries,
         todayWaterMl: todayWaterMl,
         waterGoalMl: userProfile?.waterDailyGoal ?? 2000,
         completedRoutinesLast7Days: completedRoutines.length,
@@ -1032,6 +1087,41 @@ class FirestoreService {
     } catch (e) {
       debugPrint('getAtRiskCustomerCount hatası: $e');
       return 0;
+    }
+  }
+
+  // ──────────────── Water Summaries ────────────────
+
+  CollectionReference<Map<String, dynamic>> _waterSummariesRef(String userId) =>
+      _db.collection('users').doc(userId).collection('waterSummaries');
+
+  Future<WaterSummaryModel?> getWaterSummary(String userId, String dateStr) async {
+    try {
+      final doc = await _waterSummariesRef(userId).doc(dateStr).get();
+      if (doc.exists && doc.data() != null) {
+        return WaterSummaryModel.fromMap(doc.data()!, doc.id);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('getWaterSummary hatası: $e');
+      return null;
+    }
+  }
+
+  Stream<WaterSummaryModel?> watchWaterSummary(String userId, String dateStr) {
+    return _waterSummariesRef(userId).doc(dateStr).snapshots().map((doc) {
+      if (doc.exists && doc.data() != null) {
+        return WaterSummaryModel.fromMap(doc.data()!, doc.id);
+      }
+      return null;
+    });
+  }
+
+  Future<void> setWaterSummary(String userId, WaterSummaryModel summary) async {
+    try {
+      await _waterSummariesRef(userId).doc(summary.id).set(summary.toMap());
+    } catch (e) {
+      debugPrint('setWaterSummary hatası: $e');
     }
   }
 }

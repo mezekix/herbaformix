@@ -11,6 +11,7 @@ import '../features/customers/screens/customer_detail_screen.dart';
 import '../features/customers/screens/customer_list_screen.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/orders/screens/add_edit_order_screen.dart';
+import '../features/orders/screens/cart_screen.dart';
 import '../features/orders/screens/order_list_screen.dart';
 import '../features/products/screens/add_edit_product_screen.dart';
 import '../features/products/screens/product_detail_screen.dart';
@@ -20,8 +21,9 @@ import '../features/profile/screens/personal_info_screen.dart';
 import '../features/profile/screens/health_goals_screen.dart';
 import '../features/profile/screens/app_settings_screen.dart';
 import '../features/profile/screens/support_screen.dart';
-import '../features/progress/screens/measurements_history_screen.dart';
+import '../features/progress/screens/progress_dashboard_screen.dart';
 import '../features/progress/screens/progress_photos_screen.dart';
+import '../features/progress/screens/measurements_history_screen.dart';
 import '../features/water_tracker/screens/water_tracker_screen.dart';
 import '../models/customer_model.dart';
 import '../models/order_model.dart';
@@ -108,14 +110,19 @@ class AppRouter {
             builder: (context, state) => const CalorieTrackerScreen(),
           ),
           GoRoute(
-            path: MeasurementsHistoryScreen.routeName, // 'measurements-history'
-            name: MeasurementsHistoryScreen.routeName,
-            builder: (context, state) => const MeasurementsHistoryScreen(),
+            path: ProgressDashboardScreen.routeName,
+            name: ProgressDashboardScreen.routeName,
+            builder: (context, state) => const ProgressDashboardScreen(),
           ),
           GoRoute(
             path: ProgressPhotosScreen.routeName, // 'progress-photos'
             name: ProgressPhotosScreen.routeName,
             builder: (context, state) => const ProgressPhotosScreen(),
+          ),
+          GoRoute(
+            path: MeasurementsHistoryScreen.routeName,
+            name: MeasurementsHistoryScreen.routeName,
+            builder: (context, state) => const MeasurementsHistoryScreen(),
           ),
           GoRoute(
             path: 'products', // '/home/products'
@@ -175,6 +182,11 @@ class AppRouter {
                 },
               ),
             ],
+          ),
+          GoRoute(
+            path: 'cart', // '/home/cart'
+            name: 'cart',
+            builder: (context, state) => const CartScreen(),
           ),
           GoRoute(
             path: 'orders', // '/home/orders'

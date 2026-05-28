@@ -15,7 +15,8 @@ class UserProfileModel {
   String? phoneNumber;
   double? weight;
   double? height;
-  String? goal;
+  String? goal; // Eski alan — hedef kilo (String olarak saklanıyordu). Geriye uyumluluk için korundu.
+  double? targetWeight; // Hedef kilo (kg) — sayısal alan
   DateTime? programStartDate;
 
   // Yeni eklenen alanlar (Distribütör Takip Aracı)
@@ -35,6 +36,9 @@ class UserProfileModel {
   DateTime? profilePhotoUpdatedAt;
   List<String> earnedBadges; // Kazanılan rozet ID'leri
   int? waterDailyGoal; // Günlük su hedefi (ml)
+  int? waterMinLimit; // Distribütörün koyduğu min limit (ml)
+  int? waterMaxLimit; // Distribütörün koyduğu max limit (ml)
+  String? distributorRequestStatus; // null (talep yok), 'pending' (onay bekliyor), 'approved' (onaylandı)
 
   UserProfileModel({
     required this.id,
@@ -49,6 +53,7 @@ class UserProfileModel {
     this.weight,
     this.height,
     this.goal,
+    this.targetWeight,
     this.programStartDate,
     this.userGoal,
     this.wakeTime,
@@ -64,6 +69,9 @@ class UserProfileModel {
     this.profilePhotoUpdatedAt,
     this.earnedBadges = const [],
     this.waterDailyGoal,
+    this.waterMinLimit,
+    this.waterMaxLimit,
+    this.distributorRequestStatus,
   });
 
   // Firestore'dan veri okurken Map'i UserProfileModel'e dönüştürmek için factory constructor
@@ -87,6 +95,9 @@ class UserProfileModel {
       weight: (map['weight'] as num?)?.toDouble(),
       height: (map['height'] as num?)?.toDouble(),
       goal: map['goal'] as String?,
+      targetWeight: (map['targetWeight'] as num?)?.toDouble() ??
+          (map['goal'] is num ? (map['goal'] as num).toDouble() : null) ??
+          (map['goal'] is String ? double.tryParse(map['goal'] as String) : null),
       programStartDate: map['programStartDate'] != null 
           ? DateTime.fromMillisecondsSinceEpoch(map['programStartDate'] as int)
           : null,
@@ -111,6 +122,9 @@ class UserProfileModel {
               .toList() ??
           [],
       waterDailyGoal: map['waterDailyGoal'] as int?,
+      waterMinLimit: map['waterMinLimit'] as int?,
+      waterMaxLimit: map['waterMaxLimit'] as int?,
+      distributorRequestStatus: map['distributorRequestStatus'] as String?,
     );
   }
 
@@ -130,6 +144,7 @@ class UserProfileModel {
     if (weight != null) map['weight'] = weight;
     if (height != null) map['height'] = height;
     if (goal != null) map['goal'] = goal;
+    if (targetWeight != null) map['targetWeight'] = targetWeight;
     if (programStartDate != null) map['programStartDate'] = programStartDate!.millisecondsSinceEpoch;
     if (userGoal != null) map['user_goal'] = userGoal;
     if (wakeTime != null) map['wake_time'] = wakeTime;
@@ -145,6 +160,9 @@ class UserProfileModel {
     if (profilePhotoUpdatedAt != null) map['profilePhotoUpdatedAt'] = profilePhotoUpdatedAt!.millisecondsSinceEpoch;
     if (earnedBadges.isNotEmpty) map['earnedBadges'] = earnedBadges;
     if (waterDailyGoal != null) map['waterDailyGoal'] = waterDailyGoal;
+    if (waterMinLimit != null) map['waterMinLimit'] = waterMinLimit;
+    if (waterMaxLimit != null) map['waterMaxLimit'] = waterMaxLimit;
+    if (distributorRequestStatus != null) map['distributorRequestStatus'] = distributorRequestStatus;
 
     return map;
   }

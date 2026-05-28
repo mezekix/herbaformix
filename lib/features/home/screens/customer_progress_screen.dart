@@ -4,9 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../models/badge_model.dart';
+import '../../../models/user_profile_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../progress/providers/progress_provider.dart';
-import '../../progress/screens/measurements_history_screen.dart';
+import '../../progress/screens/progress_dashboard_screen.dart';
 import '../../progress/screens/progress_photos_screen.dart';
 import '../../progress/widgets/transformation_studio_widget.dart';
 import '../../progress/widgets/weight_chart_widget.dart';
@@ -24,7 +25,9 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
   @override
   void initState() {
     super.initState();
-    // Provider'ı başlat — bir sonraki frame'de çalıştır (context hazır olsun)
+    // Rozet kazanıldığında snackbar göster
+    ProgressProvider.onBadgeEarned = _onBadgeEarned;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final authProvider = context.read<AuthProvider>();
@@ -38,8 +41,48 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
     });
   }
 
+  void _onBadgeEarned(String badgeId) {
+    if (!mounted) return;
+    final badge = AppBadges.findById(badgeId);
+    if (badge == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(badge.icon, color: badge.iconColor, size: 24),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Yeni Rozet Kazandın!',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    badge.label,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.nightSky,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   void dispose() {
+    ProgressProvider.onBadgeEarned = null;
     context.read<ProgressProvider>().stopListening();
     super.dispose();
   }
@@ -68,7 +111,17 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                     context,
                     progressProvider,
                     dayCount,
+                    userProfile,
                   ),
+                ),
+              ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+
+              // 1.5 Hedef İlerleme Çubuğu
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildGoalProgressCard(context, progressProvider, userProfile),
                 ),
               ),
               const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
@@ -81,10 +134,9 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                       ? _buildLoadingCard(height: 260)
                       : WeightChartWidget(
                           entries: progressProvider.entries,
-                          targetWeight: userProfile?.goal != null
-                              ? double.tryParse(userProfile!.goal!)
-                              : null,
+                          targetWeight: userProfile?.targetWeight,
                           initialWeight: userProfile?.weight,
+                          userGoal: userProfile?.userGoal,
                         ),
                 ),
               ),
@@ -144,7 +196,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: _buildLoadingCard(height: 180),
                       )
-                    : _buildDigitalMeasure(context, progressProvider),
+                    : _buildDigitalMeasure(context, progressProvider, userProfile),
               ),
               const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
 
@@ -164,11 +216,14 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
     BuildContext context,
     ProgressProvider provider,
     int dayCount,
+    UserProfileModel? userProfile,
   ) {
     final change = provider.totalWeightChange;
     final changeStr = change == 0
         ? '0.0'
         : '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}';
+    final isWeightLoss = userProfile?.userGoal == 'weight_loss';
+    final isGoodChange = isWeightLoss ? change < 0 : change > 0;
 
     return Row(
       children: [
@@ -177,7 +232,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             context,
             value: changeStr,
             label: 'KG TOPLAM',
-            valueColor: change < 0 ? AppColors.primary : Colors.red,
+            valueColor: change == 0 ? AppColors.nightSky : (isGoodChange ? AppColors.primary : Colors.red),
             isHighlight: false,
           ),
         ),
@@ -202,6 +257,158 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             icon: Icons.local_fire_department,
             iconColor: const Color(0xFF9E3774),
             isHighlight: false,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGoalProgressCard(
+    BuildContext context,
+    ProgressProvider provider,
+    UserProfileModel? userProfile,
+  ) {
+    final targetWeight = userProfile?.targetWeight;
+    final currentWeight = provider.latestWeight ?? userProfile?.weight;
+
+    // Hedef kilo yoksa veya mevcut kilo yoksa gösterme
+    if (targetWeight == null || currentWeight == null) return const SizedBox.shrink();
+
+    final initialWeight = userProfile?.weight ?? provider.entries.first.weight;
+    final isLoss = targetWeight < initialWeight;
+
+    // İlerleme yüzdesi hesapla
+    double progress;
+    if (isLoss) {
+      final totalToLose = initialWeight - targetWeight;
+      final lost = initialWeight - currentWeight;
+      progress = totalToLose > 0 ? (lost / totalToLose).clamp(0.0, 1.0) : 0.0;
+    } else {
+      final totalToGain = targetWeight - initialWeight;
+      final gained = currentWeight - initialWeight;
+      progress = totalToGain > 0 ? (gained / totalToGain).clamp(0.0, 1.0) : 0.0;
+    }
+
+    final remaining = (currentWeight - targetWeight).abs();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Hedef İlerlemesi',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.nightSky,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: progress >= 1.0 ? Colors.green.shade100 : Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  progress >= 1.0 ? 'Ulaşıldı!' : '%${(progress * 100).round()}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: progress >= 1.0 ? Colors.green.shade700 : Colors.orange.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Dairesel ilerleme göstergesi
+          Row(
+            children: [
+              SizedBox(
+                width: 80,
+                height: 80,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: progress,
+                      strokeWidth: 8,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        progress >= 1.0 ? Colors.green : AppColors.primary,
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        '%${(progress * 100).round()}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.nightSky,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildGoalInfoRow('Başlangıç', '${initialWeight.toStringAsFixed(1)} kg'),
+                    const SizedBox(height: 6),
+                    _buildGoalInfoRow('Mevcut', '${currentWeight.toStringAsFixed(1)} kg'),
+                    const SizedBox(height: 6),
+                    _buildGoalInfoRow('Hedef', '${targetWeight.toStringAsFixed(1)} kg'),
+                    const SizedBox(height: 6),
+                    _buildGoalInfoRow(
+                      'Kalan',
+                      '${remaining.toStringAsFixed(1)} kg',
+                      isHighlight: true,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoalInfoRow(String label, String value, {bool isHighlight = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: isHighlight ? AppColors.primary : AppColors.nightSky,
           ),
         ),
       ],
@@ -278,6 +485,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
   Widget _buildDigitalMeasure(
     BuildContext context,
     ProgressProvider provider,
+    UserProfileModel? userProfile,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -299,7 +507,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                 ),
                 GestureDetector(
                   onTap: () =>
-                      context.goNamed(MeasurementsHistoryScreen.routeName),
+                      context.goNamed(ProgressDashboardScreen.routeName),
                   child: Row(
                     children: [
                       Text(
@@ -327,6 +535,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             title: 'Bel',
             latestValue: provider.latestWaist,
             change: provider.waistChange,
+            userGoal: userProfile?.userGoal,
           ),
           const SizedBox(height: 8),
           _buildMeasureItem(
@@ -336,6 +545,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             title: 'Kalça',
             latestValue: provider.latestHip,
             change: provider.hipChange,
+            userGoal: userProfile?.userGoal,
           ),
           const SizedBox(height: 8),
           _buildMeasureItem(
@@ -345,6 +555,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             title: 'Göğüs',
             latestValue: provider.latestChest,
             change: provider.chestChange,
+            userGoal: userProfile?.userGoal,
           ),
         ],
       ),
@@ -358,12 +569,17 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
     required String title,
     required double? latestValue,
     required double? change,
+    String? userGoal,
   }) {
     final hasData = latestValue != null;
     final changeStr = change != null
         ? '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)} cm'
         : null;
     final isPositive = change != null && change >= 0;
+
+    // Hedef bazlı renk: weight_loss ise azalış yeşil, weight_gain ise artış yeşil
+    final isWeightLoss = userGoal == 'weight_loss';
+    final isGoodChange = isWeightLoss ? !isPositive : isPositive;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -417,19 +633,19 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: isPositive ? Colors.red : AppColors.primary,
+                    color: isGoodChange ? AppColors.primary : Colors.red,
                   ),
                 ),
                 Icon(
                   isPositive ? Icons.trending_up : Icons.trending_down,
-                  color: isPositive ? Colors.red : AppColors.primary,
+                  color: isGoodChange ? AppColors.primary : Colors.red,
                   size: 16,
                 ),
               ],
             )
           else if (!hasData)
             GestureDetector(
-              onTap: () => context.goNamed(MeasurementsHistoryScreen.routeName),
+              onTap: () => context.goNamed(ProgressDashboardScreen.routeName),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,

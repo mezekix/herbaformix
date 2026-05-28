@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
@@ -9,7 +10,9 @@ import '../providers/progress_provider.dart';
 
 /// Kilo ve vücut ölçümü girişi için bottom sheet.
 class AddMeasurementSheet extends StatefulWidget {
-  const AddMeasurementSheet({super.key});
+  final ProgressEntryModel? entry;
+
+  const AddMeasurementSheet({super.key, this.entry});
 
   @override
   State<AddMeasurementSheet> createState() => _AddMeasurementSheetState();
@@ -21,9 +24,48 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
   final _waistCtrl = TextEditingController();
   final _hipCtrl = TextEditingController();
   final _chestCtrl = TextEditingController();
+  final _bodyFatCtrl = TextEditingController();
+  final _muscleMassCtrl = TextEditingController();
+  final _armCtrl = TextEditingController();
+  final _thighCtrl = TextEditingController();
+  final _heightCtrl = TextEditingController();
 
   bool _showMeasurements = false;
   bool _isSaving = false;
+  bool _needsHeight = false;
+  late DateTime _selectedDate;
+
+  bool get _isEditing => widget.entry != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDate = widget.entry?.date ?? DateTime.now();
+    final e = widget.entry;
+    if (e != null) {
+      _weightCtrl.text = e.weight.toString();
+      _waistCtrl.text = e.waist?.toString() ?? '';
+      _hipCtrl.text = e.hip?.toString() ?? '';
+      _chestCtrl.text = e.chest?.toString() ?? '';
+      _bodyFatCtrl.text = e.bodyFat?.toString() ?? '';
+      _muscleMassCtrl.text = e.muscleMass?.toString() ?? '';
+      _armCtrl.text = e.arm?.toString() ?? '';
+      _thighCtrl.text = e.thigh?.toString() ?? '';
+      if (e.waist != null || e.hip != null || e.chest != null ||
+          e.bodyFat != null || e.muscleMass != null || e.arm != null || e.thigh != null) {
+        _showMeasurements = true;
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProfile = context.read<AuthProvider>().userProfile;
+      if (userProfile?.height == null || userProfile!.height! <= 0) {
+        setState(() {
+          _needsHeight = true;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -31,6 +73,11 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
     _waistCtrl.dispose();
     _hipCtrl.dispose();
     _chestCtrl.dispose();
+    _bodyFatCtrl.dispose();
+    _muscleMassCtrl.dispose();
+    _armCtrl.dispose();
+    _thighCtrl.dispose();
+    _heightCtrl.dispose();
     super.dispose();
   }
 
@@ -44,14 +91,22 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
     final userId = authProvider.firebaseUser?.uid;
     final userProfile = authProvider.userProfile;
 
-    if (userId == null) {
+    if (userId == null || userProfile == null) {
       setState(() => _isSaving = false);
       return;
     }
 
+    if (_needsHeight) {
+      final h = double.tryParse(_heightCtrl.text.replaceAll(',', '.'));
+      if (h != null && h > 0) {
+        userProfile.height = h;
+        await authProvider.updateUserProfile(userProfile);
+      }
+    }
+
     final entry = ProgressEntryModel(
-      id: '',
-      date: DateTime.now(),
+      id: _isEditing ? widget.entry!.id : '',
+      date: _selectedDate,
       weight: double.parse(_weightCtrl.text.replaceAll(',', '.')),
       waist: _waistCtrl.text.isNotEmpty
           ? double.tryParse(_waistCtrl.text.replaceAll(',', '.'))
@@ -62,10 +117,60 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
       chest: _chestCtrl.text.isNotEmpty
           ? double.tryParse(_chestCtrl.text.replaceAll(',', '.'))
           : null,
+      bodyFat: _bodyFatCtrl.text.isNotEmpty
+          ? double.tryParse(_bodyFatCtrl.text.replaceAll(',', '.'))
+          : null,
+      muscleMass: _muscleMassCtrl.text.isNotEmpty
+          ? double.tryParse(_muscleMassCtrl.text.replaceAll(',', '.'))
+          : null,
+      arm: _armCtrl.text.isNotEmpty
+          ? double.tryParse(_armCtrl.text.replaceAll(',', '.'))
+          : null,
+      thigh: _thighCtrl.text.isNotEmpty
+          ? double.tryParse(_thighCtrl.text.replaceAll(',', '.'))
+          : null,
     );
 
+    // Aynı gün tekrar kontrolü
+    if (!_isEditing) {
+      final hasSameDay = progressProvider.entries.any(
+        (e) => e.date.year == _selectedDate.year &&
+               e.date.month == _selectedDate.month &&
+               e.date.day == _selectedDate.day,
+      );
+      if (hasSameDay) {
+        final shouldContinue = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Aynı Günde Kayıt'),
+            content: const Text(
+              'Bu tarihte zaten bir ölçüm kaydın var. Yine de eklemek istiyor musun?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('İptal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Ekle', style: TextStyle(color: AppColors.primary)),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || shouldContinue != true) {
+          setState(() => _isSaving = false);
+          return;
+        }
+      }
+    }
+
     try {
-      await progressProvider.addEntry(userId, entry, userProfile);
+      if (_isEditing) {
+        await progressProvider.updateEntry(userId, entry);
+      } else {
+        await progressProvider.addEntry(userId, entry, userProfile);
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (mounted) {
@@ -107,9 +212,9 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
             const SizedBox(height: 20),
 
             // Başlık
-            const Text(
-              'Yeni Ölçüm Ekle',
-              style: TextStyle(
+            Text(
+              _isEditing ? 'Ölçümü Düzenle' : 'Yeni Ölçüm Ekle',
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: AppColors.nightSky,
@@ -117,10 +222,51 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Bugünkü ölçümlerini gir',
+              _isEditing 
+                ? 'Ölçüm bilgilerini güncelle' 
+                : 'Bugünkü ölçümlerini gir',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
             ),
             const SizedBox(height: 24),
+
+            // Tarih seçici
+            if (!_isEditing) ...[
+              GestureDetector(
+                onTap: _pickDate,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey.shade50,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 18, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Text(
+                        DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.nightSky,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Değiştir',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Kilo alanı (zorunlu)
             _buildField(
@@ -131,6 +277,22 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
               isRequired: true,
             ),
             const SizedBox(height: 16),
+
+            if (_needsHeight) ...[
+              _buildField(
+                controller: _heightCtrl,
+                label: 'Boy (cm)',
+                hint: 'Örn: 175',
+                icon: Icons.height,
+                isRequired: true,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'BMI hesaplanabilmesi için boy bilgisine ihtiyacımız var. Bu bilgi profiline kaydedilecektir.',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Vücut ölçümleri toggle
             GestureDetector(
@@ -179,6 +341,34 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
                 hint: 'Örn: 96',
                 icon: Icons.straighten,
               ),
+              const SizedBox(height: 12),
+              _buildField(
+                controller: _armCtrl,
+                label: 'Kol (cm)',
+                hint: 'Örn: 32',
+                icon: Icons.straighten,
+              ),
+              const SizedBox(height: 12),
+              _buildField(
+                controller: _thighCtrl,
+                label: 'Bacak (cm)',
+                hint: 'Örn: 58',
+                icon: Icons.straighten,
+              ),
+              const SizedBox(height: 12),
+              _buildField(
+                controller: _bodyFatCtrl,
+                label: 'Yağ Oranı (%)',
+                hint: 'Örn: 25.3',
+                icon: Icons.water_drop_outlined,
+              ),
+              const SizedBox(height: 12),
+              _buildField(
+                controller: _muscleMassCtrl,
+                label: 'Kas Kütlesi (kg)',
+                hint: 'Örn: 45.0',
+                icon: Icons.fitness_center,
+              ),
             ],
 
             const SizedBox(height: 28),
@@ -205,9 +395,9 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
                           color: Colors.white,
                         ),
                       )
-                    : const Text(
-                        'Kaydet',
-                        style: TextStyle(
+                    : Text(
+                        _isEditing ? 'Güncelle' : 'Kaydet',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -218,6 +408,27 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
         ),
       ),
     );
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      locale: const Locale('tr', 'TR'),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: AppColors.primary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
   }
 
   Widget _buildField({

@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 
 import '../../../models/badge_model.dart';
 import '../../../models/progress_entry_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../services/firestore_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProgressProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
@@ -15,13 +17,42 @@ class ProgressProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   StreamSubscription<List<ProgressEntryModel>>? _entriesSubscription;
+  bool _isPrivacyMode = false;
 
-  ProgressProvider(this._firestoreService);
+  // Yeni kazanılan rozetler için callback
+  static Function(String badgeId)? onBadgeEarned;
+
+  /// Seri hesabına dahil edilen ek aktivite tarihleri (su, öğün vb.)
+  Set<DateTime> _activityDates = {};
+
+  /// Aktivite tarihlerini günceller (su dolumu, routine tamamlama gibi).
+  void updateActivityDates(Set<DateTime> dates) {
+    _activityDates = dates.map((d) => DateTime(d.year, d.month, d.day)).toSet();
+    notifyListeners();
+  }
+
+  ProgressProvider(this._firestoreService) {
+    _loadPrivacyMode();
+  }
 
   List<ProgressEntryModel> get entries => _entries;
   List<String> get earnedBadgeIds => _earnedBadgeIds;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get isPrivacyMode => _isPrivacyMode;
+
+  Future<void> _loadPrivacyMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    _isPrivacyMode = prefs.getBool('privacy_mode') ?? false;
+    notifyListeners();
+  }
+
+  Future<void> togglePrivacyMode() async {
+    _isPrivacyMode = !_isPrivacyMode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('privacy_mode', _isPrivacyMode);
+    notifyListeners();
+  }
 
   /// Kazanılan rozet tanımlarını döner.
   List<BadgeDefinition> get earnedBadges =>
@@ -42,6 +73,47 @@ class ProgressProvider with ChangeNotifier {
     if (_entries.length < 2) return 0;
     return _entries.last.weight - _entries.first.weight;
   }
+
+  /// Haftalık ortalama kilo değişimi (kg/hafta).
+  double get weeklyAverageChange {
+    if (_entries.length < 2) return 0;
+    final first = _entries.first;
+    final last = _entries.last;
+    final days = last.date.difference(first.date).inDays;
+    if (days <= 0) return 0;
+    return (last.weight - first.weight) / (days / 7);
+  }
+
+  /// En iyi hafta (en çok kilo verilen/kazanılan hafta).
+  String get bestWeekSummary {
+    if (_entries.length < 2) return '—';
+    final isLoss = totalWeightChange < 0;
+    double bestChange = 0;
+    DateTime? bestWeekStart;
+
+    for (int i = 0; i < _entries.length - 1; i++) {
+      final start = _entries[i];
+      // 7 günlük pencere
+      final weekEnd = start.date.add(const Duration(days: 7));
+      final weekEntries = _entries.where(
+        (e) => !e.date.isBefore(start.date) && e.date.isBefore(weekEnd),
+      ).toList();
+      if (weekEntries.length >= 2) {
+        final weekChange = weekEntries.last.weight - weekEntries.first.weight;
+        final isGood = isLoss ? weekChange < bestChange : weekChange > bestChange;
+        if (isGood || bestWeekStart == null) {
+          bestChange = weekChange;
+          bestWeekStart = start.date;
+        }
+      }
+    }
+
+    if (bestWeekStart == null) return '—';
+    return '${bestChange >= 0 ? '+' : ''}${bestChange.toStringAsFixed(1)} kg (${DateFormat('d MMM', 'tr_TR').format(bestWeekStart)})';
+  }
+
+  /// Toplam kayıt sayısı.
+  int get totalEntries => _entries.length;
 
   /// Son kaydedilen kilo.
   double? get latestWeight =>
@@ -67,6 +139,38 @@ class ProgressProvider with ChangeNotifier {
   double? get latestChest {
     for (final e in _entries.reversed) {
       if (e.chest != null) return e.chest;
+    }
+    return null;
+  }
+
+  /// Son kaydedilen kol ölçümü.
+  double? get latestArm {
+    for (final e in _entries.reversed) {
+      if (e.arm != null) return e.arm;
+    }
+    return null;
+  }
+
+  /// Son kaydedilen bacak ölçümü.
+  double? get latestThigh {
+    for (final e in _entries.reversed) {
+      if (e.thigh != null) return e.thigh;
+    }
+    return null;
+  }
+
+  /// Son kaydedilen yağ oranı.
+  double? get latestBodyFat {
+    for (final e in _entries.reversed) {
+      if (e.bodyFat != null) return e.bodyFat;
+    }
+    return null;
+  }
+
+  /// Son kaydedilen kas kütlesi.
+  double? get latestMuscleMass {
+    for (final e in _entries.reversed) {
+      if (e.muscleMass != null) return e.muscleMass;
     }
     return null;
   }
@@ -98,6 +202,42 @@ class ProgressProvider with ChangeNotifier {
     return last - first;
   }
 
+  /// Kol değişimi.
+  double? get armChange {
+    if (_entries.isEmpty) return null;
+    final first = _firstValueWhere((e) => e.arm);
+    final last = latestArm;
+    if (first == null || last == null || first == last) return null;
+    return last - first;
+  }
+
+  /// Bacak değişimi.
+  double? get thighChange {
+    if (_entries.isEmpty) return null;
+    final first = _firstValueWhere((e) => e.thigh);
+    final last = latestThigh;
+    if (first == null || last == null || first == last) return null;
+    return last - first;
+  }
+
+  /// Yağ oranı değişimi.
+  double? get bodyFatChange {
+    if (_entries.isEmpty) return null;
+    final first = _firstValueWhere((e) => e.bodyFat);
+    final last = latestBodyFat;
+    if (first == null || last == null || first == last) return null;
+    return last - first;
+  }
+
+  /// Kas kütlesi değişimi.
+  double? get muscleMassChange {
+    if (_entries.isEmpty) return null;
+    final first = _firstValueWhere((e) => e.muscleMass);
+    final last = latestMuscleMass;
+    if (first == null || last == null || first == last) return null;
+    return last - first;
+  }
+
   /// Listede belirli bir alanı null olmayan ilk kaydın değerini döner.
   double? _firstValueWhere(double? Function(ProgressEntryModel) selector) {
     for (final entry in _entries) {
@@ -109,14 +249,17 @@ class ProgressProvider with ChangeNotifier {
 
   /// Ardışık gün serisi — bugünden geriye doğru kesintisiz kayıt sayısı.
   int get currentStreak {
-    if (_entries.isEmpty) return 0;
+    if (_entries.isEmpty && _activityDates.isEmpty) return 0;
     final today = DateTime.now();
     int streak = 0;
     DateTime checkDate = DateTime(today.year, today.month, today.day);
 
-    final dateSet = _entries
-        .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
-        .toSet();
+    // Ölçüm tarihleri + aktivite tarihleri (su, öğün vb.)
+    final dateSet = <DateTime>{};
+    for (final e in _entries) {
+      dateSet.add(DateTime(e.date.year, e.date.month, e.date.day));
+    }
+    dateSet.addAll(_activityDates);
 
     while (dateSet.contains(checkDate)) {
       streak++;
@@ -166,7 +309,15 @@ class ProgressProvider with ChangeNotifier {
     UserProfileModel? userProfile,
   ) async {
     try {
-      await _firestoreService.addProgressEntry(userId, entry);
+      double? bmi = entry.bmi;
+      if (bmi == null && userProfile != null && userProfile.height != null && userProfile.height! > 0) {
+        final heightInMeters = userProfile.height! / 100.0;
+        bmi = entry.weight / (heightInMeters * heightInMeters);
+        bmi = double.parse(bmi.toStringAsFixed(2));
+      }
+      final finalEntry = entry.copyWith(bmi: bmi);
+
+      await _firestoreService.addProgressEntry(userId, finalEntry);
       await _checkAndAwardBadges(userId, userProfile);
     } catch (e) {
       _errorMessage = 'Kayıt eklenemedi: $e';
@@ -177,9 +328,21 @@ class ProgressProvider with ChangeNotifier {
   }
 
   /// Mevcut bir kaydı günceller.
-  Future<void> updateEntry(String userId, ProgressEntryModel entry) async {
+  Future<void> updateEntry(
+    String userId, 
+    ProgressEntryModel entry,
+    [UserProfileModel? userProfile]
+  ) async {
     try {
-      await _firestoreService.updateProgressEntry(userId, entry);
+      double? bmi = entry.bmi;
+      if (bmi == null && userProfile != null && userProfile.height != null && userProfile.height! > 0) {
+        final heightInMeters = userProfile.height! / 100.0;
+        bmi = entry.weight / (heightInMeters * heightInMeters);
+        bmi = double.parse(bmi.toStringAsFixed(2));
+      }
+      final finalEntry = entry.copyWith(bmi: bmi);
+
+      await _firestoreService.updateProgressEntry(userId, finalEntry);
     } catch (e) {
       _errorMessage = 'Kayıt güncellenemedi: $e';
       debugPrint('ProgressProvider updateEntry hatası: $e');
@@ -229,23 +392,37 @@ class ProgressProvider with ChangeNotifier {
     check('lost_5kg', change <= -5.0);
 
     // Hedef kilo rozeti
-    final goalWeight = userProfile?.weight;
+    final goalWeight = userProfile?.targetWeight;
     if (goalWeight != null && latestWeight != null) {
-      final change = totalWeightChange;
-      if (change <= -5.0) {
+      // Kilo verme hedefi: mevcut kilo hedef kiloya eşit veya altındaysa
+      if (userProfile?.userGoal == 'weight_loss' && latestWeight! <= goalWeight) {
+        check('goal_reached', true);
+      }
+      // Kilo alma hedefi: mevcut kilo hedef kiloya eşit veya üstündeyse
+      else if (userProfile?.userGoal == 'weight_gain' && latestWeight! >= goalWeight) {
+        check('goal_reached', true);
+      }
+      // Genel: hedefe ulaşıldıysa (eşitse)
+      else if (latestWeight == goalWeight) {
         check('goal_reached', true);
       }
     }
 
     // Ölçüm ekleme rozeti
     final hasMeasurement = _entries.any(
-      (e) => e.waist != null || e.hip != null || e.chest != null,
+      (e) => e.waist != null || e.hip != null || e.chest != null ||
+             e.arm != null || e.thigh != null ||
+             e.bodyFat != null || e.muscleMass != null,
     );
     check('measurement_added', hasMeasurement);
 
     if (newlyEarned.isNotEmpty) {
       try {
         await _firestoreService.saveEarnedBadges(userId, _earnedBadgeIds);
+        // Rozet kazanıldığında callback'i tetikle
+        for (final badgeId in newlyEarned) {
+          onBadgeEarned?.call(badgeId);
+        }
         notifyListeners();
       } catch (e) {
         debugPrint('Rozet kaydetme hatası: $e');

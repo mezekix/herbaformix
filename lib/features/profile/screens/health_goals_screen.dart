@@ -54,8 +54,8 @@ class _HealthGoalsScreenState extends State<HealthGoalsScreen> {
         if (userProfile.weight != null) {
           _weightController.text = userProfile.weight!.toString();
         }
-        if (userProfile.goal != null) {
-          _targetWeightController.text = userProfile.goal!;
+        if (userProfile.targetWeight != null) {
+          _targetWeightController.text = userProfile.targetWeight!.toString();
         }
         _healthNotesController.text = userProfile.healthNotes ?? '';
         _allergiesController.text = userProfile.allergies ?? '';
@@ -96,7 +96,8 @@ class _HealthGoalsScreenState extends State<HealthGoalsScreen> {
       
       height: double.tryParse(heightText),
       weight: double.tryParse(weightText),
-      goal: targetWeightText.isEmpty ? null : targetWeightText,
+      targetWeight: double.tryParse(targetWeightText),
+      goal: double.tryParse(targetWeightText)?.toString(), // geriye uyumluluk
       healthNotes: healthNotesText.isEmpty ? null : healthNotesText,
       allergies: allergiesText.isEmpty ? null : allergiesText,
       medications: medicationsText.isEmpty ? null : medicationsText,

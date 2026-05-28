@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
+import '../../../services/firestore_service.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/program_editor_args.dart';
 import '../providers/program_provider.dart';
 import '../widgets/goal_selection_step.dart';
@@ -23,21 +25,63 @@ class CreateProgramScreen extends StatefulWidget {
 }
 
 class _CreateProgramScreenState extends State<CreateProgramScreen> {
+  bool _isLoadingProfile = true;
+
   @override
   void initState() {
     super.initState();
-    // Wizard'ı sıfırla — sadece ilk adıma dön, slot/goal state'i koru
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _loadProfileAndInitWizard();
+  }
+
+  Future<void> _loadProfileAndInitWizard() async {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      
+      final provider = context.read<ProgramProvider>();
+      final authProvider = context.read<AuthProvider>();
+      final firestoreService = context.read<FirestoreService>();
+
+      String? targetUserId;
+      if (widget.editorArgs?.isDistributorMode == true) {
+        targetUserId = widget.editorArgs!.targetUserId;
+      } else {
+        targetUserId = authProvider.firebaseUser?.uid;
+      }
+
+      if (targetUserId != null && targetUserId.isNotEmpty) {
+        try {
+          final profile = await firestoreService.getUserProfile(targetUserId);
+          if (mounted) {
+            provider.initializeWizardWithProfile(profile);
+          }
+        } catch (e) {
+          debugPrint('Profil yüklenirken hata: $e');
+          if (mounted) {
+            provider.resetWizard();
+          }
+        }
+      } else {
+        provider.resetWizard();
+      }
+
       if (mounted) {
-        final provider = context.read<ProgramProvider>();
-        // Sadece adımı sıfırla, slot ve goal state'ini koru
-        provider.goToFirstStep();
+        setState(() {
+          _isLoadingProfile = false;
+        });
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingProfile) {
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
     return _CreateProgramView(editorArgs: widget.editorArgs);
   }
 }

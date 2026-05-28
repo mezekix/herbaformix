@@ -22,7 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isRegisterMode = false; // Giriş/Kayıt modunu takip etmek için
   bool _obscurePassword = true;
-  UserRole _selectedRole = UserRole.customer; // Varsayılan seçili rol
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
@@ -43,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
       success = await authProvider.signUpWithInviteCode(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
-        role: _selectedRole,
+        role: UserRole.customer,
         inviteCode: inviteCode,
       );
     } else {
@@ -91,8 +90,8 @@ class _LoginScreenState extends State<LoginScreen> {
       inviteCode = _inviteCodeController.text.trim().isEmpty ? null : _inviteCodeController.text.trim();
     }
     
-    // Rolümüz `_isRegisterMode` true ise seçili roldür (veya varsayılan müşteri).
-    final success = await authProvider.signInWithGoogle(role: _selectedRole, inviteCode: inviteCode);
+    // Google ile yeni kaydolan herkes müşteri (customer) olarak başlar.
+    final success = await authProvider.signInWithGoogle(role: UserRole.customer, inviteCode: inviteCode);
 
     if (mounted) {
       setState(() {
@@ -155,23 +154,29 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 480),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: cardColor,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Container(
+                        color: cardColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                      const SizedBox(height: 12),
                       // Logo
                       SizedBox(
-                        height: 96,
+                        height: 120,
                         child: Image.asset(
-                          'assets/logo/new_logo.png',
+                          'assets/logo/logo_h.png',
+                          fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
                               Icons.spa,
@@ -181,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 12),
                       // Headline
                       Text(
                         _isRegisterMode ? 'Aramıza Katılın' : 'Tekrar Hoş Geldiniz',
@@ -193,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
                         _isRegisterMode
                             ? 'Sağlıklı yaşam yolculuğunuza başlayın'
@@ -205,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 20),
                       // Email
                       TextFormField(
                         controller: _emailController,
@@ -238,7 +243,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                         keyboardType: TextInputType.emailAddress,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
                       // Password
                       TextFormField(
                         controller: _passwordController,
@@ -282,60 +287,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           return null;
                         },
                       ),
-                      // Role Selection (Only in register mode)
+                      // Davet Kodu (Sadece kayıt modunda)
                       if (_isRegisterMode) ...[
-                        const SizedBox(height: 20),
-                        DropdownButtonFormField<UserRole>(
-                          initialValue: _selectedRole,
-                          decoration: InputDecoration(
-                            hintText: 'Hesap Türü',
-                            prefixIcon: Icon(Icons.badge_outlined, color: textSecondary),
-                            filled: true,
-                            fillColor: inputBg,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 20),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
-                            ),
-                          ),
-                          dropdownColor: inputBg,
-                          style: TextStyle(color: textPrimary),
-                          items: const [
-                            DropdownMenuItem(
-                              value: UserRole.customer,
-                              child: Text('Müşteri'),
-                            ),
-                            DropdownMenuItem(
-                              value: UserRole.distributor,
-                              child: Text('Distribütör'),
-                            ),
-                            DropdownMenuItem(
-                              value: UserRole.supervisor,
-                              child: Text('Supervizör ve üstü'),
-                            ),
-                            DropdownMenuItem(
-                              value: UserRole.successCreator,
-                              child: Text('Başarı Yaratıcısı'),
-                            ),
-                          ],
-                          onChanged: (UserRole? newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                _selectedRole = newValue;
-                              });
-                            }
-                          },
-                        ),
-                        // Davet Kodu
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 12),
                         TextFormField(
                             controller: _inviteCodeController,
                             style: TextStyle(color: textPrimary),
@@ -368,7 +322,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: TextButton(
                             onPressed: _showForgotPasswordDialog,
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                             ),
                             child: const Text(
                               'Şifremi Unuttum?',
@@ -381,7 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ] else ...[
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 20),
                       ],
                       
                       // Login Button
@@ -415,7 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 16),
                       
                       // Social Login Divider
                       Row(
@@ -436,7 +390,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
                       
                       // Social Buttons
                       Row(
@@ -467,7 +421,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 20),
                       
                       // Footer
                       Row(
@@ -498,17 +452,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
+        );
+      },
+    ),
+  ),
+),
+),
+);
+}
 
   Widget _buildSocialButton({
     required IconData icon,

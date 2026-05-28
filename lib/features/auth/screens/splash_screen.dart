@@ -20,7 +20,14 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  static const Color _bgColor = Color(0xFF256431);
+  static const Color _bgColor = Color(0xFFE6FFC5); // Açık fıstık yeşili (#e6ffc5)
+  static const Color _bgGradientEnd = Color(0xFFE6FFC5); // Açık fıstık yeşili (#e6ffc5)
+
+  // Büyük ekranlar için boyut sınırları
+  static const double _minBgImageWidth = 80.0;
+  static const double _maxBgImageWidth = 160.0;
+  static const double _minLogoWidth = 220.0;
+  static const double _maxLogoWidth = 360.0;
 
   late AnimationController _controller;
 
@@ -45,15 +52,15 @@ class _SplashScreenState extends State<SplashScreen>
     // Status bar rengini splash ile aynı yap
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: _bgColor,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
     ));
 
     final random = Random();
 
-    // f1: ekranın üst bölgesinde rastgele konum
+    // f1: ekranın üst bölgesinde rastgele konum (dikeyde biraz daha yukarı kaydırıldı)
     _bgImage1Alignment = Alignment(
       random.nextDouble() * 1.4 - 0.7,
-      random.nextDouble() * 0.3 - 0.8, // üst kısım
+      random.nextDouble() * 0.2 - 0.85, // üst kısım (ekran dışına taşmayacak şekilde dengelendi)
     );
     // f2: ekranın alt bölgesinde rastgele konum
     _bgImage2Alignment = Alignment(
@@ -154,11 +161,14 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final double f1Width = (screenWidth * 0.30).clamp(_minBgImageWidth, _maxBgImageWidth);
+    final double f2Width = (screenWidth * 0.30).clamp(_minBgImageWidth, _maxBgImageWidth);
+    final double logoWidth = (screenWidth * 0.55).clamp(_minLogoWidth, _maxLogoWidth);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: _bgColor,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
         systemNavigationBarColor: _bgColor,
       ),
       child: Scaffold(
@@ -169,8 +179,8 @@ class _SplashScreenState extends State<SplashScreen>
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFF256431),
-                Color(0xFF1B4D26),
+                _bgColor,
+                _bgGradientEnd,
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -185,7 +195,7 @@ class _SplashScreenState extends State<SplashScreen>
                   scale: _bgImage1Scale,
                   child: Image.asset(
                     'assets/f1.png',
-                    width: screenWidth * 0.30,
+                    width: f1Width,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) =>
                         const SizedBox.shrink(),
@@ -199,7 +209,7 @@ class _SplashScreenState extends State<SplashScreen>
                   scale: _bgImage2Scale,
                   child: Image.asset(
                     'assets/f2.png',
-                    width: screenWidth * 0.30,
+                    width: f2Width,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) =>
                         const SizedBox.shrink(),
@@ -218,17 +228,17 @@ class _SplashScreenState extends State<SplashScreen>
                         scale: _logoScale,
                         child: Image.asset(
                           'assets/logo/logo_h.png',
-                          width: screenWidth * 0.45,
+                          width: logoWidth,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return SizedBox(
-                              width: screenWidth * 0.45,
+                              width: logoWidth,
                               height: 100,
                               child: const Center(
                                 child: Text(
                                   'H',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: Color(0xFF1B4D26),
                                     fontSize: 60,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -239,7 +249,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                     // Slogan
                     SlideTransition(
                       position: _textSlide,
@@ -251,14 +261,7 @@ class _SplashScreenState extends State<SplashScreen>
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 8.0,
-                                color: Colors.black12,
-                                offset: Offset(1.0, 1.0),
-                              ),
-                            ],
+                            color: Color(0xFF1B4D26),
                           ),
                         ),
                       ),

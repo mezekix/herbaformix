@@ -40,6 +40,8 @@ import '../../water_tracker/screens/water_tracker_screen.dart';
 import '../../water_tracker/providers/water_provider.dart';
 import 'package:intl/intl.dart';
 import '../widgets/motivation_widget.dart';
+import '../widgets/daily_success_ring.dart';
+import '../../../services/exercise_service.dart';
 
 class HomeScreen extends StatefulWidget {
   static const String routeName = '/home';
@@ -109,6 +111,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return ('', greeting);
   }
 
+
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -128,12 +132,22 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final UserProfileModel? userProfile = authProvider.userProfile;
+
+    if (userProfile == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      );
+    }
+
     final orderProvider = Provider.of<OrderProvider>(context);
     final customerProvider = Provider.of<CustomerProvider>(context);
     final productProvider = Provider.of<ProductProvider>(context);
 
-    final UserProfileModel? userProfile = authProvider.userProfile;
-    final bool isCustomer = userProfile?.role == UserRole.customer;
+    final bool isCustomer = userProfile.role == UserRole.customer ||
+        (userProfile.role == UserRole.distributor && authProvider.isCustomerModeActive);
 
     return Scaffold(
       drawer: isCustomer ? null : const AppDrawer(),
@@ -332,7 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
           pinned: true,
           floating: false,
           automaticallyImplyLeading: false,
-          backgroundColor: const Color(0xFFF7F8F6),
+          backgroundColor: AppColors.primary,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 2,
@@ -348,8 +362,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 44,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)],
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 4)],
                       ),
                       child: ClipOval(
                         child: _buildHeaderAvatar(photoUrl, initials, userProfile?.id, userProfile?.profilePhotoUpdatedAt),
@@ -360,9 +374,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         width: 12, height: 12,
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: AppColors.primary, width: 2),
                         ),
                       ),
                     ),
@@ -383,10 +397,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (prefix.isNotEmpty)
-                            Text(prefix, style: TextStyle(color: Colors.grey.shade500, fontSize: 11, fontWeight: FontWeight.w500)),
+                            Text(prefix, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11, fontWeight: FontWeight.w500)),
                           Text(
                             prefix.isNotEmpty ? rest : greeting,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                             overflow: TextOverflow.ellipsis, maxLines: 1,
                           ),
                         ],
@@ -398,6 +412,30 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           actions: [
+            if (userProfile?.role == UserRole.distributor && authProvider.isCustomerModeActive)
+              Container(
+                width: 40,
+                height: 40,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade600,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  onPressed: () {
+                    authProvider.toggleCustomerMode();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Distribütör paneline geri dönüldü.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.admin_panel_settings_outlined, color: Colors.white, size: 22),
+                  tooltip: 'Distribütör Paneli',
+                  padding: EdgeInsets.zero,
+                ),
+              ),
             StreamBuilder<List<DailyRoutineModel>>(
               stream: _routinesStream ?? const Stream.empty(),
               builder: (context, snapshot) {
@@ -413,13 +451,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 40, height: 40,
                       margin: const EdgeInsets.only(right: 16),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2))],
                       ),
                       child: IconButton(
                         onPressed: () => _showNotificationPanel(context, routines, waterProgress),
-                        icon: Icon(Icons.notifications_outlined, color: Colors.grey.shade700, size: 22),
+                        icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -447,6 +484,8 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const SizedBox(height: 16),
               _buildCustomerHeroProgress(context),
+              const SizedBox(height: 12),
+              _buildExerciseToggleCard(context),
               const SizedBox(height: 16),
               _buildCustomerWaterTracker(context),
               const SizedBox(height: 16),
@@ -720,14 +759,45 @@ class _HomeScreenState extends State<HomeScreen> {
           final completedCount = routines.where((r) => r.isCompleted).length;
           final totalCount = routines.length;
           final hasProgram = totalCount > 0;
-          final progress = hasProgram ? completedCount / totalCount : 0.0;
-          final progressPct = (progress * 100).round();
+          final productProgress = hasProgram ? completedCount / totalCount : 0.0;
+
+          // Su ilerleme oranı
+          final waterProgress = context.watch<WaterProvider>().progress;
+
+          // Egzersiz ilerleme oranı
+          final exerciseProgress = context.watch<ExerciseService>().progress;
 
           // Gün sayısı: programStartDate'ten itibaren
           final startDate = userProfile?.programStartDate;
           final dayNumber = startDate != null
               ? DateTime.now().difference(startDate).inDays + 1
               : 1;
+
+          // Aktif görev metni — ilk tamamlanmamış rutin
+          String activeTaskLabel = '';
+          if (hasProgram) {
+            final nextRoutine = routines.where((r) => !r.isCompleted).toList();
+            if (nextRoutine.isNotEmpty) {
+              final r = nextRoutine.first;
+              String taskName = '';
+              if (r.isWaterStep) {
+                taskName = 'Su İç';
+              } else if (r.isNormalMealStep) {
+                taskName = r.productId;
+              } else {
+                final product = context.read<ProductProvider>().products.firstWhere(
+                  (p) => p.id == r.productId,
+                  orElse: () => ProductModel(id: '', name: 'Ürün', vp: 0),
+                );
+                taskName = product.name;
+              }
+              activeTaskLabel = '$taskName tamamla';
+            } else if (waterProgress < 1.0) {
+              activeTaskLabel = 'Su içmeyi tamamla 💧';
+            } else if (exerciseProgress < 1.0) {
+              activeTaskLabel = 'Egzersizini tamamla 🏋️';
+            }
+          }
 
           // Program yoksa teşvik kartı göster
           if (!hasProgram && snapshot.connectionState != ConnectionState.waiting) {
@@ -781,17 +851,9 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          // Program varsa normal progress kartı
-          final motivationText = progressPct >= 80
-              ? 'Muhteşem Gidiyorsun! 🔥'
-              : progressPct >= 50
-                  ? 'Bugün Harika\nGidiyorsun!'
-                  : progressPct > 0
-                      ? 'Devam Et, Yapabilirsin!'
-                      : 'Güne Başlayalım!';
-
+          // Program varsa — Günlük Başarı Halkası
           return Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(32),
@@ -803,82 +865,161 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // "Gün X" badge
-                      GestureDetector(
-                        onTap: () => setState(() => _customerNavIndex = 1),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.calendar_today, color: AppColors.primary, size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                'GÜN $dayNumber',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primary,
-                                  letterSpacing: 0.8,
-                                ),
+                // Üst satır: "Gün X" badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: () => setState(() => _customerNavIndex = 1),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.calendar_today, color: AppColors.primary, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              'GÜN $dayNumber',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                                letterSpacing: 0.8,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        motivationText,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.nightSky,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Hedeflerinin %$progressPct\'i tamamlandı',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey.shade500),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                SizedBox(
-                  width: 88,
-                  height: 88,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 7,
-                        backgroundColor: Colors.grey.shade100,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                        strokeCap: StrokeCap.round,
-                      ),
-                      Center(
-                        child: Text(
-                          '%$progressPct',
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-                        ),
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 12),
+                // Halka
+                DailySuccessRing(
+                  productProgress: productProgress,
+                  waterProgress: waterProgress.clamp(0.0, 1.0),
+                  exerciseProgress: exerciseProgress,
+                  activeTaskLabel: activeTaskLabel,
+                  hasProgram: hasProgram,
+                  size: 200,
                 ),
               ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Egzersiz tamamla/geri al toggle kartı
+  Widget _buildExerciseToggleCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Consumer<ExerciseService>(
+        builder: (context, exerciseService, _) {
+          final isCompleted = exerciseService.todayCompleted;
+
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            decoration: BoxDecoration(
+              color: isCompleted
+                  ? const Color(0xFFFFF7ED) // açık turuncu
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: isCompleted
+                    ? const Color(0xFFF97316).withValues(alpha: 0.3)
+                    : Colors.grey.shade200,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () => exerciseService.toggleExercise(!isCompleted),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isCompleted
+                              ? const Color(0xFFF97316)
+                              : const Color(0xFFF97316).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isCompleted
+                              ? Icons.check_rounded
+                              : Icons.fitness_center_rounded,
+                          color: isCompleted
+                              ? Colors.white
+                              : const Color(0xFFF97316),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isCompleted ? 'Egzersiz Tamamlandı! 🎉' : 'Bugünkü Egzersiz',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: isCompleted
+                                    ? const Color(0xFFC2410C)
+                                    : AppColors.nightSky,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isCompleted
+                                  ? 'Geri almak için dokunun'
+                                  : 'Tamamlamak için dokunun',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Icon(
+                          isCompleted
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          key: ValueKey(isCompleted),
+                          color: isCompleted
+                              ? const Color(0xFFF97316)
+                              : Colors.grey.shade300,
+                          size: 28,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           );
         },
@@ -1456,7 +1597,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 8),
                       // "Tüm Kayıtlar" text butonu
                       GestureDetector(
-                        onTap: () => context.goNamed(WaterTrackerScreen.routeName),
+                        onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1479,7 +1620,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(width: 16),
                 // Sağ: animasyonlu su bardağı (tıklanabilir)
                 GestureDetector(
-                  onTap: () => context.goNamed(WaterTrackerScreen.routeName),
+                  onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
                   child: _WaterGlassWidget(progress: progress),
                 ),
               ],

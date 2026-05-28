@@ -212,6 +212,31 @@ class AppDrawer extends StatelessWidget {
               routeName: OrderListScreen.routeName.substring(1), // 'orders'
               pathSegment: 'orders',
             ),
+          if (userProfile?.role != UserRole.customer)
+            ListTile(
+              leading: const Icon(
+                Icons.swap_horiz_outlined,
+                color: AppColors.primary,
+              ),
+              title: const Text(
+                'Kişisel Gelişim',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.nightSky,
+                ),
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              onTap: () {
+                Navigator.of(context).pop();
+                authProvider.toggleCustomerMode();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Kişisel Gelişim ekranı açıldı. İlerlemenizi buradan takip edebilirsiniz.'),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              },
+            ),
           if (userProfile?.role == UserRole.customer)
             _buildListTile(
               context,

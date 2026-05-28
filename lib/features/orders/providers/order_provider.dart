@@ -6,6 +6,7 @@ import '../../../models/scheduled_follow_up_model.dart';
 
 import '../../../models/customer_model.dart';
 import '../../../models/order_model.dart'; // OrderStatus enum'ı için
+import '../../../models/user_role.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../customers/providers/customer_provider.dart'; // Müşteri bilgisi için
@@ -27,23 +28,28 @@ class OrderProvider with ChangeNotifier {
   ) {
     _currentUserId = _authProvider.firebaseUser?.uid;
     _authProvider.addListener(_authListener);
+    _initializeOrders();
+  }
+
+  void _initializeOrders() {
     if (_currentUserId != null) {
-      fetchOrders(_currentUserId!);
+      final role = _authProvider.userProfile?.role;
+      final assignedDistributorId = _authProvider.userProfile?.assignedDistributorId;
+      if (role == UserRole.customer && assignedDistributorId != null && assignedDistributorId.isNotEmpty) {
+        fetchOrders(assignedDistributorId, filterCustomerId: _currentUserId);
+      } else {
+        fetchOrders(_currentUserId!);
+      }
     }
   }
 
   void _authListener() {
     final newUserId = _authProvider.firebaseUser?.uid;
-    if (newUserId != _currentUserId) {
+    if (newUserId != _currentUserId || _orders.isEmpty) {
       _currentUserId = newUserId;
       _ordersSubscription?.cancel();
       _orders = [];
-      if (_currentUserId != null) {
-        fetchOrders(_currentUserId!);
-      } else {
-        _isLoading = false;
-        notifyListeners();
-      }
+      _initializeOrders();
     }
   }
 
@@ -91,7 +97,7 @@ class OrderProvider with ChangeNotifier {
         .length;
   }
 
-  void fetchOrders(String userId) {
+  void fetchOrders(String userId, {String? filterCustomerId}) {
     if (userId.isEmpty) return;
     _isLoading = true;
     notifyListeners();
@@ -101,7 +107,11 @@ class OrderProvider with ChangeNotifier {
         .getOrders(userId)
         .listen(
           (ordersData) {
-            _orders = ordersData;
+            if (filterCustomerId != null) {
+              _orders = ordersData.where((o) => o.customerId == filterCustomerId).toList();
+            } else {
+              _orders = ordersData;
+            }
             _isLoading = false;
             notifyListeners();
           },
@@ -119,9 +129,15 @@ class OrderProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      final role = _authProvider.userProfile?.role;
+      final assignedDistributorId = _authProvider.userProfile?.assignedDistributorId;
+      final targetUserId = (role == UserRole.customer && assignedDistributorId != null && assignedDistributorId.isNotEmpty)
+          ? assignedDistributorId
+          : _currentUserId!;
+
       final orderWithTotals = OrderModel(
         id: order.id,
-        userId: _currentUserId!,
+        userId: targetUserId,
         customerId: order.customerId,
         customerName: order.customerName,
         items: order.items,
@@ -132,7 +148,7 @@ class OrderProvider with ChangeNotifier {
         notes: order.notes,
         shippingAddress: order.shippingAddress,
       );
-      await _firestoreService.addOrder(_currentUserId!, orderWithTotals);
+      await _firestoreService.addOrder(targetUserId, orderWithTotals);
 
       // Yeni sipariş direkt "Teslim Edildi" olarak oluşturulduysa takip planı oluştur
       if (order.status == OrderStatus.delivered) {
@@ -162,8 +178,14 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      final role = _authProvider.userProfile?.role;
+      final assignedDistributorId = _authProvider.userProfile?.assignedDistributorId;
+      final targetUserId = (role == UserRole.customer && assignedDistributorId != null && assignedDistributorId.isNotEmpty)
+          ? assignedDistributorId
+          : _currentUserId!;
+
       // Önce veritabanını güncelle.
-      await _firestoreService.updateOrder(_currentUserId!, order);
+      await _firestoreService.updateOrder(targetUserId, order);
 
       // --- OTOMATİK TAKİP OLUŞTURMA MANTIĞI ---
       // Eğer yeni durum "Teslim Edildi" ise, planı oluştur.

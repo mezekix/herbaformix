@@ -131,6 +131,7 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
         weight: existingProfile?.weight,
         height: existingProfile?.height,
         goal: existingProfile?.goal,
+        targetWeight: existingProfile?.targetWeight,
         programStartDate: existingProfile?.programStartDate,
         userGoal: existingProfile?.userGoal,
         wakeTime: existingProfile?.wakeTime,

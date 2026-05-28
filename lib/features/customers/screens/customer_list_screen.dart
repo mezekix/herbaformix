@@ -154,7 +154,15 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                   )
                 else
                   ...inviteCodeCustomers
-                      .map((entry) => _CombinedCustomerCard(entry: entry)),
+                      .map((entry) => _CombinedCustomerCard(
+                            entry: entry,
+                            onDelete: (entry) async {
+                              final success = await customerProvider.deleteCombinedCustomer(entry);
+                              if (success) {
+                                _loadCombinedCustomers();
+                              }
+                            },
+                          )),
                 const Divider(height: 24, thickness: 1),
                 _SectionHeader(
                   title: 'Manuel Eklenen Müşteriler',
@@ -174,7 +182,10 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     (entry) => _ManualCustomerCard(
                       entry: entry,
                       onDelete: (customer) async {
-                        await customerProvider.deleteCustomer(customer.id);
+                        final success = await customerProvider.deleteCustomer(customer.id);
+                        if (success) {
+                          _loadCombinedCustomers();
+                        }
                       },
                     ),
                   ),
@@ -223,8 +234,9 @@ class _SectionHeader extends StatelessWidget {
 
 class _CombinedCustomerCard extends StatelessWidget {
   final CombinedCustomerEntry entry;
+  final Future<void> Function(CombinedCustomerEntry entry) onDelete;
 
-  const _CombinedCustomerCard({required this.entry});
+  const _CombinedCustomerCard({required this.entry, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +266,46 @@ class _CombinedCustomerCard extends StatelessWidget {
             ],
           ],
         ),
-        trailing: canOpenDetails ? const Icon(Icons.chevron_right) : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              tooltip: 'Müşteriyi Sil / Bağlantıyı Kes',
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Müşteriyi Sil'),
+                    content: Text(
+                      '"${entry.name}" adlı müşteriyi silmek ve distribütör bağlantısını kesmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+                    ),
+                    actions: [
+                      TextButton(
+                        child: const Text('İptal'),
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                      ),
+                      TextButton(
+                        child: const Text(
+                          'Sil',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  await onDelete(entry);
+                }
+              },
+            ),
+            if (canOpenDetails) const Icon(Icons.chevron_right),
+          ],
+        ),
         onTap: canOpenDetails
             ? () async {
                 if (entry.customerRecord != null) {

@@ -180,6 +180,27 @@ class CustomerProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> deleteCombinedCustomer(CombinedCustomerEntry entry) async {
+    if (_currentUserId == null) return false;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      if (entry.customerRecord != null) {
+        await _firestoreService.deleteCustomer(_currentUserId!, entry.customerRecord!.id);
+      } else if (entry.userProfileId != null) {
+        await _firestoreService.disconnectDistributor(entry.userProfileId!);
+      }
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint("CustomerProvider Hata (deleteCombinedCustomer): $e");
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<CustomerModel?> getCustomerById(String customerId) async {
     if (_currentUserId == null) return null;
 

@@ -7,6 +7,7 @@ import '../../../models/product_model.dart';
 import '../../../models/user_role.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/product_provider.dart';
+import '../../orders/providers/cart_provider.dart';
 import 'add_edit_product_screen.dart';
 import '../../../widgets/cached_product_image.dart';
 import 'product_image_viewer_screen.dart';
@@ -384,6 +385,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
   Widget _buildAddToCartButton() {
+    if (_product == null) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(20),
       color: Colors.white,
@@ -391,7 +393,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         width: double.infinity,
         height: 50,
         child: ElevatedButton(
-          onPressed: () {},
+          onPressed: () {
+            context.read<CartProvider>().addItem(_product!);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('${_product!.name} sepete eklendi!'),
+                backgroundColor: AppColors.primary,
+                duration: const Duration(seconds: 2),
+                action: SnackBarAction(
+                  label: 'Sepete Git',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    context.push('/home/cart');
+                  },
+                ),
+              ),
+            );
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green[700],
             shape: RoundedRectangleBorder(

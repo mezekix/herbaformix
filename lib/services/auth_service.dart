@@ -70,6 +70,11 @@ class AuthService {
   // Çıkış yap
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      debugPrint('Google Sign-Out hatası: $e');
+    }
   }
 
   // Şifre sıfırlama e-postası gönder

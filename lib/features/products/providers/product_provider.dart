@@ -50,6 +50,16 @@ class ProductProvider with ChangeNotifier {
     );
   }
 
+  /// Ürünleri asenkron olarak yükler ve listenin dolmasını bekler.
+  Future<void> loadProducts() async {
+    fetchProducts();
+    int attempts = 0;
+    while (_products.isEmpty && attempts < 20) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
+  }
+
   Future<void> addProduct(ProductModel product) async {
     try {
       await _firestoreService.addProduct(product);

@@ -224,6 +224,30 @@ class MeasurementsHistoryScreen extends StatelessWidget {
               ),
             ),
           ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              'Kol/Bacak',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              'Yağ/Kas',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
           const SizedBox(width: 48), // işlem butonları için yer
         ],
       ),
@@ -306,6 +330,36 @@ class MeasurementsHistoryScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 color: entry.chest != null
+                    ? AppColors.nightSky
+                    : Colors.grey.shade400,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              entry.arm != null || entry.thigh != null
+                  ? '${entry.arm?.toStringAsFixed(1) ?? "—"}/${entry.thigh?.toStringAsFixed(1) ?? "—"}'
+                  : '—',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: entry.arm != null || entry.thigh != null
+                    ? AppColors.nightSky
+                    : Colors.grey.shade400,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              entry.bodyFat != null || entry.muscleMass != null
+                  ? '${entry.bodyFat != null ? "${entry.bodyFat!.toStringAsFixed(1)}%" : "—"}/${entry.muscleMass != null ? entry.muscleMass!.toStringAsFixed(1) : "—"}'
+                  : '—',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: entry.bodyFat != null || entry.muscleMass != null
                     ? AppColors.nightSky
                     : Colors.grey.shade400,
               ),
@@ -471,6 +525,10 @@ class _AddEditMeasurementSheetState extends State<_AddEditMeasurementSheet> {
   late final TextEditingController _waistCtrl;
   late final TextEditingController _hipCtrl;
   late final TextEditingController _chestCtrl;
+  late final TextEditingController _bodyFatCtrl;
+  late final TextEditingController _muscleMassCtrl;
+  late final TextEditingController _armCtrl;
+  late final TextEditingController _thighCtrl;
 
   bool _showMeasurements = false;
   bool _isSaving = false;
@@ -489,12 +547,24 @@ class _AddEditMeasurementSheetState extends State<_AddEditMeasurementSheet> {
         TextEditingController(text: e?.hip != null ? e!.hip.toString() : '');
     _chestCtrl = TextEditingController(
         text: e?.chest != null ? e!.chest.toString() : '');
+    _bodyFatCtrl = TextEditingController(
+        text: e?.bodyFat != null ? e!.bodyFat.toString() : '');
+    _muscleMassCtrl = TextEditingController(
+        text: e?.muscleMass != null ? e!.muscleMass.toString() : '');
+    _armCtrl =
+        TextEditingController(text: e?.arm != null ? e!.arm.toString() : '');
+    _thighCtrl = TextEditingController(
+        text: e?.thigh != null ? e!.thigh.toString() : '');
 
     // Düzenleme modunda ölçümler doluysa aç
     if (_isEditing &&
         (widget.entry!.waist != null ||
             widget.entry!.hip != null ||
-            widget.entry!.chest != null)) {
+            widget.entry!.chest != null ||
+            widget.entry!.bodyFat != null ||
+            widget.entry!.muscleMass != null ||
+            widget.entry!.arm != null ||
+            widget.entry!.thigh != null)) {
       _showMeasurements = true;
     }
   }
@@ -505,6 +575,10 @@ class _AddEditMeasurementSheetState extends State<_AddEditMeasurementSheet> {
     _waistCtrl.dispose();
     _hipCtrl.dispose();
     _chestCtrl.dispose();
+    _bodyFatCtrl.dispose();
+    _muscleMassCtrl.dispose();
+    _armCtrl.dispose();
+    _thighCtrl.dispose();
     super.dispose();
   }
 
@@ -533,6 +607,18 @@ class _AddEditMeasurementSheetState extends State<_AddEditMeasurementSheet> {
           : null,
       chest: _chestCtrl.text.isNotEmpty
           ? double.tryParse(_chestCtrl.text.replaceAll(',', '.'))
+          : null,
+      bodyFat: _bodyFatCtrl.text.isNotEmpty
+          ? double.tryParse(_bodyFatCtrl.text.replaceAll(',', '.'))
+          : null,
+      muscleMass: _muscleMassCtrl.text.isNotEmpty
+          ? double.tryParse(_muscleMassCtrl.text.replaceAll(',', '.'))
+          : null,
+      arm: _armCtrl.text.isNotEmpty
+          ? double.tryParse(_armCtrl.text.replaceAll(',', '.'))
+          : null,
+      thigh: _thighCtrl.text.isNotEmpty
+          ? double.tryParse(_thighCtrl.text.replaceAll(',', '.'))
           : null,
     );
 
@@ -652,6 +738,34 @@ class _AddEditMeasurementSheetState extends State<_AddEditMeasurementSheet> {
                   label: 'Göğüs (cm)',
                   hint: 'Örn: 96',
                   icon: Icons.straighten,
+                ),
+                const SizedBox(height: 12),
+                _buildField(
+                  controller: _armCtrl,
+                  label: 'Kol (cm)',
+                  hint: 'Örn: 32',
+                  icon: Icons.straighten,
+                ),
+                const SizedBox(height: 12),
+                _buildField(
+                  controller: _thighCtrl,
+                  label: 'Bacak (cm)',
+                  hint: 'Örn: 58',
+                  icon: Icons.straighten,
+                ),
+                const SizedBox(height: 12),
+                _buildField(
+                  controller: _bodyFatCtrl,
+                  label: 'Yağ Oranı (%)',
+                  hint: 'Örn: 25.3',
+                  icon: Icons.water_drop_outlined,
+                ),
+                const SizedBox(height: 12),
+                _buildField(
+                  controller: _muscleMassCtrl,
+                  label: 'Kas Kütlesi (kg)',
+                  hint: 'Örn: 45.0',
+                  icon: Icons.fitness_center,
                 ),
               ],
               const SizedBox(height: 28),

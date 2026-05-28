@@ -7,17 +7,41 @@ import '../../../models/progress_entry_model.dart';
 
 enum ChartRange { week, month, threeMonths }
 
-/// Gerçek verilerle çizilen kilo değişimi grafiği.
+/// Ölçüm türü — grafik hangi veriyi çizecek?
+enum MeasurementType {
+  weight('Kilo Değişimi', 'kg', Icons.monitor_weight_outlined),
+  waist('Bel Değişimi', 'cm', Icons.straighten),
+  hip('Kalça Değişimi', 'cm', Icons.straighten),
+  chest('Göğüs Değişimi', 'cm', Icons.straighten),
+  arm('Kol Değişimi', 'cm', Icons.straighten),
+  thigh('Bacak Değişimi', 'cm', Icons.straighten),
+  bodyFat('Yağ Oranı Değişimi', '%', Icons.water_drop_outlined),
+  muscleMass('Kas Kütlesi Değişimi', 'kg', Icons.fitness_center);
+
+  final String label;
+  final String unit;
+  final IconData icon;
+  const MeasurementType(this.label, this.unit, this.icon);
+}
+
+/// Gerçek verilerle çizilen ölçüm değişimi grafiği.
+/// [MeasurementType] parametresiyle kilo, bel, kalça vb. tüm ölçümler için kullanılabilir.
 class WeightChartWidget extends StatefulWidget {
   final List<ProgressEntryModel> entries;
   final double? targetWeight;
   final double? initialWeight; // Profildeki mevcut kilo (ölçüm yokken kullanılır)
+  final bool isPrivacyMode;
+  final MeasurementType measurementType;
+  final String? userGoal; // 'weight_loss', 'weight_gain', 'healthy_living'
 
   const WeightChartWidget({
     super.key,
     required this.entries,
     this.targetWeight,
     this.initialWeight,
+    this.isPrivacyMode = false,
+    this.measurementType = MeasurementType.weight,
+    this.userGoal,
   });
 
   @override
@@ -27,6 +51,24 @@ class WeightChartWidget extends StatefulWidget {
 class _WeightChartWidgetState extends State<WeightChartWidget> {
   ChartRange _range = ChartRange.month;
 
+  /// Seçili ölçüm türüne göre entry'den değer çeker.
+  double? _getValue(ProgressEntryModel entry) {
+    return switch (widget.measurementType) {
+      MeasurementType.weight => entry.weight,
+      MeasurementType.waist => entry.waist,
+      MeasurementType.hip => entry.hip,
+      MeasurementType.chest => entry.chest,
+      MeasurementType.arm => entry.arm,
+      MeasurementType.thigh => entry.thigh,
+      MeasurementType.bodyFat => entry.bodyFat,
+      MeasurementType.muscleMass => entry.muscleMass,
+    };
+  }
+
+  /// Değeri olmayan entry'leri filtreler.
+  List<ProgressEntryModel> get _validEntries =>
+      widget.entries.where((e) => _getValue(e) != null).toList();
+
   List<ProgressEntryModel> get _filteredEntries {
     final now = DateTime.now();
     final cutoff = switch (_range) {
@@ -34,27 +76,34 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
       ChartRange.month => now.subtract(const Duration(days: 30)),
       ChartRange.threeMonths => now.subtract(const Duration(days: 90)),
     };
-    return widget.entries
-        .where((e) => e.date.isAfter(cutoff))
-        .toList();
+    return _validEntries.where((e) => e.date.isAfter(cutoff)).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final entries = _filteredEntries;
     final hasData = entries.length >= 2;
+    final isWeight = widget.measurementType == MeasurementType.weight;
+    final unit = widget.measurementType.unit;
 
-    // Kilo değişimi hesapla
+    // Değişim hesapla
     final totalChange = hasData
-        ? widget.entries.last.weight - widget.entries.first.weight
+        ? _getValue(entries.last)! - _getValue(entries.first)!
         : 0.0;
-    final latestWeight = widget.entries.isNotEmpty
-        ? widget.entries.last.weight
-        : widget.initialWeight; // ölçüm yoksa profildeki mevcut kilo
-    final targetWeight = widget.targetWeight;
-    final remaining = (latestWeight != null && targetWeight != null)
-        ? latestWeight - targetWeight
+    final latestValue = _validEntries.isNotEmpty
+        ? _getValue(_validEntries.last)!
+        : (isWeight ? widget.initialWeight : null);
+    final targetWeight = isWeight ? widget.targetWeight : null;
+    final remaining = (latestValue != null && targetWeight != null)
+        ? latestValue - targetWeight
         : null;
+
+    // Hedef bazlı renk: weight_loss ise azalış yeşil, weight_gain ise artış yeşil
+    final isWeightLoss = widget.userGoal == 'weight_loss';
+    final isGoodChange = isWeightLoss ? totalChange < 0 : totalChange > 0;
+    final changeColor = totalChange == 0
+        ? AppColors.nightSky
+        : (isGoodChange ? AppColors.primary : Colors.red);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -77,9 +126,9 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Kilo Değişimi',
-                style: TextStyle(
+              Text(
+                widget.isPrivacyMode ? 'Gelişim Trendi' : widget.measurementType.label,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppColors.nightSky,
@@ -93,11 +142,13 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
           // Toplam değişim etiketi
           if (hasData)
             Text(
-              '${totalChange >= 0 ? '+' : ''}${totalChange.toStringAsFixed(1)} kg',
+              widget.isPrivacyMode 
+                ? 'BMI takibi aktif' 
+                : '${totalChange >= 0 ? '+' : ''}${totalChange.toStringAsFixed(1)} $unit',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: totalChange < 0 ? AppColors.primary : Colors.red,
+                color: widget.isPrivacyMode ? Colors.grey.shade500 : changeColor,
               ),
             ),
           const SizedBox(height: 16),
@@ -114,58 +165,113 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
           const Divider(height: 1),
           const SizedBox(height: 16),
 
-          // Footer
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hedef Kilo',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
+          // Footer (sadece kilo için hedef/kalan göster)
+          if (isWeight) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hedef Kilo',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    targetWeight != null
-                        ? '${targetWeight.toStringAsFixed(1)} kg'
-                        : '—',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.nightSky,
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.isPrivacyMode 
+                        ? '***'
+                        : (targetWeight != null ? '${targetWeight.toStringAsFixed(1)} kg' : '—'),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.nightSky,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Kalan',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade500,
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Kalan',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    remaining != null
-                        ? '${remaining.abs().toStringAsFixed(1)} kg'
-                        : '—',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.isPrivacyMode
+                          ? '***'
+                          : (remaining != null ? '${remaining.abs().toStringAsFixed(1)} kg' : '—'),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                  ],
+                ),
+              ],
+            ),
+          ] else ...[
+            // Kilo dışı ölçümler için son değer göster
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Son Ölçüm',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      latestValue != null
+                          ? '${latestValue.toStringAsFixed(1)} $unit'
+                          : '—',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.nightSky,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Değişim',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasData
+                          ? '${totalChange >= 0 ? '+' : ''}${totalChange.toStringAsFixed(1)} $unit'
+                          : '—',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: changeColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -173,12 +279,22 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
 
   Widget _buildChart(List<ProgressEntryModel> entries) {
     final spots = entries.asMap().entries.map((e) {
-      return FlSpot(e.key.toDouble(), e.value.weight);
+      return FlSpot(e.key.toDouble(), _getValue(e.value)!);
     }).toList();
 
-    final weights = entries.map((e) => e.weight).toList();
-    final minY = (weights.reduce((a, b) => a < b ? a : b) - 2).floorToDouble();
-    final maxY = (weights.reduce((a, b) => a > b ? a : b) + 2).ceilToDouble();
+    final values = entries.map((e) => _getValue(e)!).toList();
+
+    // Hedef kilo çizgisi için minY/maxY'yi genişlet
+    double rawMin = values.reduce((a, b) => a < b ? a : b);
+    double rawMax = values.reduce((a, b) => a > b ? a : b);
+    final target = widget.targetWeight;
+    if (target != null) {
+      if (target < rawMin) rawMin = target;
+      if (target > rawMax) rawMax = target;
+    }
+    final minY = (rawMin - 2).floorToDouble();
+    final maxY = (rawMax + 2).ceilToDouble();
+    final unit = widget.measurementType.unit;
 
     return LineChart(
       LineChartData(
@@ -194,11 +310,11 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
-              showTitles: true,
+              showTitles: !widget.isPrivacyMode,
               reservedSize: 40,
               interval: (maxY - minY) / 3,
               getTitlesWidget: (value, meta) => Text(
-                '${value.toStringAsFixed(0)} kg',
+                '${value.toStringAsFixed(0)} $unit',
                 style: TextStyle(
                   fontSize: 10,
                   color: Colors.grey.shade500,
@@ -239,6 +355,28 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
         borderData: FlBorderData(show: false),
         minY: minY,
         maxY: maxY,
+        extraLinesData: ExtraLinesData(
+          horizontalLines: [
+            if (target != null && widget.measurementType == MeasurementType.weight)
+              HorizontalLine(
+                y: target,
+                color: Colors.orange.shade400,
+                strokeWidth: 1.5,
+                dashArray: [6, 4],
+                label: HorizontalLineLabel(
+                  show: !widget.isPrivacyMode,
+                  alignment: Alignment.topRight,
+                  padding: const EdgeInsets.only(right: 4, bottom: 4),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade700,
+                  ),
+                  labelResolver: (line) => 'Hedef ${target.toStringAsFixed(1)}',
+                ),
+              ),
+          ],
+        ),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
@@ -278,8 +416,12 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
             getTooltipItems: (touchedSpots) => touchedSpots.map((s) {
               final idx = s.spotIndex;
               final entry = entries[idx];
+              final value = _getValue(entry);
+              final isWeight = widget.measurementType == MeasurementType.weight;
               return LineTooltipItem(
-                '${entry.weight.toStringAsFixed(1)} kg\n',
+                widget.isPrivacyMode && isWeight
+                  ? 'BMI: ${entry.bmi?.toStringAsFixed(1) ?? "—"}\n'
+                  : '${value?.toStringAsFixed(1) ?? "—"} $unit\n',
                 const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

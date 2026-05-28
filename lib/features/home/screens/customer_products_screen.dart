@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../models/product_model.dart';
+import '../../orders/providers/cart_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../products/screens/product_detail_screen.dart';
 import '../../../widgets/cached_product_image.dart';
@@ -70,7 +72,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
@@ -84,10 +86,39 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                           color: AppColors.nightSky,
                         ),
                       ),
-
                     ],
                   ),
                 ),
+                // Shopping Cart Badge Button
+                Consumer<CartProvider>(
+                  builder: (context, cart, child) {
+                    return Badge(
+                      label: Text('${cart.itemCount}'),
+                      isLabelVisible: cart.itemCount > 0,
+                      backgroundColor: AppColors.accent,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.shopping_cart, color: AppColors.primary),
+                          onPressed: () {
+                            context.push('/home/cart');
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
                 // Görünüm toggle
                 Container(
                   decoration: BoxDecoration(
@@ -335,23 +366,42 @@ class _ProductCard extends StatelessWidget {
               ],
             ),
           ),
-          // VP
-          if (product.vp > 0)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${product.vp.toStringAsFixed(0)} VP',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade600,
+          // VP & Add to Cart
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (product.vp > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${product.vp.toStringAsFixed(0)} VP',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
                 ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.add_shopping_cart, color: AppColors.primary, size: 20),
+                onPressed: () {
+                  context.read<CartProvider>().addItem(product);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${product.name} sepete eklendi!'),
+                      backgroundColor: AppColors.primary,
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
               ),
-            ),
+            ],
+          ),
         ],
       ),
     ), // Container
@@ -451,7 +501,7 @@ class _ProductGridCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
-            // Kategori + VP satırı
+            // Kategori + VP + Sepete Ekle satırı
             Row(
               children: [
                 if (product.category != null)
@@ -488,6 +538,27 @@ class _ProductGridCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () {
+                    context.read<CartProvider>().addItem(product);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${product.name} sepete eklendi!'),
+                        backgroundColor: AppColors.primary,
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add_shopping_cart, size: 16, color: AppColors.primary),
+                  ),
+                ),
               ],
             ),
           ],

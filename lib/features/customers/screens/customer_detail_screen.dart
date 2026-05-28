@@ -1,19 +1,26 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:herbaformix/features/customers/screens/add_edit_customer_screen.dart';
+import 'package:herbaformix/features/progress/widgets/weight_chart_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/app_colors.dart';
 import '../../../models/customer_model.dart';
+import '../../../models/invite_code_model.dart';
 import '../../../models/distributor_customer_insights.dart';
 import '../../../models/follow_up_model.dart';
+import '../../../models/progress_entry_model.dart';
 import '../../../models/scheduled_follow_up_model.dart';
 import '../../../models/user_profile_model.dart';
+import '../../../models/user_role.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../program/models/program_editor_args.dart';
 import '../../program/screens/create_program_screen.dart';
+import '../providers/customer_provider.dart';
 import '../providers/follow_up_provider.dart';
 
 class CustomerDetailScreen extends StatelessWidget {
@@ -25,17 +32,23 @@ class CustomerDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final customerProvider = context.watch<CustomerProvider>();
+    final currentCustomer = customerProvider.customers.firstWhere(
+      (c) => c.id == customer.id,
+      orElse: () => customer,
+    );
+
     return ChangeNotifierProvider(
       create: (ctx) => FollowUpProvider(
         authProvider: ctx.read<AuthProvider>(),
         firestoreService: ctx.read<FirestoreService>(),
-        customerId: customer.id,
+        customerId: currentCustomer.id,
       ),
       child: Consumer<FollowUpProvider>(
         builder: (context, followUpProvider, child) {
           return Scaffold(
             appBar: AppBar(
-              title: Text('${customer.firstName} ${customer.lastName}'),
+              title: Text('${currentCustomer.firstName} ${currentCustomer.lastName}'),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
@@ -43,7 +56,7 @@ class CustomerDetailScreen extends StatelessWidget {
                   onPressed: () {
                     context.goNamed(
                       AddEditCustomerScreen.routeName,
-                      extra: customer,
+                      extra: currentCustomer,
                     );
                   },
                 ),
@@ -54,7 +67,7 @@ class CustomerDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildCustomerHeader(context),
+                  _buildCustomerHeader(context, currentCustomer),
                   const SizedBox(height: 16),
                   Text(
                     'Sağlık Bilgileri',
@@ -62,10 +75,10 @@ class CustomerDetailScreen extends StatelessWidget {
                   ),
                   const Divider(),
                   const SizedBox(height: 8),
-                  _buildHealthSection(context),
+                  _buildHealthSection(context, currentCustomer),
                   const SizedBox(height: 12),
-                  if (customer.linkedUserId != null &&
-                      customer.linkedUserId!.isNotEmpty)
+                  if (currentCustomer.linkedUserId != null &&
+                      currentCustomer.linkedUserId!.isNotEmpty)
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -73,9 +86,9 @@ class CustomerDetailScreen extends StatelessWidget {
                           context.goNamed(
                             CreateProgramScreen.routeName,
                             extra: ProgramEditorArgs(
-                              targetUserId: customer.linkedUserId!,
+                              targetUserId: currentCustomer.linkedUserId!,
                               targetCustomerName:
-                                  '${customer.firstName} ${customer.lastName}'.trim(),
+                                  '${currentCustomer.firstName} ${currentCustomer.lastName}'.trim(),
                               isDistributorMode: true,
                             ),
                           );
@@ -141,7 +154,7 @@ class CustomerDetailScreen extends StatelessWidget {
             ),
             floatingActionButton: FloatingActionButton.extended(
               onPressed: () {
-                _showAddFollowUpSheet(context, customer, followUpProvider);
+                _showAddFollowUpSheet(context, currentCustomer, followUpProvider);
               },
               label: const Text('Plansız Takip Ekle'),
               icon: const Icon(Icons.add_comment_outlined),
@@ -178,7 +191,7 @@ class CustomerDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCustomerHeader(BuildContext context) {
+  Widget _buildCustomerHeader(BuildContext context, CustomerModel customer) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -271,13 +284,126 @@ class CustomerDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHealthSection(BuildContext context) {
+  Widget _buildHealthSection(BuildContext context, CustomerModel customer) {
     if (customer.linkedUserId == null || customer.linkedUserId!.isEmpty) {
-      return _buildInfoMessage(
-        icon: Icons.link_off_outlined,
-        color: Colors.orange,
-        text:
-            'Bu müşteri henüz hesabını aktive etmedi. Sağlık verileri ve günlük takip bilgileri aktivasyondan sonra görünür.',
+      final firestoreService = context.read<FirestoreService>();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildInfoMessage(
+            icon: Icons.link_off_outlined,
+            color: Colors.orange,
+            text:
+                'Bu müşteri henüz hesabını aktive etmedi. Sağlık verileri ve günlük takip bilgileri aktivasyondan sonra görünür.',
+          ),
+          const SizedBox(height: 16),
+          FutureBuilder<InviteCodeModel?>(
+            future: firestoreService.getInviteCodeForCustomer(customer.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+              final invite = snapshot.data;
+              if (invite == null) {
+                return _buildInfoMessage(
+                  icon: Icons.info_outline,
+                  color: Colors.blue,
+                  text: 'Bu müşteri için oluşturulmuş bir davet kodu bulunamadı.',
+                );
+              }
+
+              return Card(
+                elevation: 0,
+                color: AppColors.primary.withValues(alpha: 0.08),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Müşteri Aktivasyon Kodu',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Müşterinizin sizinle bağlantı kurması için uygulamaya kaydolurken aşağıdaki kodu girmesi gerekmektedir:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Text(
+                              invite.code,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                                fontFamily: 'monospace',
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.copy, size: 16),
+                            label: const Text('Kopyala'),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: invite.code));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Davet kodu kopyalandı!'),
+                                  backgroundColor: AppColors.primary,
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       );
     }
 
@@ -319,9 +445,15 @@ class CustomerDetailScreen extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (profile.distributorRequestStatus == 'pending') ...[
+                  _buildDistributorRequestCard(context, profile),
+                  const SizedBox(height: 12),
+                ],
                 _buildProfileSummaryCard(context, profile),
                 const SizedBox(height: 12),
                 _buildInsightsCard(context, profile, insights),
+                const SizedBox(height: 12),
+                _buildProgressSection(context, profile, insights),
               ],
             );
           },
@@ -387,6 +519,186 @@ class CustomerDetailScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProgressSection(
+    BuildContext context,
+    UserProfileModel profile,
+    DistributorCustomerInsights insights,
+  ) {
+    final entries = insights.progressEntries;
+    final hasEntries = entries.isNotEmpty;
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.trending_down, color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Gelişim Takibi',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            if (!hasEntries) ...[
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    'Henüz ölçüm kaydı yok.',
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
+                ),
+              ),
+            ] else ...[
+              // Kilo değişim grafiği
+              WeightChartWidget(
+                entries: entries,
+                targetWeight: profile.targetWeight,
+                initialWeight: profile.weight,
+              ),
+
+              // Toplam değişim
+              if (entries.length >= 2) ...[
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildChangeChip(
+                      'Kilo',
+                      insights.totalWeightChange,
+                      'kg',
+                    ),
+                    if (entries.any((e) => e.waist != null))
+                      _buildChangeChip(
+                        'Bel',
+                        _calcChange(entries, (e) => e.waist),
+                        'cm',
+                      ),
+                    if (entries.any((e) => e.hip != null))
+                      _buildChangeChip(
+                        'Kalça',
+                        _calcChange(entries, (e) => e.hip),
+                        'cm',
+                      ),
+                    if (entries.any((e) => e.chest != null))
+                      _buildChangeChip(
+                        'Göğüs',
+                        _calcChange(entries, (e) => e.chest),
+                        'cm',
+                      ),
+                  ],
+                ),
+              ],
+
+              // Son 5 ölçüm listesi
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              Text(
+                'Son Ölçümler',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              ...entries.reversed.take(5).map((entry) => _buildEntryRow(entry)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  double? _calcChange(List<ProgressEntryModel> entries, double? Function(ProgressEntryModel) getter) {
+    final first = entries.firstWhere((e) => getter(e) != null, orElse: () => entries.first);
+    final last = entries.lastWhere((e) => getter(e) != null, orElse: () => entries.last);
+    final firstVal = getter(first);
+    final lastVal = getter(last);
+    if (firstVal == null || lastVal == null) return null;
+    return lastVal - firstVal;
+  }
+
+  Widget _buildChangeChip(String label, double? change, String unit) {
+    final isPositive = (change ?? 0) >= 0;
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          change != null
+              ? '${isPositive ? '+' : ''}${change.toStringAsFixed(1)} $unit'
+              : '—',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: change != null && change < 0 ? AppColors.primary : Colors.red,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEntryRow(ProgressEntryModel entry) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              DateFormat('dd.MM.yy').format(entry.date),
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ),
+          Expanded(
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                _entryChip('${entry.weight.toStringAsFixed(1)} kg', Icons.monitor_weight_outlined),
+                if (entry.waist != null)
+                  _entryChip('${entry.waist!.toStringAsFixed(1)} cm', Icons.straighten),
+                if (entry.hip != null)
+                  _entryChip('${entry.hip!.toStringAsFixed(1)} cm', Icons.straighten),
+                if (entry.chest != null)
+                  _entryChip('${entry.chest!.toStringAsFixed(1)} cm', Icons.straighten),
+                if (entry.bodyFat != null)
+                  _entryChip('%${entry.bodyFat!.toStringAsFixed(1)}', Icons.water_drop_outlined),
+                if (entry.muscleMass != null)
+                  _entryChip('${entry.muscleMass!.toStringAsFixed(1)} kg', Icons.fitness_center),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _entryChip(String text, IconData icon) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: Colors.grey.shade400),
+        const SizedBox(width: 2),
+        Text(text, style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+      ],
     );
   }
 
@@ -743,6 +1055,162 @@ class CustomerDetailScreen extends StatelessWidget {
         return const Icon(Icons.alternate_email_outlined);
       case FollowUpType.inPerson:
         return const Icon(Icons.people_alt_outlined);
+    }
+  }
+
+  Widget _buildDistributorRequestCard(BuildContext context, UserProfileModel profile) {
+    return Card(
+      elevation: 4,
+      shadowColor: AppColors.primary.withValues(alpha: 0.2),
+      color: AppColors.primary.withValues(alpha: 0.05),
+      shape: RoundedRectangleBorder(
+        side: const BorderSide(color: AppColors.primary, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.business_center, color: AppColors.primary, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Distribütörlük Başvurusu',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.nightSky,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${profile.name ?? 'Müşteri'} distribütör olmak için başvuruda bulundu.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () => _approveDistributorRequest(context, profile),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.check),
+                label: const Text(
+                  'Distribütör Yap ve Onayla',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _approveDistributorRequest(BuildContext context, UserProfileModel profile) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Başvuruyu Onayla'),
+        content: Text(
+          '${profile.name ?? 'Müşteri'} isimli müşteriyi distribütör olarak onaylamak istediğinizden emin misiniz? '
+          'Bu işlem geri alınamaz.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Onayla'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      final firestoreService = context.read<FirestoreService>();
+
+      final updatedProfile = UserProfileModel(
+        id: profile.id,
+        email: profile.email,
+        role: UserRole.distributor,
+        name: profile.name,
+        distributorLevel: profile.distributorLevel,
+        monthlyVPTarget: profile.monthlyVPTarget,
+        isOnboarded: profile.isOnboarded,
+        age: profile.age,
+        phoneNumber: profile.phoneNumber,
+        weight: profile.weight,
+        height: profile.height,
+        goal: profile.goal,
+        targetWeight: profile.targetWeight,
+        programStartDate: profile.programStartDate,
+        userGoal: profile.userGoal,
+        wakeTime: profile.wakeTime,
+        lunchTime: profile.lunchTime,
+        sleepTime: profile.sleepTime,
+        birthDate: profile.birthDate,
+        gender: profile.gender,
+        healthNotes: profile.healthNotes,
+        allergies: profile.allergies,
+        medications: profile.medications,
+        assignedDistributorId: profile.assignedDistributorId,
+        profilePhotoUrl: profile.profilePhotoUrl,
+        profilePhotoUpdatedAt: profile.profilePhotoUpdatedAt,
+        earnedBadges: profile.earnedBadges,
+        waterDailyGoal: profile.waterDailyGoal,
+        waterMinLimit: profile.waterMinLimit,
+        waterMaxLimit: profile.waterMaxLimit,
+        distributorRequestStatus: 'approved',
+      );
+
+      await firestoreService.setUserProfile(updatedProfile);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Müşteri başarıyla distribütör olarak onaylandı.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Onaylama sırasında hata oluştu: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 }

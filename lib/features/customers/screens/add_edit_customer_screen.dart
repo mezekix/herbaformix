@@ -112,6 +112,9 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
           ? widget.customer!.firstContactDate
           : Timestamp.now(),
       isActive: _isActive,
+      linkedUserId: _isEditing ? widget.customer!.linkedUserId : null,
+      inviteCodeId: _isEditing ? widget.customer!.inviteCodeId : null,
+      activatedAt: _isEditing ? widget.customer!.activatedAt : null,
     );
 
     bool success;
@@ -160,7 +163,7 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                 final customerProvider =
                     Provider.of<CustomerProvider>(context, listen: false);
                 final scaffoldMessenger = ScaffoldMessenger.of(context);
-                final navigator = Navigator.of(context);
+                final goRouter = GoRouter.of(context);
 
                 final confirmed = await showDialog<bool>(
                   context: context,
@@ -200,7 +203,7 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                     scaffoldMessenger.showSnackBar(
                       const SnackBar(content: Text('Müşteri silindi.')),
                     );
-                    navigator.pop();
+                    goRouter.go('/home/customers');
                   } else {
                     scaffoldMessenger.showSnackBar(
                       const SnackBar(

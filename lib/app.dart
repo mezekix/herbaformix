@@ -7,12 +7,14 @@ import 'features/auth/providers/auth_provider.dart';
 import 'features/calorie_tracker/providers/calorie_provider.dart';
 import 'features/customers/providers/customer_provider.dart';
 import 'features/home/providers/home_provider.dart';
+import 'features/orders/providers/cart_provider.dart';
 import 'features/orders/providers/order_provider.dart';
 import 'features/products/providers/product_provider.dart';
 import 'features/program/providers/program_provider.dart';
 import 'features/program/services/notification_service.dart';
 import 'features/progress/providers/progress_provider.dart';
 import 'features/water_tracker/providers/water_provider.dart';
+import 'services/exercise_service.dart';
 import 'services/firestore_service.dart';
 
 /// GoRouter'ın [refreshListenable]'ı olarak kullanılır.
@@ -261,6 +263,9 @@ class _AppState extends State<App> {
                 context.read<CustomerProvider>(),
               ),
             ),
+            ChangeNotifierProvider<CartProvider>(
+              create: (context) => CartProvider(),
+            ),
             ChangeNotifierProvider<HomeProvider>(
               create: (context) => HomeProvider(
                 context.read<FirestoreService>(),
@@ -273,6 +278,21 @@ class _AppState extends State<App> {
               update: (context, auth, previous) {
                 final provider = previous ??
                     WaterProvider(context.read<FirestoreService>());
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (auth.status == AuthStatus.authenticated &&
+                      auth.firebaseUser?.uid != null) {
+                    provider.startListening(auth.firebaseUser!.uid);
+                  } else {
+                    provider.stopListening();
+                  }
+                });
+                return provider;
+              },
+            ),
+            ChangeNotifierProxyProvider<AuthProvider, ExerciseService>(
+              create: (_) => ExerciseService(),
+              update: (context, auth, previous) {
+                final provider = previous ?? ExerciseService();
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (auth.status == AuthStatus.authenticated &&
                       auth.firebaseUser?.uid != null) {

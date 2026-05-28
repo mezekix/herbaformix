@@ -86,6 +86,28 @@ class CustomerProfileMenu extends StatelessWidget {
             icon: Icons.help_outline,
             onTap: () => context.goNamed('support'),
           ),
+          _buildMenuSection(
+            context,
+            title: userProfile?.distributorRequestStatus == 'pending'
+                ? 'Distribütörlük Başvurusu (Onay Bekliyor)'
+                : 'Distribütör Ol',
+            icon: userProfile?.distributorRequestStatus == 'pending'
+                ? Icons.pending_actions
+                : Icons.business_center_outlined,
+            trailing: userProfile?.distributorRequestStatus == 'pending'
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
+                  )
+                : null,
+            onTap: userProfile?.distributorRequestStatus == 'pending'
+                ? () {}
+                : () => _showDistributorRequestDialog(context, authProvider),
+          ),
           
           const SizedBox(height: 32),
           
@@ -114,7 +136,13 @@ class CustomerProfileMenu extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuSection(BuildContext context, {required String title, required IconData icon, required VoidCallback onTap}) {
+  Widget _buildMenuSection(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+    Widget? trailing,
+  }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       leading: Container(
@@ -133,7 +161,7 @@ class CustomerProfileMenu extends StatelessWidget {
           color: AppColors.nightSky,
         ),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+      trailing: trailing ?? const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
       onTap: onTap,
     );
   }
@@ -171,6 +199,67 @@ class CustomerProfileMenu extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Çıkış yapılamadı: ${e.toString().replaceFirst('Exception: ', '')}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _showDistributorRequestDialog(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Distribütör Ol'),
+        content: const Text(
+          'Distribütör olmak için başvuruda bulunmak istiyor musunuz? '
+          'Başvurunuz danışmanınız tarafından onaylandıktan sonra hesabınız distribütör olarak güncellenecektir.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Başvur'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      final updatedProfile = authProvider.userProfile!;
+      updatedProfile.distributorRequestStatus = 'pending';
+
+      final success = await authProvider.updateUserProfile(updatedProfile);
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Distribütörlük başvurunuz başarıyla alındı. Danışman onayından sonra hesabınız güncellenecektir.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (context.mounted) {
+        throw Exception('Profil güncellenemedi.');
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Başvuru sırasında hata oluştu: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
           backgroundColor: Colors.red,
         ),
       );

@@ -242,6 +242,16 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
     ));
   }
 
+  void _openCompare() {
+    if (_beforePath == null || _afterPhotos.isEmpty) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => _CompareScreen(
+        beforePath: _beforePath!,
+        afterPhotos: _afterPhotos,
+      ),
+    ));
+  }
+
   String _formatDate(String? isoKey) {
     if (isoKey == null) return '';
     try {
@@ -270,6 +280,18 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
         ),
         iconTheme: const IconThemeData(color: AppColors.nightSky),
         actions: [
+          // Karşılaştırma butonu (önce + en az 1 sonra varsa)
+          if (_beforePath != null && _afterPhotos.isNotEmpty)
+            TextButton.icon(
+              onPressed: _openCompare,
+              icon: const Icon(Icons.compare,
+                  color: AppColors.primary, size: 18),
+              label: const Text(
+                'Karşılaştır',
+                style: TextStyle(
+                    color: AppColors.primary, fontWeight: FontWeight.bold),
+              ),
+            ),
           TextButton.icon(
             onPressed: _addAfterPhoto,
             icon: const Icon(Icons.add_a_photo,
@@ -736,4 +758,238 @@ class _FullScreenPhotoView extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Before/After Karşılaştırma Ekranı ─────────────────────────────────────────
+
+class _CompareScreen extends StatefulWidget {
+  final String beforePath;
+  final List<Map<String, String>> afterPhotos;
+
+  const _CompareScreen({
+    required this.beforePath,
+    required this.afterPhotos,
+  });
+
+  @override
+  State<_CompareScreen> createState() => _CompareScreenState();
+}
+
+class _CompareScreenState extends State<_CompareScreen> {
+  late int _selectedIndex;
+  double _sliderPosition = 0.5; // 0.0 = tam önce, 1.0 = tam sonra
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.afterPhotos.length - 1; // en son fotoğraf
+  }
+
+  String _formatDate(String? isoKey) {
+    if (isoKey == null) return '';
+    try {
+      return DateFormat('d MMM yyyy', 'tr_TR').format(DateTime.parse(isoKey));
+    } catch (_) {
+      return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final afterPath = widget.afterPhotos[_selectedIndex]['path']!;
+    final afterDate = widget.afterPhotos[_selectedIndex]['date'];
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Önce / Sonra Karşılaştırma',
+          style: TextStyle(color: Colors.white, fontSize: 14),
+        ),
+      ),
+      body: Column(
+        children: [
+          // Karşılaştırma alanı
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final clipWidth = width * _sliderPosition;
+
+                return GestureDetector(
+                  onHorizontalDragUpdate: (details) {
+                    setState(() {
+                      _sliderPosition =
+                          (details.localPosition.dx / width).clamp(0.0, 1.0);
+                    });
+                  },
+                  child: Stack(
+                    children: [
+                      // Sonra fotoğrafı (arka plan, tam)
+                      Positioned.fill(
+                        child: Image.file(
+                          File(afterPath),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      // Önce fotoğrafı (ön plan, kırpılmış)
+                      Positioned.fill(
+                        child: ClipRect(
+                          clipper: _LeftClipper(clipWidth),
+                          child: ColorFiltered(
+                            colorFilter: const ColorFilter.mode(
+                                Colors.grey, BlendMode.saturation),
+                            child: Image.file(
+                              File(widget.beforePath),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Dikey çizgi + tutamak
+                      Positioned(
+                        left: clipWidth - 20,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.compare_arrows,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Dikey çizgi
+                      Positioned(
+                        left: clipWidth,
+                        top: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      // Etiketler
+                      Positioned(
+                        left: 12,
+                        bottom: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            'ÖNCE',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: AppColors.nightSky,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 12,
+                        bottom: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            afterDate != null
+                                ? 'SONRA — ${_formatDate(afterDate)}'
+                                : 'SONRA',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Sonra fotoğrafı seçici
+          if (widget.afterPhotos.length > 1)
+            Container(
+              height: 80,
+              color: Colors.black.withValues(alpha: 0.8),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                itemCount: widget.afterPhotos.length,
+                itemBuilder: (context, index) {
+                  final isSelected = index == _selectedIndex;
+                  return GestureDetector(
+                    onTap: () =>
+                        setState(() => _selectedIndex = index),
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary
+                              : Colors.transparent,
+                          width: 2.5,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          File(widget.afterPhotos[index]['path']!),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sol taraftan clipWidth kadarını gösteren clipper.
+class _LeftClipper extends CustomClipper<Rect> {
+  final double clipWidth;
+  const _LeftClipper(this.clipWidth);
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTWH(0, 0, clipWidth, size.height);
+
+  @override
+  bool shouldReclip(covariant _LeftClipper oldClipper) =>
+      oldClipper.clipWidth != clipWidth;
 }

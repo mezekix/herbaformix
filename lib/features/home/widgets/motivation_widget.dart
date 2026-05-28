@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
-import '../../../core/app_colors.dart';
+
 import '../../../services/firestore_service.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 
@@ -24,17 +24,14 @@ class _MotivationWidgetState extends State<MotivationWidget> {
   int _currentIndex = 0;
   int _sessionSwitches = 0;
   static const int _maxSwitches = 5;
-  final bool _isLoading = false; // keeping for future async load
   String? _distributorMessage;
   String? _distributorName;
-  double _sliderValue = 7;
 
   @override
   void initState() {
     super.initState();
     _loadQuotes();
     _loadDistributorMessage();
-    _loadInitialScore();
   }
 
   Future<void> _loadQuotes() async {
@@ -76,51 +73,7 @@ class _MotivationWidgetState extends State<MotivationWidget> {
     }
   }
 
-  Future<void> _loadInitialScore() async {
-    final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.userProfile?.id;
-    if (userId == null) return;
 
-    try {
-      final scores = await context.read<FirestoreService>().getMotivationScoresLastDays(userId, 1);
-      if (mounted && scores.isNotEmpty) {
-        setState(() => _sliderValue = scores.first.toDouble());
-      }
-    } catch (e) {
-      debugPrint('loadInitialScore hatası: $e');
-    }
-  }
-
-  Future<void> _checkLowMotivationAlert() async {
-    final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.userProfile?.id;
-    if (userId == null) return;
-
-    try {
-      final scores = await context.read<FirestoreService>().getMotivationScoresLastDays(userId, 3);
-      if (scores.length >= 3 && scores.every((s) => s <= 3) && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('[${authProvider.userProfile?.name ?? "Müşteri"}] son 3 gündür düşük motivasyon bildiriyor.'),
-            backgroundColor: AppColors.papaya,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('checkLowMotivationAlert hatası: $e');
-    }
-  }
-
-  Future<void> _onSliderChangeEnd(double value) async {
-    final authProvider = context.read<AuthProvider>();
-    final userId = authProvider.userProfile?.id;
-    if (userId == null) return;
-
-    setState(() => _sliderValue = value);
-    await context.read<FirestoreService>().saveMotivationScore(userId, value.round());
-    await _checkLowMotivationAlert();
-  }
 
   void _switchQuote() {
     if (_sessionSwitches >= _maxSwitches) {
@@ -201,48 +154,7 @@ class _MotivationWidgetState extends State<MotivationWidget> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          Divider(color: Colors.white.withValues(alpha: 0.15)),
-          const SizedBox(height: 16),
-          // Slider bölümü
-          Text(
-            'Motivasyonun bugün?',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Text('😔', style: TextStyle(fontSize: 20)),
-              Expanded(
-                child: Slider(
-                  value: _sliderValue,
-                  min: 1,
-                  max: 10,
-                  divisions: 9,
-                  activeColor: AppColors.primary,
-                  inactiveColor: Colors.white.withValues(alpha: 0.2),
-                  thumbColor: Colors.white,
-                  onChanged: (v) => setState(() => _sliderValue = v),
-                  onChangeEnd: _onSliderChangeEnd,
-                ),
-              ),
-              const Text('💪', style: TextStyle(fontSize: 20)),
-            ],
-          ),
-          Center(
-            child: Text(
-              '${_sliderValue.round()} / 10',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+
           if (_distributorName != null) ...[
             const SizedBox(height: 16),
             Divider(color: Colors.white.withValues(alpha: 0.15)),

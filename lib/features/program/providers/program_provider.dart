@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../models/product_model.dart';
+import '../../../models/user_profile_model.dart';
 import '../models/program_model.dart';
 import '../services/notification_service.dart';
 import '../services/program_service.dart';
@@ -244,6 +245,51 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
+  /// Belirtilen hedefe ve kilo bilgilerine göre otomatik program oluşturur.
+  Future<bool> createAutomaticProgram({
+    required String userId,
+    required String userGoal,
+    required double? currentWeight,
+    required double? targetWeight,
+    required List<ProductModel> allProducts,
+    bool scheduleNotifications = true,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _selectedGoal = userGoal;
+      _currentWeight = currentWeight;
+      _targetWeight = targetWeight;
+
+      if (userGoal == 'weight_loss' && currentWeight != null && targetWeight != null) {
+        try {
+          _durationMonths = calculateMinDuration(currentWeight, targetWeight);
+        } catch (_) {
+          _durationMonths = 1;
+        }
+      } else {
+        _durationMonths = 1;
+      }
+
+      _slots = buildDefaultSlots(userGoal);
+
+      final result = await saveProgram(
+        userId,
+        allProducts,
+        scheduleNotifications: scheduleNotifications,
+      );
+      return result;
+    } catch (e) {
+      debugPrint('[ProgramProvider] createAutomaticProgram HATA: $e');
+      _errorMessage = 'Otomatik program oluşturulamadı: $e';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> _scheduleNotifications(ProgramModel program) async {
     await _notificationService.initialize();
     
@@ -416,6 +462,48 @@ class ProgramProvider with ChangeNotifier {
   /// Sadece adımı sıfırla, diğer state'i koru
   void goToFirstStep() {
     _currentStep = ProgramWizardStep.goalSelection;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  /// Profil bilgilerine göre wizard state'ini doldurur ve adımı belirler.
+  void initializeWizardWithProfile(UserProfileModel? profile) {
+    if (profile == null) {
+      resetWizard();
+      return;
+    }
+
+    final goal = profile.userGoal ?? profile.goal;
+    final isGoalSelected = goal != null && goal.isNotEmpty;
+    final isPhysicalInfoEntered = profile.weight != null && profile.targetWeight != null;
+
+    if (isGoalSelected) {
+      _selectedGoal = goal;
+      
+      if (isPhysicalInfoEntered) {
+        _currentWeight = profile.weight;
+        _targetWeight = profile.targetWeight;
+        try {
+          _durationMonths = calculateMinDuration(profile.weight!, profile.targetWeight!);
+        } catch (_) {
+          _durationMonths = 1;
+        }
+        
+        // Bilgiler tamsa direkt Öğün Planı adımına geç
+        _currentStep = ProgramWizardStep.mealPlan;
+      } else {
+        // Hedef seçilmiş ama kilo bilgileri yoksa (kilo verme/kilo alma hedefleri için kilo girişi adımına geç)
+        if (goal == 'weight_loss') {
+          _currentStep = ProgramWizardStep.weightInput;
+        } else {
+          _currentStep = ProgramWizardStep.mealPlan;
+        }
+      }
+    } else {
+      // Hiçbir şey seçilmemişse baştan başla
+      _currentStep = ProgramWizardStep.goalSelection;
+    }
+    
     _errorMessage = null;
     notifyListeners();
   }
