@@ -35,7 +35,6 @@ import 'customer_progress_screen.dart';
 import 'customer_products_screen.dart';
 import 'customer_support_screen.dart';
 import '../../program/screens/create_program_screen.dart';
-import '../../program/providers/program_provider.dart';
 import '../../water_tracker/screens/water_tracker_screen.dart';
 import '../../water_tracker/providers/water_provider.dart';
 import 'package:intl/intl.dart';
@@ -55,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _customerNavIndex = 0;
   Stream<List<DailyRoutineModel>>? _routinesStream;
   Future<int>? _riskCountFuture;
+  String? _lastUserId;
 
   /// Özel gün, streak ve saate göre selamlama metni döndürür.
   /// [firstName] boşsa sadece "Merhaba!" döner.
@@ -116,8 +116,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final userProfile = context.read<AuthProvider>().userProfile;
-    if (userProfile != null && _routinesStream == null) {
+    final userProfile = Provider.of<AuthProvider>(context).userProfile;
+    if (userProfile != null && (userProfile.id != _lastUserId || _routinesStream == null)) {
+      _lastUserId = userProfile.id;
       _routinesStream = context.read<RoutineService>().getDailyRoutines(userProfile.id, DateTime.now());
     }
     if (userProfile != null &&
@@ -440,10 +441,21 @@ class _HomeScreenState extends State<HomeScreen> {
               stream: _routinesStream ?? const Stream.empty(),
               builder: (context, snapshot) {
                 final routines = snapshot.data ?? [];
-                final hasIncomplete = routines.any((r) => !r.isCompleted);
+                final now = DateTime.now();
+                
+                // Sadece saati gelmiş veya geçmiş tamamlanmamış rutinler
+                final hasDueIncomplete = routines.any((r) =>
+                    !r.isCompleted &&
+                    r.scheduledTime.isBefore(now.add(const Duration(minutes: 15))));
+                
                 final waterProgress = context.watch<WaterProvider>().progress;
-                final hasWaterAlert = waterProgress < 0.5;
-                final showBadge = hasIncomplete || hasWaterAlert;
+                // Su düşükse ve en az bir su adımının saati geldiyse uyarı ver
+                final hasDueWaterStep = routines.any((r) =>
+                    r.isWaterStep && !r.isCompleted &&
+                    r.scheduledTime.isBefore(now.add(const Duration(minutes: 15))));
+                final hasWaterAlert = waterProgress < 0.5 && hasDueWaterStep;
+                
+                final showBadge = hasDueIncomplete || hasWaterAlert;
 
                 return Stack(
                   children: [
@@ -455,7 +467,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        onPressed: () => _showNotificationPanel(context, routines, waterProgress),
+                        onPressed: () => _showNotificationPanel(context, routines),
                         icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
                         padding: EdgeInsets.zero,
                       ),
@@ -485,11 +497,11 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
               _buildCustomerHeroProgress(context),
               const SizedBox(height: 12),
-              _buildExerciseToggleCard(context),
+              _buildCustomerDailyChecklist(context),
               const SizedBox(height: 16),
               _buildCustomerWaterTracker(context),
               const SizedBox(height: 16),
-              _buildCustomerDailyChecklist(context),
+              _buildExerciseToggleCard(context),
               const SizedBox(height: 16),
               const MotivationWidget(),
               const SizedBox(height: 96),
@@ -907,7 +919,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   exerciseProgress: exerciseProgress,
                   activeTaskLabel: activeTaskLabel,
                   hasProgram: hasProgram,
-                  size: 200,
+                  size: 190,
                 ),
               ],
             ),
@@ -1030,156 +1042,149 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCustomerDailyChecklist(BuildContext context) {
     final userProfile = context.read<AuthProvider>().userProfile;
     if (userProfile == null) return const SizedBox.shrink();
-    final userId = userProfile.id;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          StreamBuilder<List<DailyRoutineModel>>(
-            stream: _routinesStream ?? const Stream.empty(),
-            builder: (context, snapshot) {
-              final rawRoutines = snapshot.data ?? [];
-              final incompleteRoutines = rawRoutines.where((r) => !r.isCompleted).toList()
-                ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-              final completedRoutines = rawRoutines.where((r) => r.isCompleted).toList()
-                ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-              
-              final routines = <DailyRoutineModel>[];
-              if (incompleteRoutines.isNotEmpty) {
-                routines.add(incompleteRoutines.first);
-              }
-              routines.addAll(completedRoutines);
+      child: StreamBuilder<List<DailyRoutineModel>>(
+        stream: _routinesStream ?? const Stream.empty(),
+        builder: (context, snapshot) {
+          final rawRoutines = snapshot.data ?? [];
+          final incompleteRoutines = rawRoutines.where((r) => !r.isCompleted).toList()
+            ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+          
+          final routines = <DailyRoutineModel>[];
+          if (incompleteRoutines.isNotEmpty) {
+            routines.add(incompleteRoutines.first);
+          }
 
-              final completedCount = rawRoutines.where((r) => r.isCompleted).length;
-              final totalCount = rawRoutines.length;
+          final completedCount = rawRoutines.where((r) => r.isCompleted).length;
+          final totalCount = rawRoutines.length;
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Başlık — Stitch: "Öğün Takibi" + "3/5 Tamamlandı" badge
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Öğün Takibi',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.nightSky,
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Öğün Takibi',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    if (totalCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '$completedCount/$totalCount Tamamlandı',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
-                      Row(
-                        children: [
-                          if (totalCount > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '$completedCount/$totalCount Tamamlandı',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
-                          const SizedBox(width: 8),
-                          // Program yönetim butonları
-                          SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              iconSize: 18,
-                              icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                              tooltip: 'Programı Sil',
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('Programı Sil'),
-                                    content: const Text('Aktif programın ve tüm rutinlerin silinecek. Emin misin?'),
-                                    actions: [
-                                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
-                                      TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sil', style: TextStyle(color: AppColors.error))),
-                                    ],
-                                  ),
-                                );
-                                if (confirm == true && context.mounted) {
-                                  await context.read<ProgramProvider>().deleteProgram(userId);
-                                }
-                              },
-                            ),
-                          ),
-                          SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: IconButton(
-                              padding: EdgeInsets.zero,
-                              iconSize: 18,
-                              icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
-                              tooltip: 'Program Oluştur',
-                              onPressed: () => context.goNamed(CreateProgramScreen.routeName),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    const Center(child: CircularProgressIndicator())
-                  else if (routines.isEmpty)
-                    _buildEmptyRoutineCard(context)
-                  else
-                    _buildStitchChecklistItems(context, routines, userProfile),
-                ],
-              );
-            },
+                if (snapshot.connectionState == ConnectionState.waiting)
+                  const SizedBox(
+                    height: 80,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (rawRoutines.isEmpty)
+                  _buildEmptyRoutineContent(context)
+                else if (incompleteRoutines.isEmpty)
+                  _buildAllCompletedContent(context, rawRoutines.length)
+                else
+                  _buildStitchChecklistItems(context, routines, userProfile),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Tüm öğünler tamamlandığında gösterilen tebrik içeriği
+  Widget _buildAllCompletedContent(BuildContext context, int totalCount) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF6E9), // Hafif yeşil arka plan
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.check_circle_outline_rounded, size: 44, color: AppColors.primary),
+          const SizedBox(height: 12),
+          const Text(
+            'Tüm Öğünler Tamamlandı! 🎉',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.nightSky,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Bugünkü $totalCount öğünün hepsini başarıyla tamamladın. Harika bir gün!',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  /// Program yokken gösterilen boş durum kartı
-  Widget _buildEmptyRoutineCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.event_note_outlined, size: 48, color: Colors.grey.shade300),
-          const SizedBox(height: 12),
-          const Text(
-            'Bugün için program yok.',
-            style: TextStyle(color: Colors.grey, fontSize: 15),
-            textAlign: TextAlign.center,
+  /// Program yokken gösterilen boş durum içeriği
+  Widget _buildEmptyRoutineContent(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        Icon(Icons.event_note_outlined, size: 48, color: Colors.grey.shade300),
+        const SizedBox(height: 12),
+        const Text(
+          'Bugün için program yok.',
+          style: TextStyle(color: Colors.grey, fontSize: 15),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.add_circle_outline),
+          label: const Text('Program Oluştur'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.add_circle_outline),
-            label: const Text('Program Oluştur'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () => context.goNamed(CreateProgramScreen.routeName),
-          ),
-        ],
-      ),
+          onPressed: () => context.goNamed(CreateProgramScreen.routeName),
+        ),
+      ],
     );
   }
 
@@ -1406,20 +1411,13 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isNext
                 ? AppColors.primary.withValues(alpha: 0.3)
-                : Colors.transparent,
+                : Colors.grey.shade200,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2173,18 +2171,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showNotificationPanel(
-    BuildContext context,
-    List<DailyRoutineModel> routines,
-    double waterProgress,
-  ) {
-    final completedCount = routines.where((r) => r.isCompleted).length;
-    final totalCount = routines.length;
-    final incompleteRoutines = routines.where((r) => !r.isCompleted).toList();
-    final waterPercent = (waterProgress * 100).round();
-    final waterGoalMet = waterProgress >= 1.0;
-    final waterLow = waterProgress < 0.5;
-
+  void _showNotificationPanel(BuildContext context, List<DailyRoutineModel> routines) {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -2193,125 +2180,179 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        // Bildirim öğelerini oluştur
-        final List<_NotificationItem> items = [];
-
-        // Su bildirimi
-        if (waterGoalMet) {
-          items.add(_NotificationItem(
-            icon: Icons.water_drop,
-            color: Colors.blue,
-            title: 'Su hedefine ulaştın! 💧',
-            subtitle: 'Günlük su hedefini tamamladın. Harika!',
-          ));
-        } else if (waterLow) {
-          items.add(_NotificationItem(
-            icon: Icons.water_drop_outlined,
-            color: Colors.orange,
-            title: 'Su içmeyi unutma!',
-            subtitle: 'Bugün hedefinin yalnızca %$waterPercent\'ini tamamladın.',
-            isAlert: true,
-          ));
-        }
-
-        // Program bildirimleri
-        if (totalCount == 0) {
-          items.add(_NotificationItem(
-            icon: Icons.event_note_outlined,
-            color: Colors.grey,
-            title: 'Bugün için program yok',
-            subtitle: 'Danışmanın henüz program oluşturmadı.',
-          ));
-        } else if (completedCount == totalCount) {
-          items.add(_NotificationItem(
-            icon: Icons.check_circle_outline,
-            color: AppColors.primary,
-            title: 'Tüm öğünler tamamlandı! 🎉',
-            subtitle: 'Bugünkü $totalCount öğünün hepsini tamamladın.',
-          ));
-        } else {
-          // Tamamlanmamış öğünleri listele (max 3)
-          final shown = incompleteRoutines.take(3).toList();
-          for (final r in shown) {
-            final timeFormat = DateFormat('HH:mm');
-            items.add(_NotificationItem(
-              icon: Icons.schedule_outlined,
-              color: AppColors.primary,
-              title: r.productId,
-              subtitle: '${timeFormat.format(r.scheduledTime)} saatinde planlandı',
-              isAlert: true,
-            ));
-          }
-          if (incompleteRoutines.length > 3) {
-            items.add(_NotificationItem(
-              icon: Icons.more_horiz,
-              color: Colors.grey,
-              title: '+${incompleteRoutines.length - 3} öğün daha bekliyor',
-              subtitle: 'Programını görüntülemek için tıkla',
-            ));
-          }
-        }
-
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Bildirimler',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.nightSky,
-                      ),
-                    ),
-                    if (totalCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '$completedCount/$totalCount Tamamlandı',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                if (items.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
-                      child: Text(
-                        'Şu an için bildirim yok. 🎉',
-                        style: TextStyle(color: Colors.grey, fontSize: 15),
-                      ),
-                    ),
-                  )
-                else
-                  ...items.map((item) => _buildNotificationTile(item)),
-                const SizedBox(height: 8),
-              ],
-            ),
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+          ),
+          child: Consumer<WaterProvider>(
+            builder: (context, waterProvider, _) {
+              final waterProgress = waterProvider.progress;
+              return _buildNotificationContent(
+                context: context,
+                routines: routines,
+                waterProgress: waterProgress,
+              );
+            },
           ),
         );
       },
     );
   }
 
-  Widget _buildNotificationTile(_NotificationItem item) {
-    return Container(
+  /// Bildirim panelinin asıl içeriğini oluşturur.
+  /// _showNotificationPanel'den ayrıldı ki stream null olduğunda da çağrılabilsin.
+  Widget _buildNotificationContent({
+    required BuildContext context,
+    required List<DailyRoutineModel> routines,
+    required double waterProgress,
+  }) {
+    final now = DateTime.now();
+    final completedCount = routines.where((r) => r.isCompleted).length;
+    final totalCount = routines.length;
+    final dueIncompleteRoutines = routines.where((r) =>
+        !r.isCompleted && r.scheduledTime.isBefore(now.add(const Duration(minutes: 15)))).toList()
+      ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+    final waterPercent = (waterProgress * 100).round();
+    final hasDueWaterStep = routines.any((r) =>
+        r.isWaterStep && !r.isCompleted &&
+        r.scheduledTime.isBefore(now.add(const Duration(minutes: 15))));
+    final waterLow = waterProgress < 0.5 && hasDueWaterStep;
+
+    final List<_NotificationItem> items = [];
+
+    if (waterLow) {
+      items.add(_NotificationItem(
+        icon: Icons.water_drop_outlined,
+        color: Colors.blue,
+        title: 'Su içmeyi unutma!',
+        subtitle: 'Bugün hedefinin yalnızca %$waterPercent\'ini tamamladın.',
+        isAlert: true,
+        actionType: NotificationActionType.waterAlert,
+      ));
+    }
+
+    if (totalCount == 0) {
+      items.add(const _NotificationItem(
+        icon: Icons.event_note_outlined,
+        color: Colors.grey,
+        title: 'Bugün için program yok',
+        subtitle: 'Danışmanın henüz program oluşturmadı.',
+        actionType: NotificationActionType.info,
+      ));
+    } else {
+      if (dueIncompleteRoutines.isNotEmpty) {
+        final shown = dueIncompleteRoutines.take(3).toList();
+        for (final r in shown) {
+          final timeFormat = DateFormat('HH:mm');
+          NotificationActionType actionType;
+          String? titleText;
+          
+          if (r.isWaterStep) {
+            actionType = NotificationActionType.waterRoutine;
+            titleText = 'Su İç (500 ml)';
+          } else if (r.isNormalMealStep) {
+            actionType = NotificationActionType.mealRoutine;
+            titleText = r.productId;
+          } else {
+            actionType = NotificationActionType.productRoutine;
+            final product = context.read<ProductProvider>().products.firstWhere(
+              (p) => p.id == r.productId,
+              orElse: () => ProductModel(id: '', name: 'Silinmiş Ürün', vp: 0),
+            );
+            titleText = product.name;
+          }
+
+          final isOverdue = r.scheduledTime.isBefore(now);
+          items.add(_NotificationItem(
+            icon: r.isWaterStep ? Icons.water_drop_outlined : Icons.schedule_outlined,
+            color: r.isWaterStep ? Colors.blue : (isOverdue ? AppColors.error : AppColors.primary),
+            title: titleText,
+            subtitle: isOverdue
+                ? '${timeFormat.format(r.scheduledTime)} saatinde planlanmıştı — gecikmiş!'
+                : '${timeFormat.format(r.scheduledTime)} saatinde planlandı',
+            isAlert: true,
+            actionType: actionType,
+            routineId: r.id,
+            productId: r.productId,
+            routine: r,
+          ));
+        }
+        if (dueIncompleteRoutines.length > 3) {
+          items.add(_NotificationItem(
+            icon: Icons.more_horiz,
+            color: Colors.grey,
+            title: '+${dueIncompleteRoutines.length - 3} görev daha bekliyor',
+            subtitle: 'Programını görüntülemek için tıkla',
+            actionType: NotificationActionType.info,
+          ));
+        }
+      }
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Bildirimler',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.nightSky,
+                    ),
+                  ),
+                if (totalCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$completedCount/$totalCount Tamamlandı',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'Şu an için bildirim yok. 🎉',
+                    style: TextStyle(color: Colors.grey, fontSize: 15),
+                  ),
+                ),
+              )
+            else
+              ...items.map((item) => _buildNotificationTile(context, item)),
+            const SizedBox(height: 8),
+          ],
+        ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationTile(BuildContext context, _NotificationItem item) {
+    final userProfile = context.read<AuthProvider>().userProfile;
+    final hasActions = item.actionType != NotificationActionType.info;
+    final isMoreItem = item.icon == Icons.more_horiz;
+
+    Widget tileContent = Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -2325,51 +2366,170 @@ class _HomeScreenState extends State<HomeScreen> {
               : Colors.grey.shade100,
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: item.color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(item.icon, color: item.color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: item.isAlert ? AppColors.nightSky : Colors.grey.shade700,
+          Row(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: item.color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(item.icon, color: item.color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: item.isAlert ? AppColors.nightSky : Colors.grey.shade700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      item.subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (item.isAlert)
+                Container(
+                  width: 8, height: 8,
+                  decoration: BoxDecoration(
+                    color: item.color,
+                    shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  item.subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
+            ],
+          ),
+          if (hasActions && userProfile != null) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Colors.black12),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // İncele / Detay Butonu
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (item.actionType == NotificationActionType.waterAlert || item.actionType == NotificationActionType.waterRoutine) {
+                      context.pushNamed(WaterTrackerScreen.routeName);
+                    } else if (item.actionType == NotificationActionType.productRoutine || item.actionType == NotificationActionType.mealRoutine) {
+                      setState(() {
+                        _customerNavIndex = 1;
+                      });
+                    }
+                  },
+                  icon: Icon(Icons.open_in_new, size: 14, color: item.color),
+                  label: Text(
+                    'İncele',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: item.color,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Tamam Butonu
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(context); // Bildirimi kapat
+                    
+                    if (item.actionType == NotificationActionType.waterAlert) {
+                      context.read<WaterProvider>().addWater(250);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('250 ml su eklendi! 💧'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    } else if (item.actionType == NotificationActionType.waterRoutine && item.routineId != null) {
+                      await context.read<RoutineService>().updateRoutineStatus(
+                        userProfile.id,
+                        item.routineId!,
+                        true,
+                      );
+                      if (context.mounted) {
+                        context.read<WaterProvider>().addWater(500);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Su adımı tamamlandı ve 500 ml su eklendi! 💧'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      }
+                    } else if (item.routineId != null) {
+                      await context.read<RoutineService>().updateRoutineStatus(
+                        userProfile.id,
+                        item.routineId!,
+                        true,
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${item.title} tamamlandı! 🎉'),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.check, size: 14, color: Colors.white),
+                  label: const Text(
+                    'Tamam',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: item.color,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          if (item.isAlert)
-            Container(
-              width: 8, height: 8,
-              decoration: BoxDecoration(
-                color: item.color,
-                shape: BoxShape.circle,
-              ),
-            ),
+          ],
         ],
       ),
     );
+
+    if (isMoreItem) {
+      return InkWell(
+        onTap: () {
+          Navigator.pop(context);
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: tileContent,
+      );
+    }
+
+    return tileContent;
   }
 
   void _showRecentActivationSheet(
@@ -2425,12 +2585,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // ─── Notification Item Model ─────────────────────────────────────────────────
 
+enum NotificationActionType {
+  waterAlert,
+  waterRoutine,
+  mealRoutine,
+  productRoutine,
+  info,
+}
+
 class _NotificationItem {
   final IconData icon;
   final Color color;
   final String title;
   final String subtitle;
   final bool isAlert;
+  final NotificationActionType actionType;
+  final String? routineId;
+  final String? productId;
+  final DailyRoutineModel? routine;
 
   const _NotificationItem({
     required this.icon,
@@ -2438,6 +2610,10 @@ class _NotificationItem {
     required this.title,
     required this.subtitle,
     this.isAlert = false,
+    this.actionType = NotificationActionType.info,
+    this.routineId,
+    this.productId,
+    this.routine,
   });
 }
 

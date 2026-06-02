@@ -38,6 +38,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   final ImagePicker _picker = ImagePicker();
 
   void _nextPage() {
+    FocusScope.of(context).unfocus();
     if (_currentPage < _totalPages - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
@@ -117,6 +118,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                         ? IconButton(
                             icon: const Icon(Icons.arrow_back, color: AppColors.nightSky),
                             onPressed: () {
+                              FocusScope.of(context).unfocus();
                               _pageController.previousPage(
                                 duration: const Duration(milliseconds: 400),
                                 curve: Curves.easeInOut,
@@ -187,34 +189,47 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   }
 
   Widget _buildStep3PersonalInfo() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Tanışalım 👋',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Tanışalım 👋',
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Sana en iyi programı hazırlayabilmemiz için seni biraz tanıyalım.',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 32),
+                    _buildTextField('Adın Soyadın', _nameController, TextInputType.name, 'Örn: Elif Yılmaz'),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _buildTextField('Yaşın', _ageController, TextInputType.number, '28')),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildTextField('Telefon', _phoneController, TextInputType.phone, '05XX...')),
+                      ],
+                    ),
+                    const Spacer(),
+                    _buildNextButton(),
+                  ],
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Sana en iyi programı hazırlayabilmemiz için seni biraz tanıyalım.',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 32),
-          _buildTextField('Adın Soyadın', _nameController, TextInputType.name, 'Örn: Elif Yılmaz'),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _buildTextField('Yaşın', _ageController, TextInputType.number, '28')),
-              const SizedBox(width: 16),
-              Expanded(child: _buildTextField('Telefon', _phoneController, TextInputType.phone, '05XX...')),
-            ],
-          ),
-          const Spacer(),
-          _buildNextButton(),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -374,35 +389,48 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   }
 
   Widget _buildStep4PhysicalInfo() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Mevcut Durum ⚖️',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-          ),
-          const SizedBox(height: 8),
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-              children: [
-                TextSpan(text: 'Gelişimini doğru takip edebilmemiz için başlangıç ölçülerini girebilirsin. '),
-                TextSpan(text: '(Opsiyonel)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Mevcut Durum ⚖️',
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                    ),
+                    const SizedBox(height: 8),
+                    RichText(
+                      text: const TextSpan(
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                        children: [
+                          TextSpan(text: 'Gelişimini doğru takip edebilmemiz için başlangıç ölçülerini girebilirsin. '),
+                          TextSpan(text: '(Opsiyonel)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    _buildPhysicalInput('Mevcut Kilo', _weightController, 'kg', Icons.monitor_weight, Colors.green.shade100),
+                    const SizedBox(height: 16),
+                    _buildPhysicalInput('Boy', _heightController, 'cm', Icons.height, Colors.blue.shade100),
+                    const SizedBox(height: 16),
+                    _buildPhysicalInput('Hedef Kilo', _targetWeightController, 'kg', Icons.flag, Colors.orange.shade100),
+                    const Spacer(),
+                    _buildNextButton(),
+                  ],
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 32),
-          _buildPhysicalInput('Mevcut Kilo', _weightController, 'kg', Icons.monitor_weight, Colors.green.shade100),
-          const SizedBox(height: 16),
-          _buildPhysicalInput('Boy', _heightController, 'cm', Icons.height, Colors.blue.shade100),
-          const SizedBox(height: 16),
-          _buildPhysicalInput('Hedef Kilo', _targetWeightController, 'kg', Icons.flag, Colors.orange.shade100),
-          const Spacer(),
-          _buildNextButton(),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -465,145 +493,159 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   }
 
   Widget _buildStep5Selfie() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Başlangıç Fotoğrafı 📸',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-          ),
-          const SizedBox(height: 8),
-          RichText(
-            text: const TextSpan(
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-              children: [
-                TextSpan(text: '30 gün sonra farkı görmek ister misin? Motivasyon için ilk gün fotoğrafını çek. '),
-                TextSpan(text: '(Zorunlu değil)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
             ),
-          ),
-          const SizedBox(height: 32),
-          Expanded(
-            child: Center(
-              child: GestureDetector(
-                onTap: () async {
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => SafeArea(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Başlangıç Fotoğrafı 📸',
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                    ),
+                    const SizedBox(height: 8),
+                    RichText(
+                      text: const TextSpan(
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
                         children: [
-                          ListTile(
-                            leading: const Icon(Icons.camera_alt),
-                            title: const Text('Kamera ile Çek'),
-                            onTap: () async {
-                              Navigator.pop(context);
-                              final image = await _picker.pickImage(source: ImageSource.camera);
-                              if (image != null) {
-                                setState(() {
-                                  _selfieImage = image;
-                                });
-                              }
-                            },
+                          TextSpan(text: '30 gün sonra farkı görmek ister misin? Motivasyon için ilk gün fotoğrafını çek. '),
+                          TextSpan(text: '(Zorunlu değil)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Center(
+                      child: GestureDetector(
+                        onTap: () async {
+                          FocusScope.of(context).unfocus();
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (context) => SafeArea(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.camera_alt),
+                                    title: const Text('Kamera ile Çek'),
+                                    onTap: () async {
+                                      Navigator.pop(context);
+                                      final image = await _picker.pickImage(source: ImageSource.camera);
+                                      if (image != null) {
+                                        setState(() {
+                                          _selfieImage = image;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.photo_library),
+                                    title: const Text('Galeriden Seç'),
+                                    onTap: () async {
+                                      Navigator.pop(context);
+                                      final image = await _picker.pickImage(source: ImageSource.gallery);
+                                      if (image != null) {
+                                        setState(() {
+                                          _selfieImage = image;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          width: 200,
+                          height: 260,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(color: Colors.grey.shade300, width: 2, style: BorderStyle.solid),
+                            image: _selfieImage != null
+                                ? DecorationImage(
+                                    image: FileImage(File(_selfieImage!.path)),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null,
                           ),
-                          ListTile(
-                            leading: const Icon(Icons.photo_library),
-                            title: const Text('Galeriden Seç'),
-                            onTap: () async {
-                              Navigator.pop(context);
-                              final image = await _picker.pickImage(source: ImageSource.gallery);
-                              if (image != null) {
-                                setState(() {
-                                  _selfieImage = image;
-                                });
-                              }
-                            },
+                          child: _selfieImage == null
+                              ? Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: const BoxDecoration(color: AppColors.white, shape: BoxShape.circle, boxShadow: [
+                                        BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
+                                      ]),
+                                      child: const Icon(Icons.photo_camera, color: AppColors.garden, size: 32),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text('Fotoğraf Çek', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                  ],
+                                )
+                              : null,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.green.shade100),
+                      ),
+                      child: Row(
+                        children: [
+                          const Text('⏳', style: TextStyle(fontSize: 24)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: RichText(
+                              text: TextSpan(
+                                style: TextStyle(color: Colors.green.shade800, fontSize: 13),
+                                children: const [
+                                  TextSpan(text: 'Butona tıkladığında '),
+                                  TextSpan(text: '30 Günlük', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  TextSpan(text: ' geri sayımın başlayacak. Hazır mısın?'),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
-                child: Container(
-                  width: 200,
-                  height: 260,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: Colors.grey.shade300, width: 2, style: BorderStyle.solid),
-                    image: _selfieImage != null
-                        ? DecorationImage(
-                            image: FileImage(File(_selfieImage!.path)),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: _selfieImage == null
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: const BoxDecoration(color: AppColors.white, shape: BoxShape.circle, boxShadow: [
-                                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))
-                              ]),
-                              child: const Icon(Icons.photo_camera, color: AppColors.garden, size: 32),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text('Fotoğraf Çek', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
-                          ],
-                        )
-                      : null,
+                    const Spacer(),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _finishOnboarding,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.nightSky,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 8,
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Yolculuğum Başlıyor 🚀', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.white)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green.shade50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.green.shade100),
-            ),
-            child: Row(
-              children: [
-                const Text('⏳', style: TextStyle(fontSize: 24)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      style: TextStyle(color: Colors.green.shade800, fontSize: 13),
-                      children: const [
-                        TextSpan(text: 'Butona tıkladığında '),
-                        TextSpan(text: '30 Günlük', style: TextStyle(fontWeight: FontWeight.bold)),
-                        TextSpan(text: ' geri sayımın başlayacak. Hazır mısın?'),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _finishOnboarding,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.nightSky,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 8,
-            ),
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('Yolculuğum Başlıyor 🚀', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.white)),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

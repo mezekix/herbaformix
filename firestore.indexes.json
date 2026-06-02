@@ -17,6 +17,52 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "inviteCodes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "distributorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "scheduled_follow_ups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "consultantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isCompleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Daily_Routines",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "is_completed",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "scheduled_time",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

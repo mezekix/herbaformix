@@ -33,16 +33,23 @@ class _MotivationWidgetState extends State<MotivationWidget> {
     _loadQuotes();
     _loadDistributorMessage();
   }
-
   Future<void> _loadQuotes() async {
     try {
+      final authProvider = context.read<AuthProvider>();
       final jsonString = await rootBundle.loadString('assets/motivations.json');
-      final List<dynamic> data = json.decode(jsonString);
+      final Map<String, dynamic> data = json.decode(jsonString);
+      
+      final userGoal = authProvider.userProfile?.userGoal ?? 'healthy_living';
+      
+      final List<dynamic> quotesList = data[userGoal] ?? data['healthy_living'] ?? [];
+      
       if (!mounted) return;
       setState(() {
-        _quotes = data.cast<String>();
-        final dayIndex = DateTime.now().millisecondsSinceEpoch ~/ 86400000 % _quotes.length;
-        _currentIndex = dayIndex;
+        _quotes = quotesList.cast<String>();
+        if (_quotes.isNotEmpty) {
+          final dayIndex = DateTime.now().millisecondsSinceEpoch ~/ 86400000 % _quotes.length;
+          _currentIndex = dayIndex;
+        }
       });
     } catch (e) {
       debugPrint('loadQuotes hatası: $e');

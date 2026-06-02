@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'core/app_colors.dart'; // Yeni renk dosyamızı import ediyoruz
@@ -70,6 +71,15 @@ class _AppState extends State<App> {
     return MaterialApp.router(
       title: 'HerbaForm',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('tr', 'TR'),
+        Locale('en', 'US'),
+      ],
       theme: ThemeData(
         // Ana Renk Paleti AppColors'dan alınıyor
         colorScheme: ColorScheme.fromSeed(

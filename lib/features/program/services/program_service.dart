@@ -89,6 +89,7 @@ class ProgramService {
     try {
       final now = DateTime.now();
       final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
 
       final routinesRef = _firestore
           .collection('users')
@@ -98,6 +99,8 @@ class ProgramService {
       final snap = await routinesRef
           .where('scheduled_time',
               isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('scheduled_time',
+              isLessThan: Timestamp.fromDate(endOfDay))
           .limit(1)
           .get();
 

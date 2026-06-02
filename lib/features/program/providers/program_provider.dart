@@ -318,8 +318,8 @@ class ProgramProvider with ChangeNotifier {
         scheduledTime: slot.scheduledTime,
       );
 
-      // 2. Normal öğün (snack değilse) için 30 dk öncesine SU bildirimi
-      if (slot.isNormalMeal && slot.kind != MealSlotKind.snack) {
+      // 2. Öğün (snack değilse) için 30 dk öncesine SU bildirimi
+      if (slot.kind != MealSlotKind.snack) {
         final timeParts = slot.scheduledTime.split(':');
         if (timeParts.length == 2) {
           final mealHour = int.tryParse(timeParts[0]) ?? 0;
@@ -335,7 +335,7 @@ class ProgramProvider with ChangeNotifier {
           await _notificationService.scheduleMealNotification(
             notificationId: waterId,
             title: '💧 Su Hatırlatıcısı',
-            body: '${slot.label} öğününüzden önce 1 büyük bardak (500ml) su içmeyi unutmayın.',
+            body: '${slot.label} öncesinde 1 büyük bardak (500ml) su içmeyi unutmayın.',
             scheduledTime: waterScheduledTime,
           );
         }

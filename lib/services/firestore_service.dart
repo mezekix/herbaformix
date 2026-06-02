@@ -95,6 +95,11 @@ class FirestoreService {
         .map((s) => s.docs.map((d) => d.data()).toList());
   }
 
+  Future<List<CustomerModel>> fetchAllCustomers(String userId) async {
+    final snapshot = await customersRef(userId).orderBy('firstName').get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
   Future<CustomerModel?> getCustomer(String userId, String customerId) async {
     try {
       final docSnapshot = await customersRef(userId).doc(customerId).get();
@@ -698,6 +703,15 @@ class FirestoreService {
         .where('assignedDistributorId', isEqualTo: distributorId)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+  }
+
+  Future<List<UserProfileModel>> fetchCustomersByDistributorId(
+    String distributorId,
+  ) async {
+    final snapshot = await userProfilesRef
+        .where('assignedDistributorId', isEqualTo: distributorId)
+        .get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
   Stream<List<InviteCodeModel>> getInviteCodesForDistributor(

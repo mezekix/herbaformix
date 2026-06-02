@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../models/invite_code_model.dart';
@@ -11,6 +13,10 @@ import '../../auth/providers/auth_provider.dart';
 /// Distribütör profil ekranındaki davet kodları bölümü.
 class InviteCodeSection extends StatefulWidget {
   const InviteCodeSection({super.key});
+
+  /// Davet kodunu paylaşırken kullanılacak mesaj şablonu.
+  static const String shareMessageTemplate =
+      'Herbaformix platformuna katılman için davet kodun: {CODE}\n\nKayıt olurken bu kodu girerek benimle bağlantı kurabilirsin.';
 
   @override
   State<InviteCodeSection> createState() => _InviteCodeSectionState();
@@ -249,8 +255,38 @@ class _InviteCodeSectionState extends State<InviteCodeSection> {
             ),
           ),
 
-          // Sil butonu (sadece aktif kodlarda)
-          if (isActive)
+          // Eylemler (sadece aktif kodlarda)
+          if (isActive) ...[
+            IconButton(
+              icon: const Icon(Icons.copy, color: AppColors.primary, size: 20),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: code.code));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Davet kodu kopyalandı: ${code.code}'),
+                    backgroundColor: AppColors.primary,
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+              tooltip: 'Kopyala',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
+            IconButton(
+              icon: const Icon(Icons.share, color: AppColors.papaya, size: 20),
+              onPressed: () {
+                SharePlus.instance.share(
+                  ShareParams(
+                    text: InviteCodeSection.shareMessageTemplate.replaceAll('{CODE}', code.code),
+                    subject: 'Herbaformix Davet Kodu',
+                  ),
+                );
+              },
+              tooltip: 'Paylaş',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            ),
             IconButton(
               icon: Icon(Icons.delete_outline,
                   color: Colors.red.withValues(alpha: 0.6), size: 20),
@@ -259,6 +295,7 @@ class _InviteCodeSectionState extends State<InviteCodeSection> {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             ),
+          ],
         ],
       ),
     );

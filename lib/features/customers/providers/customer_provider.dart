@@ -268,10 +268,9 @@ class CustomerProvider with ChangeNotifier {
 
     try {
       final userProfileCustomers = await _firestoreService
-          .getCustomersByDistributorId(_currentUserId!)
-          .first;
+          .fetchCustomersByDistributorId(_currentUserId!);
       final subCollectionCustomers =
-          await _firestoreService.getCustomers(_currentUserId!).first;
+          await _firestoreService.fetchAllCustomers(_currentUserId!);
 
       final result = <CombinedCustomerEntry>[];
       final addedIds = <String>{};

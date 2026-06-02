@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../models/product_model.dart';
 
 /// Öğün tipi
 enum MealSlotKind {
@@ -266,10 +267,7 @@ class ProgramModel {
 int calculateMinDuration(double currentWeight, double targetWeight) {
   final diff = currentWeight - targetWeight;
   if (diff <= 0) throw ArgumentError('Hedef kilo mevcut kilodan küçük olmalıdır.');
-  if (diff <= 5) return 1;
-  if (diff <= 10) return 2;
-  if (diff <= 20) return 3;
-  return 4;
+  return (diff / 5).ceil();
 }
 
 String calculateWaterStepTime(String mealTime) {
@@ -293,21 +291,55 @@ int getMealNotificationId(String slotId) {
 }
 
 /// Varsayılan slot listesi oluşturur
-List<MealSlot> buildDefaultSlots(String userGoal) {
+List<MealSlot> buildDefaultSlots(
+  String userGoal, {
+  String? wakeTime,
+  String? lunchTime,
+  String? sleepTime,
+  List<ProductModel>? allProducts,
+}) {
+  String calcMorningTime(String wTime) {
+    final parts = wTime.split(':');
+    if (parts.length != 2) return '09:00';
+    final dt = DateTime(0, 1, 1, int.parse(parts[0]), int.parse(parts[1]));
+    final morning = dt.add(const Duration(hours: 1));
+    return '${morning.hour.toString().padLeft(2, '0')}:${morning.minute.toString().padLeft(2, '0')}';
+  }
+
+  final mTime = wakeTime != null ? calcMorningTime(wakeTime) : '09:00';
+  final lTime = lunchTime ?? '13:00';
+  final eTime = sleepTime != null ? calculateEveningMealTime(sleepTime) : '19:00';
+
+  // "Formül 1" içeren ürünleri bul
+  MealProduct? formula1Product;
+  if (allProducts != null) {
+    try {
+      final f1 = allProducts.firstWhere(
+        (p) => p.name.toLowerCase().contains('formül 1') || p.name.toLowerCase().contains('shake'),
+      );
+      formula1Product = MealProduct(productId: f1.id, productName: f1.name);
+    } catch (_) {
+      // Bulunamazsa sorun yok
+    }
+  }
+
+  final addF1 = userGoal == 'weight_loss' && formula1Product != null;
+  final f1List = addF1 ? [formula1Product] : <MealProduct>[];
+
   return [
     MealSlot(
       id: 'morning',
       kind: MealSlotKind.morning,
       label: 'Sabah Öğünü',
-      scheduledTime: '09:00',
+      scheduledTime: mTime,
       isNormalMeal: false,
-      products: [],
+      products: f1List,
     ),
     MealSlot(
       id: 'lunch',
       kind: MealSlotKind.lunch,
       label: 'Öğle Öğünü',
-      scheduledTime: '13:00',
+      scheduledTime: lTime,
       isNormalMeal: userGoal == 'weight_loss', // kilo vermede öğle normal yemek
       products: [],
     ),
@@ -315,9 +347,9 @@ List<MealSlot> buildDefaultSlots(String userGoal) {
       id: 'evening',
       kind: MealSlotKind.evening,
       label: 'Akşam Öğünü',
-      scheduledTime: '19:00',
+      scheduledTime: eTime,
       isNormalMeal: false,
-      products: [],
+      products: f1List,
     ),
   ];
 }

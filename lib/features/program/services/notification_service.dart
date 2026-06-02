@@ -25,7 +25,7 @@ class NotificationService {
 
   // ── Bildirim action ID sabitleri ──────────────────────────────────────────
   static const String actionOk = 'ACTION_OK';
-  static const String actionRemindLater = 'ACTION_REMIND_LATER';
+  static const String actionView = 'ACTION_VIEW';
 
   // Hatırlatma ID offset'i (çakışmayı önler)
   static const int _reminderIdOffset = 500000;
@@ -70,17 +70,14 @@ class NotificationService {
   }
 
   /// Bildirim tıklama/aksiyon callback'i.
-  /// "Daha Sonra" seçilirse 15 dk sonra 1 defalık hatırlatma bildirimi zamanlar.
   void _onNotificationResponse(NotificationResponse response) {
     debugPrint(
       '[NotificationService] Bildirim yanıtı: '
       'actionId=${response.actionId}, id=${response.id}, payload=${response.payload}',
     );
 
-    if (response.actionId == actionRemindLater) {
-      _scheduleReminderFromPayload(response.id, response.payload);
-    }
-    // "Tamam" veya doğrudan tıklama → ek işlem yok
+    // "Tamam" veya doğrudan tıklama → ek işlem yok, bildirim kapanır.
+    // "İncele" tıklandığında showsUserInterface: true olduğu için uygulama açılır.
   }
 
   /// Payload bilgisinden 15 dk sonrası için hatırlatma bildirimi zamanlar.
@@ -114,6 +111,11 @@ class NotificationService {
         icon: '@drawable/ic_notification',
         color: const Color(0xFF7AC144), // AppColors.primary
         actions: const <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            actionView,
+            '🔍 İncele',
+            showsUserInterface: true,
+          ),
           AndroidNotificationAction(
             actionOk,
             '✅ Tamam',
@@ -251,13 +253,13 @@ class NotificationService {
         color: const Color(0xFF7AC144), // AppColors.primary
         actions: const <AndroidNotificationAction>[
           AndroidNotificationAction(
-            actionOk,
-            '✅ Tamam',
-            showsUserInterface: false,
+            actionView,
+            '🔍 İncele',
+            showsUserInterface: true,
           ),
           AndroidNotificationAction(
-            actionRemindLater,
-            '⏰ Daha Sonra',
+            actionOk,
+            '✅ Tamam',
             showsUserInterface: false,
           ),
         ],
@@ -352,13 +354,13 @@ class NotificationService {
         color: Color(0xFF7AC144),
         actions: <AndroidNotificationAction>[
           AndroidNotificationAction(
-            actionOk,
-            '✅ Tamam',
-            showsUserInterface: false,
+            actionView,
+            '🔍 İncele',
+            showsUserInterface: true,
           ),
           AndroidNotificationAction(
-            actionRemindLater,
-            '⏰ Daha Sonra',
+            actionOk,
+            '✅ Tamam',
             showsUserInterface: false,
           ),
         ],

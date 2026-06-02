@@ -194,10 +194,11 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
       ),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Handle
             Center(
               child: Container(
@@ -405,6 +406,7 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
               ),
             ),
           ],
+        ),
         ),
       ),
     );
