@@ -49,12 +49,13 @@ class AuthProvider with ChangeNotifier {
   }
 
   AuthProvider(this._authService, this._firestoreService) {
-    // Constructor'a FirestoreService'i ekle
     _firebaseUser = _authService.getCurrentUser();
     if (_firebaseUser != null) {
       _status = AuthStatus.authenticating;
-      // Build aşamasında synchronous notifyListeners tetiklememesi için microtask ile asenkron başlatıyoruz
-      Future.microtask(() => _onAuthStateChanged(_firebaseUser));
+      // microtask kullanmıyoruz — authStateChanges stream'i zaten
+      // ilk event olarak mevcut kullanıcıyı verecek.
+      // İkisini birden çağırmak yarış durumuna ve çift Firestore
+      // çağrısına yol açıyordu.
     } else {
       _status = AuthStatus.unauthenticated;
     }
@@ -341,9 +342,11 @@ class AuthProvider with ChangeNotifier {
       final destFile = await imageFile.copy(destPath);
       debugPrint('Profil fotoğrafı local kaydedildi: ${destFile.path}');
 
-      // Fotoğraf güncelleme tarihini profile kaydet
+      // Fotoğraf güncelleme tarihini profile kaydet (immutable copyWith)
       if (_userProfile != null) {
-        _userProfile!.profilePhotoUpdatedAt = DateTime.now();
+        _userProfile = _userProfile!.copyWith(
+          profilePhotoUpdatedAt: DateTime.now(),
+        );
       }
 
       return destFile.path;

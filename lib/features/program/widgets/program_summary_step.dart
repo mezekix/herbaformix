@@ -196,8 +196,10 @@ class ProgramSummaryStep extends StatelessWidget {
                     if (success && context.mounted) {
                       final userProfile = authProvider.userProfile;
                       if (!isDistributorMode && userProfile != null) {
-                        userProfile.programStartDate = DateTime.now();
-                        await authProvider.updateUserProfile(userProfile);
+                        final updated = userProfile.copyWith(
+                          programStartDate: DateTime.now(),
+                        );
+                        await authProvider.updateUserProfile(updated);
                       }
 
                       if (context.mounted) {

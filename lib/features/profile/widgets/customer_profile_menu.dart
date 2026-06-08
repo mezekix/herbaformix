@@ -237,8 +237,9 @@ class CustomerProfileMenu extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      final updatedProfile = authProvider.userProfile!;
-      updatedProfile.distributorRequestStatus = 'pending';
+      final updatedProfile = authProvider.userProfile!.copyWith(
+        distributorRequestStatus: 'pending',
+      );
 
       final success = await authProvider.updateUserProfile(updatedProfile);
       if (success && context.mounted) {

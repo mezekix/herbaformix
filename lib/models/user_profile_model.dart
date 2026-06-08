@@ -1,46 +1,54 @@
 // Bu dosya, kullanıcı profili verilerini temsil eden model sınıfını içerir.
 import 'user_role.dart';
 
+/// Kullanıcı profili — **immutable**.
+///
+/// State güncellemeleri için `copyWith` kullanın. Doğrudan alan ataması yapmayın
+/// (Dart compile-time'da engelleyecektir; tüm alanlar `final`).
+///
+/// ```dart
+/// final updated = oldProfile.copyWith(name: 'Yeni Ad', isOnboarded: true);
+/// ```
 class UserProfileModel {
-  final String id; // Firebase Auth UID ile aynı olacak
+  final String id; // Firebase Auth UID ile aynı
   final String email;
   final UserRole role;
-  String? name;
-  String? distributorLevel; // Örn: Supervisor, President's Team
-  int? monthlyVPTarget; // Aylık Kişisel Hacim Puanı Hedefi
-  
+  final String? name;
+  final String? distributorLevel; // Örn: Supervisor, President's Team
+  final int? monthlyVPTarget; // Aylık Kişisel Hacim Puanı Hedefi
+
   // Onboarding alanları
-  bool isOnboarded;
-  int? age;
-  String? phoneNumber;
-  double? weight;
-  double? height;
-  String? goal; // Eski alan — hedef kilo (String olarak saklanıyordu). Geriye uyumluluk için korundu.
-  double? targetWeight; // Hedef kilo (kg) — sayısal alan
-  DateTime? programStartDate;
+  final bool isOnboarded;
+  final int? age;
+  final String? phoneNumber;
+  final double? weight;
+  final double? height;
+  final String? goal; // ⚠️ DEPRECATED — eski alan. Migration sonrası P1.9'da kaldırılacak.
+  final double? targetWeight; // Hedef kilo (kg) — sayısal alan
+  final DateTime? programStartDate;
 
   // Yeni eklenen alanlar (Distribütör Takip Aracı)
-  String? userGoal; // Enum yerine String: weight_loss, healthy_living, weight_gain (maintain)
-  String? wakeTime; // Örn: "07:30"
-  String? lunchTime; // Örn: "13:00"
-  String? sleepTime; // Örn: "23:00"
+  final String? userGoal; // String: weight_loss, healthy_living, weight_gain
+  final String? wakeTime; // Örn: "07:30"
+  final String? lunchTime; // Örn: "13:00"
+  final String? sleepTime; // Örn: "23:00"
 
-  // Müşteri Profil Ayarları alanları
-  DateTime? birthDate;
-  String? gender; // "Kadın" | "Erkek" | "Belirtmek İstemiyorum"
-  String? healthNotes; // max 1000 karakter
-  String? allergies; // max 1000 karakter
-  String? medications; // max 1000 karakter
-  String? assignedDistributorId;
-  String? profilePhotoUrl;
-  DateTime? profilePhotoUpdatedAt;
-  List<String> earnedBadges; // Kazanılan rozet ID'leri
-  int? waterDailyGoal; // Günlük su hedefi (ml)
-  int? waterMinLimit; // Distribütörün koyduğu min limit (ml)
-  int? waterMaxLimit; // Distribütörün koyduğu max limit (ml)
-  String? distributorRequestStatus; // null (talep yok), 'pending' (onay bekliyor), 'approved' (onaylandı)
+  // Müşteri Profil Ayarları
+  final DateTime? birthDate;
+  final String? gender; // "Kadın" | "Erkek" | "Belirtmek İstemiyorum"
+  final String? healthNotes; // max 1000 karakter
+  final String? allergies; // max 1000 karakter
+  final String? medications; // max 1000 karakter
+  final String? assignedDistributorId;
+  final String? profilePhotoUrl;
+  final DateTime? profilePhotoUpdatedAt;
+  final List<String> earnedBadges; // Kazanılan rozet ID'leri
+  final int? waterDailyGoal; // Günlük su hedefi (ml)
+  final int? waterMinLimit; // Distribütörün koyduğu min limit (ml)
+  final int? waterMaxLimit; // Distribütörün koyduğu max limit (ml)
+  final String? distributorRequestStatus; // null / 'pending' / 'approved'
 
-  UserProfileModel({
+  const UserProfileModel({
     required this.id,
     required this.email,
     required this.role,
@@ -74,7 +82,127 @@ class UserProfileModel {
     this.distributorRequestStatus,
   });
 
-  // Firestore'dan veri okurken Map'i UserProfileModel'e dönüştürmek için factory constructor
+  // ── Sentinel ────────────────────────────────────────────────────────────────
+  // copyWith içinde "alanı null yap" ile "alanı değiştirme" senaryolarını
+  // ayırt edebilmek için sentinel kullanılır.
+  static const Object _unset = Object();
+
+  /// İmmutable profili istenen alanlar değişmiş yeni bir kopyayla döndürür.
+  ///
+  /// Alanı **null** yapmak için `null` geçin (sentinel sayesinde ayırt edilir):
+  /// ```dart
+  /// profile.copyWith(profilePhotoUrl: null) // → fotoğraf URL'i silinir
+  /// profile.copyWith() // → hiçbir alan değişmez
+  /// ```
+  UserProfileModel copyWith({
+    String? id,
+    String? email,
+    UserRole? role,
+    Object? name = _unset,
+    Object? distributorLevel = _unset,
+    Object? monthlyVPTarget = _unset,
+    bool? isOnboarded,
+    Object? age = _unset,
+    Object? phoneNumber = _unset,
+    Object? weight = _unset,
+    Object? height = _unset,
+    Object? goal = _unset,
+    Object? targetWeight = _unset,
+    Object? programStartDate = _unset,
+    Object? userGoal = _unset,
+    Object? wakeTime = _unset,
+    Object? lunchTime = _unset,
+    Object? sleepTime = _unset,
+    Object? birthDate = _unset,
+    Object? gender = _unset,
+    Object? healthNotes = _unset,
+    Object? allergies = _unset,
+    Object? medications = _unset,
+    Object? assignedDistributorId = _unset,
+    Object? profilePhotoUrl = _unset,
+    Object? profilePhotoUpdatedAt = _unset,
+    List<String>? earnedBadges,
+    Object? waterDailyGoal = _unset,
+    Object? waterMinLimit = _unset,
+    Object? waterMaxLimit = _unset,
+    Object? distributorRequestStatus = _unset,
+  }) {
+    return UserProfileModel(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      name: identical(name, _unset) ? this.name : name as String?,
+      distributorLevel: identical(distributorLevel, _unset)
+          ? this.distributorLevel
+          : distributorLevel as String?,
+      monthlyVPTarget: identical(monthlyVPTarget, _unset)
+          ? this.monthlyVPTarget
+          : monthlyVPTarget as int?,
+      isOnboarded: isOnboarded ?? this.isOnboarded,
+      age: identical(age, _unset) ? this.age : age as int?,
+      phoneNumber: identical(phoneNumber, _unset)
+          ? this.phoneNumber
+          : phoneNumber as String?,
+      weight: identical(weight, _unset) ? this.weight : weight as double?,
+      height: identical(height, _unset) ? this.height : height as double?,
+      goal: identical(goal, _unset) ? this.goal : goal as String?,
+      targetWeight: identical(targetWeight, _unset)
+          ? this.targetWeight
+          : targetWeight as double?,
+      programStartDate: identical(programStartDate, _unset)
+          ? this.programStartDate
+          : programStartDate as DateTime?,
+      userGoal: identical(userGoal, _unset)
+          ? this.userGoal
+          : userGoal as String?,
+      wakeTime: identical(wakeTime, _unset)
+          ? this.wakeTime
+          : wakeTime as String?,
+      lunchTime: identical(lunchTime, _unset)
+          ? this.lunchTime
+          : lunchTime as String?,
+      sleepTime: identical(sleepTime, _unset)
+          ? this.sleepTime
+          : sleepTime as String?,
+      birthDate: identical(birthDate, _unset)
+          ? this.birthDate
+          : birthDate as DateTime?,
+      gender: identical(gender, _unset) ? this.gender : gender as String?,
+      healthNotes: identical(healthNotes, _unset)
+          ? this.healthNotes
+          : healthNotes as String?,
+      allergies: identical(allergies, _unset)
+          ? this.allergies
+          : allergies as String?,
+      medications: identical(medications, _unset)
+          ? this.medications
+          : medications as String?,
+      assignedDistributorId: identical(assignedDistributorId, _unset)
+          ? this.assignedDistributorId
+          : assignedDistributorId as String?,
+      profilePhotoUrl: identical(profilePhotoUrl, _unset)
+          ? this.profilePhotoUrl
+          : profilePhotoUrl as String?,
+      profilePhotoUpdatedAt: identical(profilePhotoUpdatedAt, _unset)
+          ? this.profilePhotoUpdatedAt
+          : profilePhotoUpdatedAt as DateTime?,
+      earnedBadges: earnedBadges ?? this.earnedBadges,
+      waterDailyGoal: identical(waterDailyGoal, _unset)
+          ? this.waterDailyGoal
+          : waterDailyGoal as int?,
+      waterMinLimit: identical(waterMinLimit, _unset)
+          ? this.waterMinLimit
+          : waterMinLimit as int?,
+      waterMaxLimit: identical(waterMaxLimit, _unset)
+          ? this.waterMaxLimit
+          : waterMaxLimit as int?,
+      distributorRequestStatus: identical(distributorRequestStatus, _unset)
+          ? this.distributorRequestStatus
+          : distributorRequestStatus as String?,
+    );
+  }
+
+  // Firestore'dan veri okurken Map'i UserProfileModel'e dönüştürmek için factory
   factory UserProfileModel.fromMap(
     Map<String, dynamic> map,
     String documentId,
@@ -95,10 +223,13 @@ class UserProfileModel {
       weight: (map['weight'] as num?)?.toDouble(),
       height: (map['height'] as num?)?.toDouble(),
       goal: map['goal'] as String?,
+      // ⚠️ Geriye uyumluluk fallback'i — P1.9 backfill sonrası kaldırılacak.
       targetWeight: (map['targetWeight'] as num?)?.toDouble() ??
           (map['goal'] is num ? (map['goal'] as num).toDouble() : null) ??
-          (map['goal'] is String ? double.tryParse(map['goal'] as String) : null),
-      programStartDate: map['programStartDate'] != null 
+          (map['goal'] is String
+              ? double.tryParse(map['goal'] as String)
+              : null),
+      programStartDate: map['programStartDate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['programStartDate'] as int)
           : null,
       userGoal: map['user_goal'] as String?,
@@ -115,12 +246,13 @@ class UserProfileModel {
       assignedDistributorId: map['assignedDistributorId'] as String?,
       profilePhotoUrl: map['profilePhotoUrl'] as String?,
       profilePhotoUpdatedAt: map['profilePhotoUpdatedAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['profilePhotoUpdatedAt'] as int)
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['profilePhotoUpdatedAt'] as int)
           : null,
       earnedBadges: (map['earnedBadges'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
-          [],
+          const [],
       waterDailyGoal: map['waterDailyGoal'] as int?,
       waterMinLimit: map['waterMinLimit'] as int?,
       waterMaxLimit: map['waterMaxLimit'] as int?,
@@ -128,7 +260,7 @@ class UserProfileModel {
     );
   }
 
-  // UserProfileModel'i Firestore'a yazmak için Map'e dönüştürmek için metot
+  // UserProfileModel'i Firestore'a yazmak için Map'e dönüştürür
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
       'email': email,
@@ -145,24 +277,35 @@ class UserProfileModel {
     if (height != null) map['height'] = height;
     if (goal != null) map['goal'] = goal;
     if (targetWeight != null) map['targetWeight'] = targetWeight;
-    if (programStartDate != null) map['programStartDate'] = programStartDate!.millisecondsSinceEpoch;
+    if (programStartDate != null) {
+      map['programStartDate'] = programStartDate!.millisecondsSinceEpoch;
+    }
     if (userGoal != null) map['user_goal'] = userGoal;
     if (wakeTime != null) map['wake_time'] = wakeTime;
     if (lunchTime != null) map['lunch_time'] = lunchTime;
     if (sleepTime != null) map['sleep_time'] = sleepTime;
-    if (birthDate != null) map['birthDate'] = birthDate!.millisecondsSinceEpoch;
+    if (birthDate != null) {
+      map['birthDate'] = birthDate!.millisecondsSinceEpoch;
+    }
     if (gender != null) map['gender'] = gender;
     if (healthNotes != null) map['healthNotes'] = healthNotes;
     if (allergies != null) map['allergies'] = allergies;
     if (medications != null) map['medications'] = medications;
-    if (assignedDistributorId != null) map['assignedDistributorId'] = assignedDistributorId;
+    if (assignedDistributorId != null) {
+      map['assignedDistributorId'] = assignedDistributorId;
+    }
     if (profilePhotoUrl != null) map['profilePhotoUrl'] = profilePhotoUrl;
-    if (profilePhotoUpdatedAt != null) map['profilePhotoUpdatedAt'] = profilePhotoUpdatedAt!.millisecondsSinceEpoch;
+    if (profilePhotoUpdatedAt != null) {
+      map['profilePhotoUpdatedAt'] =
+          profilePhotoUpdatedAt!.millisecondsSinceEpoch;
+    }
     if (earnedBadges.isNotEmpty) map['earnedBadges'] = earnedBadges;
     if (waterDailyGoal != null) map['waterDailyGoal'] = waterDailyGoal;
     if (waterMinLimit != null) map['waterMinLimit'] = waterMinLimit;
     if (waterMaxLimit != null) map['waterMaxLimit'] = waterMaxLimit;
-    if (distributorRequestStatus != null) map['distributorRequestStatus'] = distributorRequestStatus;
+    if (distributorRequestStatus != null) {
+      map['distributorRequestStatus'] = distributorRequestStatus;
+    }
 
     return map;
   }

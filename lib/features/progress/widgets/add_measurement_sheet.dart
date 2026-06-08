@@ -99,8 +99,8 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
     if (_needsHeight) {
       final h = double.tryParse(_heightCtrl.text.replaceAll(',', '.'));
       if (h != null && h > 0) {
-        userProfile.height = h;
-        await authProvider.updateUserProfile(userProfile);
+        final updated = userProfile.copyWith(height: h);
+        await authProvider.updateUserProfile(updated);
       }
     }
 
@@ -139,6 +139,7 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
                e.date.day == _selectedDate.day,
       );
       if (hasSameDay) {
+        if (!mounted) return;
         final shouldContinue = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(

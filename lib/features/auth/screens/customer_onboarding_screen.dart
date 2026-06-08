@@ -5,7 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
-import '../../home/screens/home_screen.dart'; // Yönlendirme için
+import '../../products/providers/product_provider.dart';
+import '../../program/providers/program_provider.dart';
 import '../providers/auth_provider.dart';
 
 class CustomerOnboardingScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   final TextEditingController _targetWeightController = TextEditingController();
 
   String _selectedGoal = ''; // weight_loss, healthy_living, weight_gain
+  String? _selectedGender;
   TimeOfDay? _wakeTime;
   TimeOfDay? _lunchTime;
   TimeOfDay? _sleepTime;
@@ -50,33 +52,76 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   Future<void> _finishOnboarding() async {
     final authProvider = context.read<AuthProvider>();
     final userProfile = authProvider.userProfile;
+    if (userProfile == null) return;
 
-    if (userProfile != null) {
-      userProfile.name = _nameController.text.trim();
-      userProfile.age = int.tryParse(_ageController.text.trim());
-      userProfile.phoneNumber = _phoneController.text.trim();
-      userProfile.weight = double.tryParse(_weightController.text.trim());
-      userProfile.height = double.tryParse(_heightController.text.trim());
-      userProfile.targetWeight = double.tryParse(_targetWeightController.text.trim());
-      userProfile.userGoal = _selectedGoal;
-      userProfile.wakeTime = _wakeTime != null ? '${_wakeTime!.hour.toString().padLeft(2, '0')}:${_wakeTime!.minute.toString().padLeft(2, '0')}' : null;
-      userProfile.lunchTime = _lunchTime != null ? '${_lunchTime!.hour.toString().padLeft(2, '0')}:${_lunchTime!.minute.toString().padLeft(2, '0')}' : null;
-      userProfile.sleepTime = _sleepTime != null ? '${_sleepTime!.hour.toString().padLeft(2, '0')}:${_sleepTime!.minute.toString().padLeft(2, '0')}' : null;
-      userProfile.isOnboarded = true;
-      userProfile.programStartDate = DateTime.now();
+    String? fmt(TimeOfDay? t) => t == null
+        ? null
+        : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-      await authProvider.updateUserProfile(userProfile);
-    }
+    final updated = userProfile.copyWith(
+      name: _nameController.text.trim(),
+      age: int.tryParse(_ageController.text.trim()),
+      phoneNumber: _phoneController.text.trim(),
+      weight: double.tryParse(_weightController.text.trim()),
+      height: double.tryParse(_heightController.text.trim()),
+      targetWeight: double.tryParse(_targetWeightController.text.trim()),
+      userGoal: _selectedGoal,
+      wakeTime: fmt(_wakeTime),
+      lunchTime: fmt(_lunchTime),
+      sleepTime: fmt(_sleepTime),
+      gender: _selectedGender,
+      isOnboarded: true,
+      programStartDate: DateTime.now(),
+    );
+
+    await authProvider.updateUserProfile(updated);
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Yolculuğunuz Başladı! 30 Günlük sayaç aktif.'),
-        backgroundColor: AppColors.garden,
+    // Otomatik Program Oluşturma — güncellenmiş profilden okur,
+    // eski mutable kodda olduğu gibi yeni saatleri kullanır.
+    final productProvider = context.read<ProductProvider>();
+    final programProvider = context.read<ProgramProvider>();
+
+    await programProvider.createAutomaticProgram(
+      userId: updated.id,
+      userGoal: _selectedGoal,
+      currentWeight: double.tryParse(_weightController.text.trim()),
+      targetWeight: double.tryParse(_targetWeightController.text.trim()),
+      allProducts: productProvider.products,
+      wakeTime: updated.wakeTime,
+      lunchTime: updated.lunchTime,
+      sleepTime: updated.sleepTime,
+    );
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Programınız Hazır! 🎉', style: TextStyle(color: AppColors.garden, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'Program saatleriniz yaşam tarzınıza göre ayarlandı.\n\nLütfen program ekranına giderek kullanacağınız ürünleri ekleyin ve programınızı tamamlayın.',
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.garden,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Programıma Git', style: TextStyle(color: AppColors.white)),
+          )
+        ],
       ),
     );
-    context.goNamed(HomeScreen.routeName);
+
+    if (!mounted) return;
+    context.goNamed('create-program'); // Program düzenleme ekranına yönlendir
   }
 
   @override
@@ -219,6 +264,36 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                         Expanded(child: _buildTextField('Yaşın', _ageController, TextInputType.number, '28')),
                         const SizedBox(width: 16),
                         Expanded(child: _buildTextField('Telefon', _phoneController, TextInputType.phone, '05XX...')),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Cinsiyet', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 14)),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          initialValue: _selectedGender,
+                          hint: const Text('Seçiniz'),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: AppColors.white,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
+                            focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16)), borderSide: BorderSide(color: AppColors.garden, width: 2)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'Kadın', child: Text('Kadın')),
+                            DropdownMenuItem(value: 'Erkek', child: Text('Erkek')),
+                            DropdownMenuItem(value: 'Belirtmek İstemiyorum', child: Text('Belirtmek İstemiyorum')),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              _selectedGender = val;
+                            });
+                          },
+                        ),
                       ],
                     ),
                     const Spacer(),
@@ -421,7 +496,17 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     const SizedBox(height: 16),
                     _buildPhysicalInput('Boy', _heightController, 'cm', Icons.height, Colors.blue.shade100),
                     const SizedBox(height: 16),
+                    _buildBMIIndicator(),
+                    const SizedBox(height: 16),
                     _buildPhysicalInput('Hedef Kilo', _targetWeightController, 'kg', Icons.flag, Colors.orange.shade100),
+                    if (_isAutoTargetCalculated)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8.0, left: 8.0),
+                        child: Text(
+                          'ℹ️ İdeal kilonuza göre hedef otomatik belirlendi, isterseniz değiştirebilirsiniz.',
+                          style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+                        ),
+                      ),
                     const Spacer(),
                     _buildNextButton(),
                   ],
@@ -476,6 +561,14 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
+                        onChanged: (val) {
+                          setState(() {});
+                          if (label == 'Mevcut Kilo' || label == 'Boy') {
+                            _calculateTargetWeight();
+                          } else if (label == 'Hedef Kilo') {
+                            _userChangedTargetWeight = true;
+                          }
+                        },
                       ),
                     ),
                     Padding(
@@ -487,6 +580,77 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  bool _userChangedTargetWeight = false;
+  bool _isAutoTargetCalculated = false;
+
+  void _calculateTargetWeight() {
+    if (_userChangedTargetWeight) return; // Kullanıcı kendisi girdiyse bozma
+
+    final h = double.tryParse(_heightController.text.trim());
+    if (h != null && h > 0) {
+      // Standart BMI=22 hedefi
+      final hMeters = h / 100;
+      final target = 22 * hMeters * hMeters;
+      _targetWeightController.text = target.toStringAsFixed(1);
+      _isAutoTargetCalculated = true;
+    } else {
+      _isAutoTargetCalculated = false;
+    }
+  }
+
+  Widget _buildBMIIndicator() {
+    final w = double.tryParse(_weightController.text.trim());
+    final h = double.tryParse(_heightController.text.trim());
+    
+    if (w == null || h == null || h <= 0) return const SizedBox.shrink();
+
+    final bmi = w / ((h / 100) * (h / 100));
+    String status = '';
+    Color color = Colors.grey;
+
+    if (bmi < 18.5) {
+      status = 'Zayıf';
+      color = Colors.blue;
+    } else if (bmi < 25) {
+      status = 'Normal';
+      color = Colors.green;
+    } else if (bmi < 30) {
+      status = 'Fazla Kilolu';
+      color = Colors.orange;
+    } else {
+      status = 'Obez';
+      color = Colors.red;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.monitor_heart, color: color),
+              const SizedBox(width: 8),
+              const Text('Vücut Kitle İndeksi (BMI):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(bmi.toStringAsFixed(1), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+              Text(status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+            ],
+          )
         ],
       ),
     );
