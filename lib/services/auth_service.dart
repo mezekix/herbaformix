@@ -5,8 +5,21 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
+  /// Google OAuth Web Client ID.
+  ///
+  /// Derleme zamanında `--dart-define=GOOGLE_WEB_CLIENT_ID=...` ile geçirilir.
+  /// OAuth client ID'leri tasarım gereği "public" olsa da kaynağa gömmek
+  /// rotasyonu zorlaştırır ve ortamlar arası geçişi engeller (dev / prod).
+  ///
+  /// Örnek:
+  ///   flutter run -d chrome --dart-define=GOOGLE_WEB_CLIENT_ID=xxxxx.apps.googleusercontent.com
+  static const String _webClientId = String.fromEnvironment(
+    'GOOGLE_WEB_CLIENT_ID',
+    defaultValue: '',
+  );
+
   GoogleSignIn get _googleSignIn => GoogleSignIn(
-    clientId: kIsWeb ? '433193562880-0lolvao40s0dgn51390fsndgaq921t8n.apps.googleusercontent.com' : null,
+    clientId: kIsWeb && _webClientId.isNotEmpty ? _webClientId : null,
   );
 
   // Kullanıcı oturum durumunu dinle

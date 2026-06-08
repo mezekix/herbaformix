@@ -25,7 +25,9 @@ service cloud.firestore {
     }
 
     match /products/{productId} {
-      allow read, write: if true;
+      // Ürün kataloğu giriş yapmış herkes okuyabilir, sadece distribütörler yazabilir.
+      allow read: if signedIn();
+      allow write: if isDistributor();
     }
 
     match /userProfiles/{userId} {
@@ -40,7 +42,33 @@ service cloud.firestore {
 
       allow create: if isOwner(userId);
 
-      allow update: if signedIn();
+      // Sahibi (kullanıcı) kendi profilinin tüm alanlarını güncelleyebilir.
+      // Atanmış distribütör yalnızca sınırlı senkronizasyon alanlarını güncelleyebilir:
+      //   - name, phoneNumber, email  → CRM müşteri düzenleme ekranından senkron
+      //   - waterMinLimit, waterMaxLimit, waterDailyGoal → su limiti ayarı
+      //   - assignedDistributorId    → müşteri silindiğinde bağlantıyı kesmek için
+      // Diğer hassas alanlar (role, isOnboarded, earnedBadges, weight, vb.) korunur.
+      allow update: if isOwner(userId)
+        || (
+          signedIn()
+          && resource.data.assignedDistributorId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly([
+                'name',
+                'phoneNumber',
+                'email',
+                'waterMinLimit',
+                'waterMaxLimit',
+                'waterDailyGoal',
+                'assignedDistributorId'
+              ])
+          // assignedDistributorId değişiyorsa yalnızca SİLİNEBİLİR.
+          // Distribütör müşteriyi başka bir UID'ye devredemez.
+          && (
+            !('assignedDistributorId' in request.resource.data)
+            || request.resource.data.assignedDistributorId == request.auth.uid
+          )
+        );
     }
 
     match /inviteCodes/{codeId} {
@@ -57,7 +85,11 @@ service cloud.firestore {
         request.resource.data.code == resource.data.code &&
         request.resource.data.distributorId == resource.data.distributorId;
 
-      allow delete: if signedIn();
+      // Sadece kodu üreten distribütör (veya kullanan müşterinin kendisi) silebilir.
+      allow delete: if signedIn() && (
+        resource.data.distributorId == request.auth.uid ||
+        resource.data.usedByUserId == request.auth.uid
+      );
     }
 
     match /users/{userId} {
@@ -123,15 +155,29 @@ service cloud.firestore {
     }
 
     match /scheduled_follow_ups/{followUpId} {
-      allow read, write: if signedIn();
+      // Sadece takip kaydının consultant'ı veya bağlı müşterisi okuyabilir.
+      allow read: if signedIn() && (
+        resource.data.consultantId == request.auth.uid ||
+        resource.data.customerId == request.auth.uid ||
+        ('linkedUserId' in resource.data && resource.data.linkedUserId == request.auth.uid)
+      );
+      // Sadece consultant olarak kendini gösteren distribütör oluşturabilir.
+      allow create: if signedIn() && request.resource.data.consultantId == request.auth.uid;
+      // Sadece kaydı oluşturan consultant güncelleyebilir/silebilir.
+      allow update, delete: if signedIn() && resource.data.consultantId == request.auth.uid;
     }
 
     match /careerRoadmap/{levelId} {
-      allow read, write: if signedIn();
+      // Statik referans verisi: okuma serbest, yazma Console/Admin SDK'ya bırakıldı.
+      allow read: if signedIn();
+      allow write: if false;
     }
 
     match /programs/{programId} {
-      allow read, write: if signedIn();
+      // Şablon program kataloğu (top-level). Okuma giriş yapmışlara, yazma distribütörlere.
+      // Kullanıcıya özel programlar /users/{userId}/program/ altında ayrı kuralla yönetilir.
+      allow read: if signedIn();
+      allow write: if isDistributor();
     }
 
     match /motivations/{customerId} {
