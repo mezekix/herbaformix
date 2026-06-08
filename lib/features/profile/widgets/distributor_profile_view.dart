@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../core/avatar_color_helper.dart';
@@ -130,7 +131,6 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
         phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         weight: existingProfile?.weight,
         height: existingProfile?.height,
-        goal: existingProfile?.goal,
         targetWeight: existingProfile?.targetWeight,
         programStartDate: existingProfile?.programStartDate,
         userGoal: existingProfile?.userGoal,
@@ -545,6 +545,18 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
                       textStyle: const TextStyle(fontSize: 16),
                     ),
                   ),
+            const SizedBox(height: 12),
+
+            // Uygulama Ayarları butonu
+            OutlinedButton.icon(
+              icon: const Icon(Icons.settings_outlined),
+              label: const Text('Uygulama Ayarları'),
+              onPressed: () => context.goNamed('app-settings'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: const TextStyle(fontSize: 16),
+              ),
+            ),
             const SizedBox(height: 12),
 
             // Çıkış Yap butonu

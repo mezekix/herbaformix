@@ -252,6 +252,9 @@ class ProgramProvider with ChangeNotifier {
     required double? currentWeight,
     required double? targetWeight,
     required List<ProductModel> allProducts,
+    String? wakeTime,
+    String? lunchTime,
+    String? sleepTime,
     bool scheduleNotifications = true,
   }) async {
     _isLoading = true;
@@ -273,7 +276,13 @@ class ProgramProvider with ChangeNotifier {
         _durationMonths = 1;
       }
 
-      _slots = buildDefaultSlots(userGoal);
+      _slots = buildDefaultSlots(
+        userGoal,
+        wakeTime: wakeTime,
+        lunchTime: lunchTime,
+        sleepTime: sleepTime,
+        allProducts: allProducts,
+      );
 
       final result = await saveProgram(
         userId,
@@ -473,7 +482,7 @@ class ProgramProvider with ChangeNotifier {
       return;
     }
 
-    final goal = profile.userGoal ?? profile.goal;
+    final goal = profile.userGoal;
     final isGoalSelected = goal != null && goal.isNotEmpty;
     final isPhysicalInfoEntered = profile.weight != null && profile.targetWeight != null;
 

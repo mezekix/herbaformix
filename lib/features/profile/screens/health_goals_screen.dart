@@ -97,7 +97,6 @@ class _HealthGoalsScreenState extends State<HealthGoalsScreen> {
       height: double.tryParse(heightText),
       weight: double.tryParse(weightText),
       targetWeight: double.tryParse(targetWeightText),
-      goal: double.tryParse(targetWeightText)?.toString(), // geriye uyumluluk
       healthNotes: healthNotesText.isEmpty ? null : healthNotesText,
       allergies: allergiesText.isEmpty ? null : allergiesText,
       medications: medicationsText.isEmpty ? null : medicationsText,

@@ -23,7 +23,6 @@ class UserProfileModel {
   final String? phoneNumber;
   final double? weight;
   final double? height;
-  final String? goal; // ⚠️ DEPRECATED — eski alan. Migration sonrası P1.9'da kaldırılacak.
   final double? targetWeight; // Hedef kilo (kg) — sayısal alan
   final DateTime? programStartDate;
 
@@ -60,7 +59,6 @@ class UserProfileModel {
     this.phoneNumber,
     this.weight,
     this.height,
-    this.goal,
     this.targetWeight,
     this.programStartDate,
     this.userGoal,
@@ -106,7 +104,6 @@ class UserProfileModel {
     Object? phoneNumber = _unset,
     Object? weight = _unset,
     Object? height = _unset,
-    Object? goal = _unset,
     Object? targetWeight = _unset,
     Object? programStartDate = _unset,
     Object? userGoal = _unset,
@@ -145,7 +142,6 @@ class UserProfileModel {
           : phoneNumber as String?,
       weight: identical(weight, _unset) ? this.weight : weight as double?,
       height: identical(height, _unset) ? this.height : height as double?,
-      goal: identical(goal, _unset) ? this.goal : goal as String?,
       targetWeight: identical(targetWeight, _unset)
           ? this.targetWeight
           : targetWeight as double?,
@@ -222,13 +218,7 @@ class UserProfileModel {
       phoneNumber: map['phoneNumber'] as String?,
       weight: (map['weight'] as num?)?.toDouble(),
       height: (map['height'] as num?)?.toDouble(),
-      goal: map['goal'] as String?,
-      // ⚠️ Geriye uyumluluk fallback'i — P1.9 backfill sonrası kaldırılacak.
-      targetWeight: (map['targetWeight'] as num?)?.toDouble() ??
-          (map['goal'] is num ? (map['goal'] as num).toDouble() : null) ??
-          (map['goal'] is String
-              ? double.tryParse(map['goal'] as String)
-              : null),
+      targetWeight: (map['targetWeight'] as num?)?.toDouble(),
       programStartDate: map['programStartDate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['programStartDate'] as int)
           : null,
@@ -275,7 +265,6 @@ class UserProfileModel {
     if (phoneNumber != null) map['phoneNumber'] = phoneNumber;
     if (weight != null) map['weight'] = weight;
     if (height != null) map['height'] = height;
-    if (goal != null) map['goal'] = goal;
     if (targetWeight != null) map['targetWeight'] = targetWeight;
     if (programStartDate != null) {
       map['programStartDate'] = programStartDate!.millisecondsSinceEpoch;

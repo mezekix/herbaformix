@@ -276,7 +276,6 @@ Veriler Firestore üzerinde döküman-koleksiyon yapısında tutulur.
 | `phoneNumber` | String? | Telefon |
 | `weight` | double? | Mevcut kilo (kg) |
 | `height` | double? | Boy (cm) |
-| `goal` | String? | *Eski alan* — geriye uyumluluk için korundu |
 | `targetWeight` | double? | Hedef kilo (kg) — sayısal alan |
 | `programStartDate` | DateTime? | Program başlangıç tarihi |
 | `userGoal` | String | `weight_loss` / `healthy_living` / `weight_gain` |
@@ -299,7 +298,7 @@ Veriler Firestore üzerinde döküman-koleksiyon yapısında tutulur.
 | `fcmToken` | String? | Push bildirimleri ve zamanlanmış hatırlatıcılar için cihaz token'ı |
 | `notificationSettings` | Map\<String, bool\>? | Kullanıcı bildirim tercihleri (Örn: `{"meals": true, "water": true, "followUp": true}`) |
 
-**Not:** `targetWeight` alanı eski `goal` alanından otomatik migrate edilir (`fromMap`'te üç aşamalı fallback: `targetWeight` → `goal` (num) → `goal` (String parse)). Tüm db alanları camelCase standardına getirilmiştir. Geriye dönük uyumluluk için eski `user_goal` alanı parse aşamasında desteklenecektir.
+**Not:** Eski `goal` alanı P1.9 ile kaldırıldı. Yeni kayıtlarda yalnızca sayısal `targetWeight` kullanılır. Tüm db alanları camelCase standardına getirilmiştir; `user_goal`, `wake_time`, `lunch_time`, `sleep_time` snake_case alanları P1.6 ile camelCase'e taşınacaktır.
 
 ### 4.2. Gelişim Ölçüm Kaydı (`ProgressEntryModel`)
 **Koleksiyon:** `/users/{userId}/progressEntries/{entryId}`

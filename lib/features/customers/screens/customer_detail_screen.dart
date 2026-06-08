@@ -34,7 +34,7 @@ class CustomerDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final customerProvider = context.watch<CustomerProvider>();
     final currentCustomer = customerProvider.customers.firstWhere(
-      (c) => c.id == customer.id,
+      (c) => c.id == customer.id || (c.linkedUserId != null && c.linkedUserId == customer.id),
       orElse: () => customer,
     );
 
@@ -43,6 +43,7 @@ class CustomerDetailScreen extends StatelessWidget {
         authProvider: ctx.read<AuthProvider>(),
         firestoreService: ctx.read<FirestoreService>(),
         customerId: currentCustomer.id,
+        linkedUserId: currentCustomer.linkedUserId,
       ),
       child: Consumer<FollowUpProvider>(
         builder: (context, followUpProvider, child) {
@@ -152,12 +153,12 @@ class CustomerDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-            floatingActionButton: FloatingActionButton.extended(
+            floatingActionButton: FloatingActionButton(
               onPressed: () {
                 _showAddFollowUpSheet(context, currentCustomer, followUpProvider);
               },
-              label: const Text('Plansız Takip Ekle'),
-              icon: const Icon(Icons.add_comment_outlined),
+              tooltip: 'Plansız Takip Ekle',
+              child: const Icon(Icons.add),
             ),
           );
         },
@@ -497,7 +498,7 @@ class CustomerDetailScreen extends StatelessWidget {
                 ),
                 _buildDataChip(
                   Icons.flag_outlined,
-                  _formatGoal(profile.userGoal ?? profile.goal),
+                  _formatGoal(profile.userGoal),
                 ),
                 _buildDataChip(
                   Icons.cake_outlined,
@@ -1169,7 +1170,6 @@ class CustomerDetailScreen extends StatelessWidget {
         phoneNumber: profile.phoneNumber,
         weight: profile.weight,
         height: profile.height,
-        goal: profile.goal,
         targetWeight: profile.targetWeight,
         programStartDate: profile.programStartDate,
         userGoal: profile.userGoal,
