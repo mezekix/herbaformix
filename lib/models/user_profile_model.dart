@@ -222,10 +222,12 @@ class UserProfileModel {
       programStartDate: map['programStartDate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['programStartDate'] as int)
           : null,
-      userGoal: map['user_goal'] as String?,
-      wakeTime: map['wake_time'] as String?,
-      lunchTime: map['lunch_time'] as String?,
-      sleepTime: map['sleep_time'] as String?,
+      // camelCase okuma + eski snake_case fallback (P1.6.a hard cutover sonrası
+      // eski test verilerinde hâlâ snake_case anahtarlar olabilir).
+      userGoal: (map['userGoal'] ?? map['user_goal']) as String?,
+      wakeTime: (map['wakeTime'] ?? map['wake_time']) as String?,
+      lunchTime: (map['lunchTime'] ?? map['lunch_time']) as String?,
+      sleepTime: (map['sleepTime'] ?? map['sleep_time']) as String?,
       birthDate: map['birthDate'] is int
           ? DateTime.fromMillisecondsSinceEpoch(map['birthDate'] as int)
           : null,
@@ -269,10 +271,11 @@ class UserProfileModel {
     if (programStartDate != null) {
       map['programStartDate'] = programStartDate!.millisecondsSinceEpoch;
     }
-    if (userGoal != null) map['user_goal'] = userGoal;
-    if (wakeTime != null) map['wake_time'] = wakeTime;
-    if (lunchTime != null) map['lunch_time'] = lunchTime;
-    if (sleepTime != null) map['sleep_time'] = sleepTime;
+    // Standart yazım: camelCase.
+    if (userGoal != null) map['userGoal'] = userGoal;
+    if (wakeTime != null) map['wakeTime'] = wakeTime;
+    if (lunchTime != null) map['lunchTime'] = lunchTime;
+    if (sleepTime != null) map['sleepTime'] = sleepTime;
     if (birthDate != null) {
       map['birthDate'] = birthDate!.millisecondsSinceEpoch;
     }
