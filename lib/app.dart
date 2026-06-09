@@ -328,7 +328,13 @@ class _AppState extends State<App> {
               ),
             ),
           ],
-          child: child,
+          // Saat seçicilerinde (showTimePicker) 24 saat formatını zorla —
+          // Türkçe lokalizasyonda 12 saat AM/PM doğal değil. Cihaz ayarı
+          // ne olursa olsun uygulama tutarlı görünür.
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+            child: child,
+          ),
         );
       },
     );
