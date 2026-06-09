@@ -18,14 +18,14 @@ class MealProduct {
 
   factory MealProduct.fromMap(Map<String, dynamic> map) {
     return MealProduct(
-      productId: map['product_id'] as String? ?? '',
-      productName: map['product_name'] as String? ?? '',
+      productId: (map['productId'] ?? map['product_id']) as String? ?? '',
+      productName: (map['productName'] ?? map['product_name']) as String? ?? '',
     );
   }
 
   Map<String, dynamic> toMap() => {
-        'product_id': productId,
-        'product_name': productName,
+        'productId': productId,
+        'productName': productName,
       };
 }
 
@@ -53,8 +53,10 @@ class MealSlot {
       id: map['id'] as String? ?? '',
       kind: _kindFromString(map['kind'] as String? ?? 'morning'),
       label: map['label'] as String? ?? 'Öğün',
-      scheduledTime: map['scheduled_time'] as String? ?? '09:00',
-      isNormalMeal: map['is_normal_meal'] as bool? ?? false,
+      scheduledTime:
+          (map['scheduledTime'] ?? map['scheduled_time']) as String? ?? '09:00',
+      isNormalMeal:
+          (map['isNormalMeal'] ?? map['is_normal_meal']) as bool? ?? false,
       products: rawProducts
           .map((e) => MealProduct.fromMap(e as Map<String, dynamic>))
           .toList(),
@@ -65,8 +67,8 @@ class MealSlot {
         'id': id,
         'kind': _kindToString(kind),
         'label': label,
-        'scheduled_time': scheduledTime,
-        'is_normal_meal': isNormalMeal,
+        'scheduledTime': scheduledTime,
+        'isNormalMeal': isNormalMeal,
         'products': products.map((p) => p.toMap()).toList(),
       };
 
@@ -165,13 +167,17 @@ class ProgramModel {
       for (final key in order) {
         if (rawPlan.containsKey(key)) {
           final old = rawPlan[key] as Map<String, dynamic>;
-          final productId = old['product_id'] as String?;
-          final productName = old['product_name'] as String?;
+          final productId =
+              (old['productId'] ?? old['product_id']) as String?;
+          final productName =
+              (old['productName'] ?? old['product_name']) as String?;
           slots.add(MealSlot(
             id: key,
             kind: MealSlot._kindFromString(key),
             label: _legacyLabel(key),
-            scheduledTime: old['scheduled_time'] as String? ?? '09:00',
+            scheduledTime:
+                (old['scheduledTime'] ?? old['scheduled_time']) as String? ??
+                    '09:00',
             isNormalMeal: old['type'] == 'normal_meal',
             products: productId != null
                 ? [MealProduct(productId: productId, productName: productName ?? '')]
@@ -181,16 +187,24 @@ class ProgramModel {
       }
     }
 
+    // camelCase okuma + eski snake_case fallback
+    final startDate = (map['startDate'] ?? map['start_date']) as Timestamp;
+    final createdAt = (map['createdAt'] ?? map['created_at']) as Timestamp;
+
     return ProgramModel(
       id: documentId,
-      userGoal: map['user_goal'] as String? ?? 'healthy_living',
-      startDate: (map['start_date'] as Timestamp).toDate(),
-      durationMonths: map['duration_months'] as int? ?? 1,
+      userGoal: (map['userGoal'] ?? map['user_goal']) as String? ??
+          'healthy_living',
+      startDate: startDate.toDate(),
+      durationMonths:
+          (map['durationMonths'] ?? map['duration_months']) as int? ?? 1,
       slots: slots,
-      currentWeight: (map['current_weight'] as num?)?.toDouble(),
-      targetWeight: (map['target_weight'] as num?)?.toDouble(),
-      createdAt: (map['created_at'] as Timestamp).toDate(),
-      isActive: map['is_active'] as bool? ?? true,
+      currentWeight:
+          ((map['currentWeight'] ?? map['current_weight']) as num?)?.toDouble(),
+      targetWeight:
+          ((map['targetWeight'] ?? map['target_weight']) as num?)?.toDouble(),
+      createdAt: createdAt.toDate(),
+      isActive: (map['isActive'] ?? map['is_active']) as bool? ?? true,
     );
   }
 
@@ -205,16 +219,16 @@ class ProgramModel {
 
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
-      'user_goal': userGoal,
-      'start_date': Timestamp.fromDate(startDate),
-      'duration_months': durationMonths,
+      'userGoal': userGoal,
+      'startDate': Timestamp.fromDate(startDate),
+      'durationMonths': durationMonths,
       'slots': slots.map((s) => s.toMap()).toList(),
-      'created_at': Timestamp.fromDate(createdAt),
-      'is_active': isActive,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'isActive': isActive,
     };
     if (userGoal == 'weight_loss') {
-      map['current_weight'] = currentWeight;
-      map['target_weight'] = targetWeight;
+      map['currentWeight'] = currentWeight;
+      map['targetWeight'] = targetWeight;
     }
     return map;
   }

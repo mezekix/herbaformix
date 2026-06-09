@@ -129,7 +129,7 @@ service cloud.firestore {
         allow write: if isOwner(userId);
       }
 
-      match /Daily_Routines/{routineId} {
+      match /dailyRoutines/{routineId} {
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
         allow write: if isOwner(userId) || isAssignedDistributor(userId);
       }

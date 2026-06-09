@@ -77,7 +77,7 @@ class ProgramService {
   Future<bool> hasActiveProgram(String userId) async {
     try {
       final doc = await _programRef(userId).get();
-      return doc.exists && (doc.data()?['is_active'] == true);
+      return doc.exists && (doc.data()?['isActive'] == true);
     } on FirebaseException catch (e) {
       debugPrint('[ProgramService] hasActiveProgram hatası: ${e.message}');
       return false;
@@ -94,12 +94,12 @@ class ProgramService {
       final routinesRef = _firestore
           .collection('users')
           .doc(userId)
-          .collection('Daily_Routines');
+          .collection('dailyRoutines');
 
       final snap = await routinesRef
-          .where('scheduled_time',
+          .where('scheduledTime',
               isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('scheduled_time',
+          .where('scheduledTime',
               isLessThan: Timestamp.fromDate(endOfDay))
           .limit(1)
           .get();
@@ -129,12 +129,12 @@ class ProgramService {
     final routinesRef = _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines');
+        .collection('dailyRoutines');
 
     // Mevcut bugünkü rutinleri al ve tamamlama durumlarını (isCompleted) sakla
     final todayDocs = await routinesRef
-        .where('scheduled_time', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('scheduled_time', isLessThan: Timestamp.fromDate(endOfDay))
+        .where('scheduledTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('scheduledTime', isLessThan: Timestamp.fromDate(endOfDay))
         .get();
 
     final completedMap = <String, bool>{};
@@ -142,10 +142,12 @@ class ProgramService {
 
     for (var doc in todayDocs.docs) {
       final data = doc.data();
-      final pId = data['product_id'] as String? ?? '';
-      final time = (data['scheduled_time'] as Timestamp).toDate();
+      final pId = (data['productId'] ?? data['product_id']) as String? ?? '';
+      final time = ((data['scheduledTime'] ?? data['scheduled_time'])
+              as Timestamp)
+          .toDate();
       final key = '${pId}_${time.hour}:${time.minute}';
-      if (data['is_completed'] == true) {
+      if ((data['isCompleted'] ?? data['is_completed']) == true) {
         completedMap[key] = true;
       }
       // Eski rutini silmek üzere batch'e ekle

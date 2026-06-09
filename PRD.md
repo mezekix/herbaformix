@@ -367,12 +367,12 @@ Veriler Firestore üzerinde döküman-koleksiyon yapısında tutulur.
 | Alan | Tür | Açıklama |
 |---|---|---|
 | `id` | String | Belge ID |
-| `product_id` | String | Ürün ID (su adımları için `water_step`) |
-| `scheduled_time` | Timestamp | Planlanan saat |
-| `is_completed` | bool | Tamamlandı mı? |
-| `step_type` | String | `product` / `water` / `normalMeal` |
-| `amount_ml` | int? | Su miktarı (yalnızca water tipi) |
-| `slot_id` | String? | Hangi kalıcı slot'tan üretildi |
+| `productId` | String | Ürün ID (su adımları için `water_step`) |
+| `scheduledTime` | Timestamp | Planlanan saat |
+| `isCompleted` | bool | Tamamlandı mı? |
+| `stepType` | String | `product` / `water` / `normalMeal` |
+| `amountMl` | int? | Su miktarı (yalnızca water tipi) |
+| `slotId` | String? | Hangi kalıcı slot'tan üretildi |
 
 ### 4.6. Su Tüketim Günlüğü (`WaterLogModel`)
 **Koleksiyon:** `/users/{userId}/water_logs/{YYYY-MM-DD}`

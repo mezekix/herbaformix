@@ -337,14 +337,30 @@ class FirestoreService {
 
   Stream<List<ScheduledFollowUpModel>> getScheduledFollowUpsForCustomer(
     String userId,
-    String customerId,
-  ) {
-    return scheduledFollowUpsRef()
-        .where('customerId', isEqualTo: customerId)
-        .where('consultantId', isEqualTo: userId)
-        .orderBy('dueDate')
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => doc.data()).toList());
+    String customerId, {
+    String? linkedUserId,
+  }) {
+    if (linkedUserId != null && linkedUserId.isNotEmpty) {
+      return scheduledFollowUpsRef()
+          .where('consultantId', isEqualTo: userId)
+          .where('customerId', whereIn: [customerId, linkedUserId])
+          .snapshots()
+          .map((snapshot) {
+            final list = snapshot.docs.map((doc) => doc.data()).toList();
+            list.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+            return list;
+          });
+    } else {
+      return scheduledFollowUpsRef()
+          .where('customerId', isEqualTo: customerId)
+          .where('consultantId', isEqualTo: userId)
+          .snapshots()
+          .map((snapshot) {
+            final list = snapshot.docs.map((doc) => doc.data()).toList();
+            list.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+            return list;
+          });
+    }
   }
 
   Future<void> addScheduledFollowUpBatch(
@@ -861,6 +877,10 @@ class FirestoreService {
     await _waterLogsRef(userId).doc(logId).delete();
   }
 
+  Future<void> updateWaterLog(String userId, WaterLogModel log) async {
+    await _waterLogsRef(userId).doc(log.id).update(log.toMap());
+  }
+
   Future<void> clearWaterLogs(String userId, DateTime date) async {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
@@ -898,12 +918,12 @@ class FirestoreService {
       final recentRoutinesFuture = _db
           .collection('users')
           .doc(customerUserId)
-          .collection('Daily_Routines')
+          .collection('dailyRoutines')
           .where(
-            'scheduled_time',
+            'scheduledTime',
             isGreaterThanOrEqualTo: Timestamp.fromDate(sevenDaysAgo),
           )
-          .where('scheduled_time', isLessThan: Timestamp.fromDate(endOfToday))
+          .where('scheduledTime', isLessThan: Timestamp.fromDate(endOfToday))
           .get();
       final userProfileFuture = getUserProfile(customerUserId);
 
@@ -935,13 +955,15 @@ class FirestoreService {
       );
 
       final routines = recentRoutinesSnapshot.docs.map((doc) => doc.data()).toList();
-      final completedRoutines =
-          routines.where((routine) => routine['is_completed'] == true);
+      final completedRoutines = routines.where((routine) =>
+          (routine['isCompleted'] ?? routine['is_completed']) == true);
 
       DateTime? latestRoutineAt;
       if (recentRoutinesSnapshot.docs.isNotEmpty) {
         latestRoutineAt = recentRoutinesSnapshot.docs
-            .map((doc) => (doc.data()['scheduled_time'] as Timestamp).toDate())
+            .map((doc) => ((doc.data()['scheduledTime'] ??
+                    doc.data()['scheduled_time']) as Timestamp)
+                .toDate())
             .fold<DateTime?>(
               null,
               (latest, current) =>

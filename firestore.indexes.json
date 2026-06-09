@@ -51,15 +51,15 @@
       ]
     },
     {
-      "collectionGroup": "Daily_Routines",
+      "collectionGroup": "dailyRoutines",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "is_completed",
+          "fieldPath": "isCompleted",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "scheduled_time",
+          "fieldPath": "scheduledTime",
           "order": "ASCENDING"
         }
       ]

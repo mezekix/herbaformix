@@ -214,7 +214,7 @@ lib/
 /users/{userId}/progressEntries/     → ProgressEntryModel (ölçümler)
 /users/{userId}/water_logs/          → WaterLogModel (YYYY-MM-DD)
 /users/{userId}/waterSummaries/      → WaterSummaryModel (YYYY-MM-DD)
-/users/{userId}/Daily_Routines/      → DailyRoutineModel
+/users/{userId}/dailyRoutines/       → DailyRoutineModel
 /users/{userId}/program/             → ProgramModel
 /users/{userId}/daily_exercise/      → Egzersiz verileri
 /users/{userId}/customers/           → CustomerModel (distribütör CRM)

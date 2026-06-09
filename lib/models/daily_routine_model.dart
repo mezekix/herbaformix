@@ -27,8 +27,10 @@ class DailyRoutineModel {
     Map<String, dynamic> map,
     String documentId,
   ) {
-    // Geriye dönük uyumluluk: 'step_type' alanı yoksa 'product' kabul et
-    final stepTypeStr = map['step_type'] as String? ?? 'product';
+    // camelCase okuma + eski snake_case fallback (P1.6.b hard cutover sonrası
+    // mevcut test verisi için geriye dönük uyumluluk; bir release sonra silinir).
+    final stepTypeStr =
+        (map['stepType'] ?? map['step_type']) as String? ?? 'product';
     RoutineStepType stepType;
     if (stepTypeStr == 'water') {
       stepType = RoutineStepType.water;
@@ -38,27 +40,29 @@ class DailyRoutineModel {
       stepType = RoutineStepType.product;
     }
 
+    final scheduled = map['scheduledTime'] ?? map['scheduled_time'];
+
     return DailyRoutineModel(
       id: documentId,
-      productId: map['product_id'] as String? ?? '',
-      scheduledTime: map['scheduled_time'] != null
-          ? (map['scheduled_time'] as Timestamp).toDate()
+      productId: (map['productId'] ?? map['product_id']) as String? ?? '',
+      scheduledTime: scheduled != null
+          ? (scheduled as Timestamp).toDate()
           : DateTime.now(),
-      isCompleted: map['is_completed'] as bool? ?? false,
+      isCompleted: (map['isCompleted'] ?? map['is_completed']) as bool? ?? false,
       stepType: stepType,
-      amountMl: map['amount_ml'] as int?,
-      slotId: map['slot_id'] as String?,
+      amountMl: (map['amountMl'] ?? map['amount_ml']) as int?,
+      slotId: (map['slotId'] ?? map['slot_id']) as String?,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'product_id': productId,
-      'scheduled_time': Timestamp.fromDate(scheduledTime),
-      'is_completed': isCompleted,
-      'step_type': stepType.name,
-      if (amountMl != null) 'amount_ml': amountMl,
-      if (slotId != null) 'slot_id': slotId,
+      'productId': productId,
+      'scheduledTime': Timestamp.fromDate(scheduledTime),
+      'isCompleted': isCompleted,
+      'stepType': stepType.name,
+      if (amountMl != null) 'amountMl': amountMl,
+      if (slotId != null) 'slotId': slotId,
     };
   }
 

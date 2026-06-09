@@ -37,11 +37,11 @@ class RoutineService {
     final routinesRef = _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines');
+        .collection('dailyRoutines');
         
     final existingRoutines = await routinesRef
-        .where('scheduled_time', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(now.year, now.month, now.day)))
-        .where('scheduled_time', isLessThan: Timestamp.fromDate(DateTime(now.year, now.month, now.day).add(const Duration(days: 1))))
+        .where('scheduledTime', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime(now.year, now.month, now.day)))
+        .where('scheduledTime', isLessThan: Timestamp.fromDate(DateTime(now.year, now.month, now.day).add(const Duration(days: 1))))
         .get();
 
     for (var doc in existingRoutines.docs) {
@@ -74,17 +74,17 @@ class RoutineService {
     final routinesRef = _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines');
+        .collection('dailyRoutines');
 
     final todayDocs = await routinesRef
         .where(
-          'scheduled_time',
+          'scheduledTime',
           isGreaterThanOrEqualTo: Timestamp.fromDate(
             DateTime(now.year, now.month, now.day),
           ),
         )
         .where(
-          'scheduled_time',
+          'scheduledTime',
           isLessThan: Timestamp.fromDate(
             DateTime(now.year, now.month, now.day).add(const Duration(days: 1)),
           ),
@@ -101,7 +101,7 @@ class RoutineService {
     final routinesRef = _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines');
+        .collection('dailyRoutines');
 
     final allDocs = await routinesRef.get();
     for (var doc in allDocs.docs) {
@@ -114,9 +114,9 @@ class RoutineService {
     await _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines')
+        .collection('dailyRoutines')
         .doc(routineId)
-        .update({'is_completed': isCompleted});
+        .update({'isCompleted': isCompleted});
   }
 
   // Rutin saatini güncelle
@@ -124,9 +124,9 @@ class RoutineService {
     await _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines')
+        .collection('dailyRoutines')
         .doc(routineId)
-        .update({'scheduled_time': Timestamp.fromDate(newTime)});
+        .update({'scheduledTime': Timestamp.fromDate(newTime)});
   }
 
   // Belirli bir tarihin rutinlerini getir
@@ -137,10 +137,10 @@ class RoutineService {
     return _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines')
-        .where('scheduled_time', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('scheduled_time', isLessThan: Timestamp.fromDate(endOfDay))
-        .orderBy('scheduled_time')
+        .collection('dailyRoutines')
+        .where('scheduledTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('scheduledTime', isLessThan: Timestamp.fromDate(endOfDay))
+        .orderBy('scheduledTime')
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => DailyRoutineModel.fromMap(doc.data(), doc.id))
@@ -154,7 +154,7 @@ class RoutineService {
     final routinesRef = _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines');
+        .collection('dailyRoutines');
 
     int streak = 0;
     final today = DateTime.now();
@@ -165,9 +165,9 @@ class RoutineService {
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
       final snapshot = await routinesRef
-          .where('scheduled_time', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('scheduled_time', isLessThan: Timestamp.fromDate(endOfDay))
-          .where('is_completed', isEqualTo: true)
+          .where('scheduledTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('scheduledTime', isLessThan: Timestamp.fromDate(endOfDay))
+          .where('isCompleted', isEqualTo: true)
           .limit(1)
           .get();
 
@@ -188,7 +188,7 @@ class RoutineService {
     final routinesRef = _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines');
+        .collection('dailyRoutines');
         
     final newRef = routinesRef.doc();
     final newRoutine = routine.copyWith(id: newRef.id);
@@ -201,7 +201,7 @@ class RoutineService {
     await _firestore
         .collection('users')
         .doc(userId)
-        .collection('Daily_Routines')
+        .collection('dailyRoutines')
         .doc(routineId)
         .delete();
   }
