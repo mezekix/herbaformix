@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../models/product_model.dart';
 
 /// Öğün tipi
 enum MealSlotKind {
@@ -256,13 +255,25 @@ int getMealNotificationId(String slotId) {
   return slotId.hashCode.abs() % 9000 + 1000;
 }
 
-/// Varsayılan slot listesi oluşturur
+/// Onboarding sonrası boş varsayılan slot iskeleti oluşturur.
+///
+/// **Ürün seçimi distribütöre bırakılır** — müşteri uygulamayı ilk açtığında
+/// 3 ana öğün slot'u görür (saatleri uyku/uyanma planına göre hesaplanmış),
+/// ama içleri boştur. Distribütör CRM'den müşterinin programını düzenleyerek
+/// her slot'a uygun ürünleri ekler.
+///
+/// Kilo verme hedefinde öğle öğünü "normal yemek" olarak işaretlenir —
+/// distribütör isterse bunu değiştirebilir.
+///
+/// Eski davranış: `firstWhere(p.name.contains('formül 1'))` ile listedeki
+/// ilk Formül 1 ürününü otomatik seçiyordu. Bu UTF-8 alfabetik sıralamada
+/// "Muz" aromasına denk geliyor ve müşteri için anlamsız bir varsayılan
+/// üretiyordu.
 List<MealSlot> buildDefaultSlots(
   String userGoal, {
   String? wakeTime,
   String? lunchTime,
   String? sleepTime,
-  List<ProductModel>? allProducts,
 }) {
   String calcMorningTime(String wTime) {
     final parts = wTime.split(':');
@@ -276,22 +287,6 @@ List<MealSlot> buildDefaultSlots(
   final lTime = lunchTime ?? '13:00';
   final eTime = sleepTime != null ? calculateEveningMealTime(sleepTime) : '19:00';
 
-  // "Formül 1" içeren ürünleri bul
-  MealProduct? formula1Product;
-  if (allProducts != null) {
-    try {
-      final f1 = allProducts.firstWhere(
-        (p) => p.name.toLowerCase().contains('formül 1') || p.name.toLowerCase().contains('shake'),
-      );
-      formula1Product = MealProduct(productId: f1.id, productName: f1.name);
-    } catch (_) {
-      // Bulunamazsa sorun yok
-    }
-  }
-
-  final addF1 = userGoal == 'weight_loss' && formula1Product != null;
-  final f1List = addF1 ? [formula1Product] : <MealProduct>[];
-
   return [
     MealSlot(
       id: 'morning',
@@ -299,7 +294,7 @@ List<MealSlot> buildDefaultSlots(
       label: 'Sabah Öğünü',
       scheduledTime: mTime,
       isNormalMeal: false,
-      products: f1List,
+      products: const [],
     ),
     MealSlot(
       id: 'lunch',
@@ -307,7 +302,7 @@ List<MealSlot> buildDefaultSlots(
       label: 'Öğle Öğünü',
       scheduledTime: lTime,
       isNormalMeal: userGoal == 'weight_loss', // kilo vermede öğle normal yemek
-      products: [],
+      products: const [],
     ),
     MealSlot(
       id: 'evening',
@@ -315,7 +310,7 @@ List<MealSlot> buildDefaultSlots(
       label: 'Akşam Öğünü',
       scheduledTime: eTime,
       isNormalMeal: false,
-      products: f1List,
+      products: const [],
     ),
   ];
 }

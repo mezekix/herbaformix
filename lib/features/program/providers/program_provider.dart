@@ -276,12 +276,12 @@ class ProgramProvider with ChangeNotifier {
         _durationMonths = 1;
       }
 
+      // Boş slot iskeleti — ürün seçimi distribütöre bırakılır.
       _slots = buildDefaultSlots(
         userGoal,
         wakeTime: wakeTime,
         lunchTime: lunchTime,
         sleepTime: sleepTime,
-        allProducts: allProducts,
       );
 
       final result = await saveProgram(
