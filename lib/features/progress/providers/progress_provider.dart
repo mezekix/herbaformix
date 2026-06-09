@@ -7,6 +7,7 @@ import '../../../models/badge_model.dart';
 import '../../../models/progress_entry_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../services/firestore_service.dart';
+import '../models/measurement_type.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProgressProvider with ChangeNotifier {
@@ -115,136 +116,36 @@ class ProgressProvider with ChangeNotifier {
   /// Toplam kayıt sayısı.
   int get totalEntries => _entries.length;
 
-  /// Son kaydedilen kilo.
+  /// Son kaydedilen kilo — `latestFor(MeasurementType.weight)` ile aynı,
+  /// kilo özel hedef/rozet mantıklarında sık kullanıldığı için kestirme.
   double? get latestWeight =>
       _entries.isNotEmpty ? _entries.last.weight : null;
 
-  /// Son kaydedilen bel ölçümü.
-  double? get latestWaist {
+  /// Verilen [type] için **null olmayan en son** kaydın değerini döner.
+  /// Boş listede veya hiçbir kayıt o ölçümü içermiyorsa `null`.
+  double? latestFor(MeasurementType type) {
     for (final e in _entries.reversed) {
-      if (e.waist != null) return e.waist;
+      final v = e.valueFor(type);
+      if (v != null) return v;
     }
     return null;
   }
 
-  /// Son kaydedilen kalça ölçümü.
-  double? get latestHip {
-    for (final e in _entries.reversed) {
-      if (e.hip != null) return e.hip;
-    }
-    return null;
-  }
-
-  /// Son kaydedilen göğüs ölçümü.
-  double? get latestChest {
-    for (final e in _entries.reversed) {
-      if (e.chest != null) return e.chest;
-    }
-    return null;
-  }
-
-  /// Son kaydedilen kol ölçümü.
-  double? get latestArm {
-    for (final e in _entries.reversed) {
-      if (e.arm != null) return e.arm;
-    }
-    return null;
-  }
-
-  /// Son kaydedilen bacak ölçümü.
-  double? get latestThigh {
-    for (final e in _entries.reversed) {
-      if (e.thigh != null) return e.thigh;
-    }
-    return null;
-  }
-
-  /// Son kaydedilen yağ oranı.
-  double? get latestBodyFat {
-    for (final e in _entries.reversed) {
-      if (e.bodyFat != null) return e.bodyFat;
-    }
-    return null;
-  }
-
-  /// Son kaydedilen kas kütlesi.
-  double? get latestMuscleMass {
-    for (final e in _entries.reversed) {
-      if (e.muscleMass != null) return e.muscleMass;
-    }
-    return null;
-  }
-
-  /// Bel değişimi (ilk kayıtlı - son kayıtlı).
-  double? get waistChange {
+  /// Verilen [type] için **toplam değişim**: (null olmayan son) - (null
+  /// olmayan ilk). İki uçtan en az biri yoksa veya aynıysa `null`.
+  double? changeFor(MeasurementType type) {
     if (_entries.isEmpty) return null;
-    final first = _firstValueWhere((e) => e.waist);
-    final last = latestWaist;
-    if (first == null || last == null || first == last) return null;
-    return last - first;
-  }
-
-  /// Kalça değişimi.
-  double? get hipChange {
-    if (_entries.isEmpty) return null;
-    final first = _firstValueWhere((e) => e.hip);
-    final last = latestHip;
-    if (first == null || last == null || first == last) return null;
-    return last - first;
-  }
-
-  /// Göğüs değişimi.
-  double? get chestChange {
-    if (_entries.isEmpty) return null;
-    final first = _firstValueWhere((e) => e.chest);
-    final last = latestChest;
-    if (first == null || last == null || first == last) return null;
-    return last - first;
-  }
-
-  /// Kol değişimi.
-  double? get armChange {
-    if (_entries.isEmpty) return null;
-    final first = _firstValueWhere((e) => e.arm);
-    final last = latestArm;
-    if (first == null || last == null || first == last) return null;
-    return last - first;
-  }
-
-  /// Bacak değişimi.
-  double? get thighChange {
-    if (_entries.isEmpty) return null;
-    final first = _firstValueWhere((e) => e.thigh);
-    final last = latestThigh;
-    if (first == null || last == null || first == last) return null;
-    return last - first;
-  }
-
-  /// Yağ oranı değişimi.
-  double? get bodyFatChange {
-    if (_entries.isEmpty) return null;
-    final first = _firstValueWhere((e) => e.bodyFat);
-    final last = latestBodyFat;
-    if (first == null || last == null || first == last) return null;
-    return last - first;
-  }
-
-  /// Kas kütlesi değişimi.
-  double? get muscleMassChange {
-    if (_entries.isEmpty) return null;
-    final first = _firstValueWhere((e) => e.muscleMass);
-    final last = latestMuscleMass;
-    if (first == null || last == null || first == last) return null;
-    return last - first;
-  }
-
-  /// Listede belirli bir alanı null olmayan ilk kaydın değerini döner.
-  double? _firstValueWhere(double? Function(ProgressEntryModel) selector) {
+    double? first;
     for (final entry in _entries) {
-      final val = selector(entry);
-      if (val != null) return val;
+      final v = entry.valueFor(type);
+      if (v != null) {
+        first = v;
+        break;
+      }
     }
-    return null;
+    final last = latestFor(type);
+    if (first == null || last == null || first == last) return null;
+    return last - first;
   }
 
   /// Ardışık gün serisi — bugünden geriye doğru kesintisiz kayıt sayısı.

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../features/progress/models/measurement_type.dart';
+
 /// Kullanıcının bir günde girdiği kilo + vücut ölçümü kaydı.
 /// Firestore yolu: users/{userId}/progressEntries/{entryId}
 class ProgressEntryModel {
@@ -57,6 +59,22 @@ class ProgressEntryModel {
       if (muscleMass != null) 'muscleMass': muscleMass,
       if (arm != null) 'arm': arm,
       if (thigh != null) 'thigh': thigh,
+    };
+  }
+
+  /// Tek nokta erişim: [MeasurementType]'a karşılık gelen alan değerini döner.
+  /// Yeni bir ölçüm türü eklendiğinde yalnızca burası ve [MeasurementType]
+  /// enum'u güncellenir; provider/widget parametrik yola gider.
+  double? valueFor(MeasurementType type) {
+    return switch (type) {
+      MeasurementType.weight => weight,
+      MeasurementType.waist => waist,
+      MeasurementType.hip => hip,
+      MeasurementType.chest => chest,
+      MeasurementType.arm => arm,
+      MeasurementType.thigh => thigh,
+      MeasurementType.bodyFat => bodyFat,
+      MeasurementType.muscleMass => muscleMass,
     };
   }
 

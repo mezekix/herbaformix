@@ -4,25 +4,11 @@ import 'package:intl/intl.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../models/progress_entry_model.dart';
+import '../models/measurement_type.dart';
+
+export '../models/measurement_type.dart';
 
 enum ChartRange { week, month, threeMonths }
-
-/// Ölçüm türü — grafik hangi veriyi çizecek?
-enum MeasurementType {
-  weight('Kilo Değişimi', 'kg', Icons.monitor_weight_outlined),
-  waist('Bel Değişimi', 'cm', Icons.straighten),
-  hip('Kalça Değişimi', 'cm', Icons.straighten),
-  chest('Göğüs Değişimi', 'cm', Icons.straighten),
-  arm('Kol Değişimi', 'cm', Icons.straighten),
-  thigh('Bacak Değişimi', 'cm', Icons.straighten),
-  bodyFat('Yağ Oranı Değişimi', '%', Icons.water_drop_outlined),
-  muscleMass('Kas Kütlesi Değişimi', 'kg', Icons.fitness_center);
-
-  final String label;
-  final String unit;
-  final IconData icon;
-  const MeasurementType(this.label, this.unit, this.icon);
-}
 
 /// Gerçek verilerle çizilen ölçüm değişimi grafiği.
 /// [MeasurementType] parametresiyle kilo, bel, kalça vb. tüm ölçümler için kullanılabilir.
@@ -52,18 +38,8 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
   ChartRange _range = ChartRange.month;
 
   /// Seçili ölçüm türüne göre entry'den değer çeker.
-  double? _getValue(ProgressEntryModel entry) {
-    return switch (widget.measurementType) {
-      MeasurementType.weight => entry.weight,
-      MeasurementType.waist => entry.waist,
-      MeasurementType.hip => entry.hip,
-      MeasurementType.chest => entry.chest,
-      MeasurementType.arm => entry.arm,
-      MeasurementType.thigh => entry.thigh,
-      MeasurementType.bodyFat => entry.bodyFat,
-      MeasurementType.muscleMass => entry.muscleMass,
-    };
-  }
+  double? _getValue(ProgressEntryModel entry) =>
+      entry.valueFor(widget.measurementType);
 
   /// Değeri olmayan entry'leri filtreler.
   List<ProgressEntryModel> get _validEntries =>
