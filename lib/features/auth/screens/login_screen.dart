@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -371,41 +370,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         
                       const SizedBox(height: 16),
-
-                      // --- TEST BYPASS (sadece debug build) ---
-                      if (kDebugMode) ...[
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: OutlinedButton.icon(
-                            onPressed: _isLoading
-                                ? null
-                                : () async {
-                                    setState(() => _isLoading = true);
-                                    final auth = Provider.of<AuthProvider>(
-                                        context,
-                                        listen: false);
-                                    await auth.signIn(
-                                        'test@test.com', '1234321');
-                                    if (mounted) {
-                                      setState(() => _isLoading = false);
-                                    }
-                                  },
-                            icon: const Icon(Icons.bug_report_outlined,
-                                size: 18),
-                            label: const Text('Test Girişi (Distribütör)'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.orange.shade700,
-                              side: BorderSide(
-                                  color: Colors.orange.shade300, width: 1.5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
 
                       // Social Login Divider
                       Row(
