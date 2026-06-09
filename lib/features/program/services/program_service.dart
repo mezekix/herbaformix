@@ -142,12 +142,10 @@ class ProgramService {
 
     for (var doc in todayDocs.docs) {
       final data = doc.data();
-      final pId = (data['productId'] ?? data['product_id']) as String? ?? '';
-      final time = ((data['scheduledTime'] ?? data['scheduled_time'])
-              as Timestamp)
-          .toDate();
+      final pId = data['productId'] as String? ?? '';
+      final time = (data['scheduledTime'] as Timestamp).toDate();
       final key = '${pId}_${time.hour}:${time.minute}';
-      if ((data['isCompleted'] ?? data['is_completed']) == true) {
+      if (data['isCompleted'] == true) {
         completedMap[key] = true;
       }
       // Eski rutini silmek üzere batch'e ekle

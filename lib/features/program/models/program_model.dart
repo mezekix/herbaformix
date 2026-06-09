@@ -18,8 +18,8 @@ class MealProduct {
 
   factory MealProduct.fromMap(Map<String, dynamic> map) {
     return MealProduct(
-      productId: (map['productId'] ?? map['product_id']) as String? ?? '',
-      productName: (map['productName'] ?? map['product_name']) as String? ?? '',
+      productId: map['productId'] as String? ?? '',
+      productName: map['productName'] as String? ?? '',
     );
   }
 
@@ -53,10 +53,8 @@ class MealSlot {
       id: map['id'] as String? ?? '',
       kind: _kindFromString(map['kind'] as String? ?? 'morning'),
       label: map['label'] as String? ?? 'Öğün',
-      scheduledTime:
-          (map['scheduledTime'] ?? map['scheduled_time']) as String? ?? '09:00',
-      isNormalMeal:
-          (map['isNormalMeal'] ?? map['is_normal_meal']) as bool? ?? false,
+      scheduledTime: map['scheduledTime'] as String? ?? '09:00',
+      isNormalMeal: map['isNormalMeal'] as bool? ?? false,
       products: rawProducts
           .map((e) => MealProduct.fromMap(e as Map<String, dynamic>))
           .toList(),
@@ -153,68 +151,22 @@ class ProgramModel {
   });
 
   factory ProgramModel.fromMap(Map<String, dynamic> map, String documentId) {
-    // Geriye dönük uyumluluk: eski 'meal_plan' map formatını da destekle
-    List<MealSlot> slots = [];
-    if (map['slots'] != null) {
-      final rawSlots = map['slots'] as List<dynamic>;
-      slots = rawSlots
-          .map((e) => MealSlot.fromMap(e as Map<String, dynamic>))
-          .toList();
-    } else if (map['meal_plan'] != null) {
-      // Eski format — dönüştür
-      final rawPlan = map['meal_plan'] as Map<String, dynamic>;
-      final order = ['morning', 'lunch', 'evening'];
-      for (final key in order) {
-        if (rawPlan.containsKey(key)) {
-          final old = rawPlan[key] as Map<String, dynamic>;
-          final productId =
-              (old['productId'] ?? old['product_id']) as String?;
-          final productName =
-              (old['productName'] ?? old['product_name']) as String?;
-          slots.add(MealSlot(
-            id: key,
-            kind: MealSlot._kindFromString(key),
-            label: _legacyLabel(key),
-            scheduledTime:
-                (old['scheduledTime'] ?? old['scheduled_time']) as String? ??
-                    '09:00',
-            isNormalMeal: old['type'] == 'normal_meal',
-            products: productId != null
-                ? [MealProduct(productId: productId, productName: productName ?? '')]
-                : [],
-          ));
-        }
-      }
-    }
-
-    // camelCase okuma + eski snake_case fallback
-    final startDate = (map['startDate'] ?? map['start_date']) as Timestamp;
-    final createdAt = (map['createdAt'] ?? map['created_at']) as Timestamp;
+    final rawSlots = (map['slots'] as List<dynamic>?) ?? const [];
+    final slots = rawSlots
+        .map((e) => MealSlot.fromMap(e as Map<String, dynamic>))
+        .toList();
 
     return ProgramModel(
       id: documentId,
-      userGoal: (map['userGoal'] ?? map['user_goal']) as String? ??
-          'healthy_living',
-      startDate: startDate.toDate(),
-      durationMonths:
-          (map['durationMonths'] ?? map['duration_months']) as int? ?? 1,
+      userGoal: map['userGoal'] as String? ?? 'healthy_living',
+      startDate: (map['startDate'] as Timestamp).toDate(),
+      durationMonths: map['durationMonths'] as int? ?? 1,
       slots: slots,
-      currentWeight:
-          ((map['currentWeight'] ?? map['current_weight']) as num?)?.toDouble(),
-      targetWeight:
-          ((map['targetWeight'] ?? map['target_weight']) as num?)?.toDouble(),
-      createdAt: createdAt.toDate(),
-      isActive: (map['isActive'] ?? map['is_active']) as bool? ?? true,
+      currentWeight: (map['currentWeight'] as num?)?.toDouble(),
+      targetWeight: (map['targetWeight'] as num?)?.toDouble(),
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      isActive: map['isActive'] as bool? ?? true,
     );
-  }
-
-  static String _legacyLabel(String key) {
-    switch (key) {
-      case 'morning': return 'Sabah Öğünü';
-      case 'lunch': return 'Öğle Öğünü';
-      case 'evening': return 'Akşam Öğünü';
-      default: return 'Öğün';
-    }
   }
 
   Map<String, dynamic> toMap() {

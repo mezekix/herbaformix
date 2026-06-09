@@ -955,15 +955,13 @@ class FirestoreService {
       );
 
       final routines = recentRoutinesSnapshot.docs.map((doc) => doc.data()).toList();
-      final completedRoutines = routines.where((routine) =>
-          (routine['isCompleted'] ?? routine['is_completed']) == true);
+      final completedRoutines =
+          routines.where((routine) => routine['isCompleted'] == true);
 
       DateTime? latestRoutineAt;
       if (recentRoutinesSnapshot.docs.isNotEmpty) {
         latestRoutineAt = recentRoutinesSnapshot.docs
-            .map((doc) => ((doc.data()['scheduledTime'] ??
-                    doc.data()['scheduled_time']) as Timestamp)
-                .toDate())
+            .map((doc) => (doc.data()['scheduledTime'] as Timestamp).toDate())
             .fold<DateTime?>(
               null,
               (latest, current) =>

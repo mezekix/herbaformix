@@ -27,10 +27,7 @@ class DailyRoutineModel {
     Map<String, dynamic> map,
     String documentId,
   ) {
-    // camelCase okuma + eski snake_case fallback (P1.6.b hard cutover sonrası
-    // mevcut test verisi için geriye dönük uyumluluk; bir release sonra silinir).
-    final stepTypeStr =
-        (map['stepType'] ?? map['step_type']) as String? ?? 'product';
+    final stepTypeStr = map['stepType'] as String? ?? 'product';
     RoutineStepType stepType;
     if (stepTypeStr == 'water') {
       stepType = RoutineStepType.water;
@@ -40,18 +37,16 @@ class DailyRoutineModel {
       stepType = RoutineStepType.product;
     }
 
-    final scheduled = map['scheduledTime'] ?? map['scheduled_time'];
-
     return DailyRoutineModel(
       id: documentId,
-      productId: (map['productId'] ?? map['product_id']) as String? ?? '',
-      scheduledTime: scheduled != null
-          ? (scheduled as Timestamp).toDate()
+      productId: map['productId'] as String? ?? '',
+      scheduledTime: map['scheduledTime'] != null
+          ? (map['scheduledTime'] as Timestamp).toDate()
           : DateTime.now(),
-      isCompleted: (map['isCompleted'] ?? map['is_completed']) as bool? ?? false,
+      isCompleted: map['isCompleted'] as bool? ?? false,
       stepType: stepType,
-      amountMl: (map['amountMl'] ?? map['amount_ml']) as int?,
-      slotId: (map['slotId'] ?? map['slot_id']) as String?,
+      amountMl: map['amountMl'] as int?,
+      slotId: map['slotId'] as String?,
     );
   }
 

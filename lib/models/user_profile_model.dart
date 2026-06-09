@@ -222,12 +222,10 @@ class UserProfileModel {
       programStartDate: map['programStartDate'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['programStartDate'] as int)
           : null,
-      // camelCase okuma + eski snake_case fallback (P1.6.a hard cutover sonrası
-      // eski test verilerinde hâlâ snake_case anahtarlar olabilir).
-      userGoal: (map['userGoal'] ?? map['user_goal']) as String?,
-      wakeTime: (map['wakeTime'] ?? map['wake_time']) as String?,
-      lunchTime: (map['lunchTime'] ?? map['lunch_time']) as String?,
-      sleepTime: (map['sleepTime'] ?? map['sleep_time']) as String?,
+      userGoal: map['userGoal'] as String?,
+      wakeTime: map['wakeTime'] as String?,
+      lunchTime: map['lunchTime'] as String?,
+      sleepTime: map['sleepTime'] as String?,
       birthDate: map['birthDate'] is int
           ? DateTime.fromMillisecondsSinceEpoch(map['birthDate'] as int)
           : null,
