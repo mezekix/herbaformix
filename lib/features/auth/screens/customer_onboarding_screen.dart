@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../products/providers/product_provider.dart';
 import '../../program/providers/program_provider.dart';
+import '../../program/services/notification_service.dart';
 import '../providers/auth_provider.dart';
 
 class CustomerOnboardingScreen extends StatefulWidget {
@@ -93,6 +94,64 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
       lunchTime: updated.lunchTime,
       sleepTime: updated.sleepTime,
     );
+
+    if (!mounted) return;
+
+    // Bildirim izni — rationale önce, sonra OS dialog'u.
+    // Onboarding tek seferlik olduğundan kullanıcı bu akışı sadece bir kez görür.
+    // iOS'ta sistem izin dialog'u ömür boyu yalnız bir kez gösterildiği için
+    // önce bağlamı açıklamak izin verme oranını ciddi şekilde artırır.
+    final shouldAsk = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.notifications_active, color: AppColors.primary, size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Hatırlatıcıları Aç',
+                style: TextStyle(
+                  color: AppColors.garden,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Programının çalışması için öğün ve su zamanlarında sana bildirim '
+          'göndereceğim. Bildirimler kapalıysa hatırlatma alamazsın.\n\n'
+          'Şimdi açmak ister misin?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Şimdi Değil'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('İzin Ver'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldAsk == true && mounted) {
+      // OS dialog'unu tetikle. Sonuç ne olursa olsun akışı kesmiyoruz —
+      // izin verilmezse kullanıcı sonradan Profil > Ayarlar > Bildirimler'den
+      // tekrar açabilir.
+      await NotificationService().requestPermission();
+    }
 
     if (!mounted) return;
 

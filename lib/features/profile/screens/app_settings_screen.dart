@@ -54,18 +54,52 @@ class AppSettingsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: Colors.grey.shade200),
             ),
-            child: ListTile(
-              leading: const Icon(Icons.notifications_outlined, color: AppColors.primary),
-              title: const Text('Bildirim Tercihleri', style: TextStyle(fontWeight: FontWeight.w600)),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-              onTap: () async {
-                final service = NotificationService();
-                final granted = await service.requestPermission();
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(granted ? 'Bildirim izni verildi.' : 'Bildirim izni verilmedi.'),
+            child: FutureBuilder<bool>(
+              future: NotificationService().hasPermission(),
+              builder: (context, snapshot) {
+                final hasPermission = snapshot.data ?? false;
+                final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+                return ListTile(
+                  leading: Icon(
+                    hasPermission
+                        ? Icons.notifications_active
+                        : Icons.notifications_off_outlined,
+                    color: hasPermission ? AppColors.primary : Colors.grey,
                   ),
+                  title: const Text(
+                    'Bildirimler',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    isLoading
+                        ? 'Kontrol ediliyor...'
+                        : hasPermission
+                            ? 'Açık — öğün ve su hatırlatıcıları çalışıyor'
+                            : 'Kapalı — hatırlatıcı almıyorsun',
+                    style: TextStyle(
+                      color: hasPermission ? Colors.green.shade700 : Colors.orange.shade700,
+                      fontSize: 12,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  onTap: hasPermission
+                      ? null
+                      : () async {
+                          final service = NotificationService();
+                          final granted = await service.requestPermission();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                granted
+                                    ? 'Bildirimler açıldı. ✓'
+                                    : 'İzin verilmedi. Cihaz Ayarları > Uygulamalar > Herbaformix > Bildirimler menüsünden manuel açabilirsin.',
+                              ),
+                              duration: const Duration(seconds: 5),
+                            ),
+                          );
+                        },
                 );
               },
             ),
