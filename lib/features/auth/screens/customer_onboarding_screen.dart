@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
-import '../../products/providers/product_provider.dart';
-import '../../program/providers/program_provider.dart';
 import '../../program/services/notification_service.dart';
 import '../providers/auth_provider.dart';
 
@@ -59,6 +57,8 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
         ? null
         : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
+    // Profili kaydet. programStartDate burada set EDİLMEZ — program
+    // gerçekten oluşturulduğunda (program_summary_step) set edilir.
     final updated = userProfile.copyWith(
       name: _nameController.text.trim(),
       age: int.tryParse(_ageController.text.trim()),
@@ -72,28 +72,9 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
       sleepTime: fmt(_sleepTime),
       gender: _selectedGender,
       isOnboarded: true,
-      programStartDate: DateTime.now(),
     );
 
     await authProvider.updateUserProfile(updated);
-
-    if (!mounted) return;
-
-    // Otomatik Program Oluşturma — güncellenmiş profilden okur,
-    // eski mutable kodda olduğu gibi yeni saatleri kullanır.
-    final productProvider = context.read<ProductProvider>();
-    final programProvider = context.read<ProgramProvider>();
-
-    await programProvider.createAutomaticProgram(
-      userId: updated.id,
-      userGoal: _selectedGoal,
-      currentWeight: double.tryParse(_weightController.text.trim()),
-      targetWeight: double.tryParse(_targetWeightController.text.trim()),
-      allProducts: productProvider.products,
-      wakeTime: updated.wakeTime,
-      lunchTime: updated.lunchTime,
-      sleepTime: updated.sleepTime,
-    );
 
     if (!mounted) return;
 
@@ -155,32 +136,67 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
 
     if (!mounted) return;
 
-    await showDialog(
+    // Program oluşturma kararı — müşteriye sor, otomatik üretme.
+    // Eskiden createAutomaticProgram ile boş slot iskeleti otomatik
+    // yazılıyordu; ama "saçma otomatik program" hissi veriyordu çünkü
+    // kullanıcıdan onay alınmıyordu. Şimdi açık tercih:
+    final createNow = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Programınız Hazır! 🎉', style: TextStyle(color: AppColors.garden, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Profilin Hazır! ✨',
+          style: TextStyle(
+            color: AppColors.garden,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: const Text(
-          'Program saatleriniz yaşam tarzınıza göre ayarlandı.\n\nLütfen program ekranına giderek kullanacağınız ürünleri ekleyin ve programınızı tamamlayın.',
+          'Şimdi sana özel beslenme programını oluşturalım mı?\n\n'
+          'Programı oluştururken kullanacağın ürünleri seçecek, '
+          'öğün saatlerini ayarlayacaksın. Dilersen sonra "Programım" '
+          'sekmesinden de başlayabilirsin.',
         ),
         actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Daha Sonra'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.garden,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Programıma Git', style: TextStyle(color: AppColors.white)),
-          )
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Şimdi Oluştur'),
+          ),
         ],
       ),
     );
 
     if (!mounted) return;
-    context.goNamed('create-program'); // Program düzenleme ekranına yönlendir
+
+    if (createNow == true) {
+      // Müşteri kabul etti → program oluşturma sihirbazına yönlendir.
+      context.goNamed('create-program');
+    } else {
+      // Müşteri "Daha Sonra" dedi → ana sayfaya git + bilgi snackbar.
+      context.goNamed('home');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Programını dilediğin zaman "Programım" sekmesinden '
+            'oluşturabilirsin. 🌱',
+          ),
+          backgroundColor: AppColors.garden,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   @override
