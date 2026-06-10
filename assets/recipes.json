@@ -1,0 +1,92 @@
+{
+  "recipes": [
+    {
+      "id": "f1_classic_vanilla",
+      "productId": "formul1_id",
+      "title": "Klasik Vanilyalı Shake",
+      "description": "Günlük en temel tarifiniz. Sabahları hızlıca hazırlayın.",
+      "imageUrl": "",
+      "prepTimeMin": 3,
+      "calories": 220,
+      "goals": ["weight_loss", "healthy_living", "weight_gain"],
+      "tags": ["kolay", "hızlı", "klasik"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilyalı", "amount": "2 ölçek", "note": "~50gr" },
+        { "name": "Yarım yağlı süt", "amount": "250ml" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Tüm malzemeleri blender'a koy.",
+        "30 saniye yüksek hızda karıştır.",
+        "Hemen servis et."
+      ],
+      "nutritionInfo": {
+        "protein": 24,
+        "carbs": 18,
+        "fat": 3,
+        "fiber": 5
+      },
+      "tips": "Daha kremsi bir tat için buzları önceden kırın.",
+      "isRecommended": true
+    },
+    {
+      "id": "f1_chocolate_banana",
+      "productId": "formul1_id",
+      "title": "Muzlu Çikolatalı Fit Shake",
+      "description": "Tatlı krizlerini önleyen ve enerji veren harika bir karışım.",
+      "imageUrl": "",
+      "prepTimeMin": 5,
+      "calories": 280,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["tatlı", "enerji", "meyveli"],
+      "ingredients": [
+        { "name": "Formül 1 Çikolatalı", "amount": "2 ölçek", "note": "~50gr" },
+        { "name": "Su veya Bitkisel Süt", "amount": "250ml" },
+        { "name": "Muz", "amount": "1/2 adet" },
+        { "name": "Ceviz", "amount": "1 tatlı kaşığı" }
+      ],
+      "steps": [
+        "Sıvıyı blender'a alın.",
+        "Üzerine Formül 1, muz ve cevizi ekleyin.",
+        "Pürüzsüz olana kadar karıştırın."
+      ],
+      "nutritionInfo": {
+        "protein": 26,
+        "carbs": 30,
+        "fat": 8,
+        "fiber": 7
+      },
+      "tips": "Muzu önceden dondurarak daha yoğun bir kıvam elde edebilirsiniz.",
+      "isRecommended": true
+    },
+    {
+      "id": "f1_berry_detox",
+      "productId": "formul1_id",
+      "title": "Orman Meyveli Antioksidan Shake",
+      "description": "Kilo kontrolü döneminde ferahlatıcı ve düşük kalorili bir seçenek.",
+      "imageUrl": "",
+      "prepTimeMin": 4,
+      "calories": 190,
+      "goals": ["weight_loss"],
+      "tags": ["ferah", "antioksidan", "hafif"],
+      "ingredients": [
+        { "name": "Formül 1 Ahududulu & Yaban Mersinli", "amount": "2 ölçek", "note": "~50gr" },
+        { "name": "Su", "amount": "250ml" },
+        { "name": "Dondurulmuş meyve mix", "amount": "1 yemek kaşığı" }
+      ],
+      "steps": [
+        "Suyu blender'a ekleyin.",
+        "Formül 1 tozunu ve donmuş meyveleri ekleyip karıştırın.",
+        "Buz ile servis yapın."
+      ],
+      "nutritionInfo": {
+        "protein": 18,
+        "carbs": 15,
+        "fat": 2,
+        "fiber": 6
+      },
+      "tips": "Su yerine şekersiz badem sütü kullanarak lezzetini artırabilirsiniz.",
+      "isRecommended": false
+    }
+  ]
+}

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
 import '../providers/calorie_provider.dart';
+import 'calorie_history_screen.dart';
 
 class CalorieTrackerScreen extends StatelessWidget {
   static const routeName = 'calorie-tracker';
@@ -16,9 +18,10 @@ class CalorieTrackerScreen extends StatelessWidget {
         title: const Text('Kalori Sayacı'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _showResetDialog(context),
-            tooltip: 'Günlük Sayacı Sıfırla',
+            icon: const Icon(Icons.history),
+            onPressed: () =>
+                context.goNamed(CalorieHistoryScreen.routeName),
+            tooltip: 'Geçmiş',
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -32,19 +35,33 @@ class CalorieTrackerScreen extends StatelessWidget {
           if (provider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
-          return RefreshIndicator(
-            onRefresh: () => provider.resetCalories(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildProgressCard(context, provider),
-                  const SizedBox(height: 24),
-                  _buildMealList(context, provider),
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildProgressCard(context, provider),
+                if (provider.errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      provider.errorMessage!,
+                      style: const TextStyle(
+                          color: AppColors.error, fontSize: 13),
+                    ),
+                  ),
                 ],
-              ),
+                const SizedBox(height: 24),
+                _buildMealList(context, provider),
+              ],
             ),
           );
         },
@@ -60,6 +77,8 @@ class CalorieTrackerScreen extends StatelessWidget {
   Widget _buildProgressCard(BuildContext context, CalorieProvider provider) {
     final textTheme = Theme.of(context).textTheme;
     final progress = provider.progress;
+    final overGoal = provider.totalCalories > provider.calorieGoal;
+    final color = overGoal ? Colors.orange : AppColors.primary;
 
     return Card(
       elevation: 4,
@@ -72,21 +91,14 @@ class CalorieTrackerScreen extends StatelessWidget {
               width: 100,
               height: 100,
               child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: progress),
-                duration: const Duration(milliseconds: 1000),
+                tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0)),
+                duration: const Duration(milliseconds: 800),
                 builder: (context, value, child) {
                   return CircularProgressIndicator(
                     value: value,
                     strokeWidth: 8,
                     backgroundColor: Colors.grey.shade200,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Color.lerp(
-                            AppColors.primary,
-                            AppColors.secondary,
-                            value,
-                          ) ??
-                          AppColors.primary,
-                    ),
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
                   );
                 },
               ),
@@ -100,18 +112,30 @@ class CalorieTrackerScreen extends StatelessWidget {
                     '${provider.totalCalories} / ${provider.calorieGoal}',
                     style: textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
+                      color: color,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text('Tüketilen Kalori (kcal)', style: textTheme.bodyMedium),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
-                    value: progress,
+                    value: progress.clamp(0.0, 1.0),
                     backgroundColor: Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
                     minHeight: 6,
                     borderRadius: BorderRadius.circular(3),
                   ),
+                  if (overGoal) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Hedefi ${provider.totalCalories - provider.calorieGoal} kcal aştın.',
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -140,7 +164,8 @@ class CalorieTrackerScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Günlük Öğünler', style: Theme.of(context).textTheme.titleLarge),
+        Text('Bugünkü Öğünler',
+            style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         ListView.separated(
           shrinkWrap: true,
@@ -179,9 +204,7 @@ class CalorieTrackerScreen extends StatelessWidget {
                       Icons.delete_outline,
                       color: Colors.red.shade400,
                     ),
-                    onPressed: () {
-                      provider.removeMeal(meal.id);
-                    },
+                    onPressed: () => provider.removeMeal(meal.id),
                   ),
                 ],
               ),
@@ -212,7 +235,7 @@ class CalorieTrackerScreen extends StatelessWidget {
                 decoration: const InputDecoration(
                   labelText: 'Öğün Adı (Örn: Tavuklu Salata)',
                 ),
-                validator: (value) => (value?.isEmpty ?? true)
+                validator: (value) => (value?.trim().isEmpty ?? true)
                     ? 'Lütfen bir öğün adı girin.'
                     : null,
               ),
@@ -225,7 +248,8 @@ class CalorieTrackerScreen extends StatelessWidget {
                   if (value == null || value.isEmpty) {
                     return 'Lütfen kalori miktarı girin.';
                   }
-                  if (int.tryParse(value) == null || int.parse(value) <= 0) {
+                  final v = int.tryParse(value);
+                  if (v == null || v <= 0) {
                     return 'Lütfen geçerli bir kalori değeri girin.';
                   }
                   return null;
@@ -242,12 +266,11 @@ class CalorieTrackerScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
+                final navigator = Navigator.of(context);
                 final name = nameController.text;
                 final calories = int.parse(caloriesController.text);
                 await provider.addMeal(name, calories);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
+                navigator.pop();
               }
             },
             child: const Text('Ekle'),
@@ -282,44 +305,14 @@ class CalorieTrackerScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
+              final navigator = Navigator.of(context);
               final newGoal = int.tryParse(goalController.text);
               if (newGoal != null && newGoal > 0) {
                 await provider.setCalorieGoal(newGoal);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
+                navigator.pop();
               }
             },
             child: const Text('Kaydet'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showResetDialog(BuildContext context) {
-    final provider = Provider.of<CalorieProvider>(context, listen: false);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sayacı Sıfırla'),
-        content: const Text(
-          'Tüm günlük kalori ve öğün verilerini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('İptal'),
-          ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () async {
-              await provider.resetCalories();
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
-            },
-            child: const Text('Sıfırla'),
           ),
         ],
       ),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart'; // redirect içinde Provider.of veya co
 import '../features/auth/providers/auth_provider.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/splash_screen.dart';
+import '../features/calorie_tracker/screens/calorie_history_screen.dart';
 import '../features/calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../features/customers/screens/add_edit_customer_screen.dart';
 import '../features/customers/screens/customer_detail_screen.dart';
@@ -31,7 +32,10 @@ import '../models/product_model.dart';
 import '../models/user_role.dart';
 import '../features/auth/screens/customer_onboarding_screen.dart';
 import '../features/program/screens/create_program_screen.dart';
+import '../features/program/screens/edit_program_template_screen.dart';
+import '../features/program/screens/program_templates_screen.dart';
 import '../features/program/models/program_editor_args.dart';
+import '../features/program/models/program_template_model.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -73,6 +77,21 @@ class AppRouter {
             },
           ),
           GoRoute(
+            path: ProgramTemplatesScreen.routeName, // 'program-templates'
+            name: ProgramTemplatesScreen.routeName,
+            builder: (context, state) => const ProgramTemplatesScreen(),
+            routes: [
+              GoRoute(
+                path: 'edit', // '/home/program-templates/edit'
+                name: EditProgramTemplateScreen.routeName,
+                builder: (context, state) {
+                  final existing = state.extra as ProgramTemplateModel?;
+                  return EditProgramTemplateScreen(existing: existing);
+                },
+              ),
+            ],
+          ),
+          GoRoute(
             path: 'profile', // '/home/profile'
             name: ProfileScreen.routeName,
             builder: (context, state) => const ProfileScreen(),
@@ -108,6 +127,13 @@ class AppRouter {
             path: CalorieTrackerScreen.routeName, // 'calorie-tracker'
             name: CalorieTrackerScreen.routeName,
             builder: (context, state) => const CalorieTrackerScreen(),
+            routes: [
+              GoRoute(
+                path: 'history', // '/home/calorie-tracker/history'
+                name: CalorieHistoryScreen.routeName,
+                builder: (context, state) => const CalorieHistoryScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: ProgressDashboardScreen.routeName,

@@ -11,6 +11,8 @@ import '../../orders/providers/cart_provider.dart';
 import 'add_edit_product_screen.dart';
 import '../../../widgets/cached_product_image.dart';
 import 'product_image_viewer_screen.dart';
+import '../providers/recipe_provider.dart';
+import '../widgets/recipe_card.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   static const String routeName = 'product-detail';
@@ -190,6 +192,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
                   const SizedBox(height: 8),
                   _buildUsage(),
                   const SizedBox(height: 24),
+                  _buildRecipeSuggestions(),
+                  const SizedBox(height: 24),
                   _buildRelatedProductsSection(),
                   const SizedBox(height: 90),
                 ],
@@ -314,6 +318,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     );
   }
 
+  Widget _buildRecipeSuggestions() {
+    final recipes = context.watch<RecipeProvider>().getRecipesForProduct(_product!.id);
+    if (recipes.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('🥤 Tarif Önerileri'),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 200,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: recipes.length,
+            itemBuilder: (context, index) {
+              return RecipeCard(recipe: recipes[index], isHorizontal: true);
+            },
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildRelatedProductsSection() {
     if (_relatedProducts.isEmpty) {

@@ -57,7 +57,7 @@ class _CartScreenState extends State<CartScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final customerId = isCustomer ? authProvider.firebaseUser!.uid : _selectedCustomer!.id;
+      final customerId = isCustomer ? authProvider.firebaseUser!.uid : (_selectedCustomer!.linkedUserId ?? _selectedCustomer!.id);
       final customerName = isCustomer
           ? (authProvider.userProfile?.name ?? 'Müşteri')
           : '${_selectedCustomer!.firstName} ${_selectedCustomer!.lastName}'.trim();

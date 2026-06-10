@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/products/providers/product_provider.dart';
+import '../../../features/products/providers/recipe_provider.dart';
+import '../../../features/products/widgets/recipe_card.dart';
 import '../../../models/daily_routine_model.dart';
 import '../../../models/product_model.dart';
 import '../../../services/routine_service.dart';
@@ -816,14 +818,25 @@ class _ProductTile extends StatelessWidget {
   void _showInstruction(BuildContext context) {
     final instruction =
         product.instructionsByGoal?[userGoal] ?? product.usageInfo;
-    if (instruction == null || instruction.isEmpty) return;
+
+    // Eğer tarif varsa instruction boş olsa bile gösterebilmeliyiz.
+    final recipes = context.read<RecipeProvider>().getRecipesForProduct(product.id);
+    final hasInstruction = instruction != null && instruction.isNotEmpty;
+    
+    if (!hasInstruction && recipes.isEmpty) return;
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.only(
+          left: 24,
+          right: 24,
+          top: 24,
+          bottom: MediaQuery.of(ctx).padding.bottom + 24,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -845,19 +858,30 @@ class _ProductTile extends StatelessWidget {
                     color: AppColors.nightSky),
                 textAlign: TextAlign.center),
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.shade100),
+            if (hasInstruction)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.shade100),
+                ),
+                child: Text(instruction,
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.orange.shade800,
+                        height: 1.5)),
               ),
-              child: Text(instruction,
-                  style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.orange.shade800,
-                      height: 1.5)),
-            ),
+            if (recipes.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                '🥤 Bu ürün için ${recipes.length} tarif var',
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+              ),
+              const SizedBox(height: 8),
+              RecipeCard(recipe: recipes.first, isCompact: true),
+            ],
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx),

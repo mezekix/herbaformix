@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
+import '../../../models/water_log_model.dart';
 import '../providers/water_provider.dart';
 
 class WaterTrackerScreen extends StatelessWidget {
@@ -326,13 +327,26 @@ class WaterTrackerScreen extends StatelessWidget {
               title: Text('${log.amount} ml su eklendi'),
               subtitle: Text(DateFormat.Hm().format(log.time)),
               dense: true,
-              trailing: IconButton(
-                icon: Icon(Icons.delete_outline,
-                    size: 18, color: Colors.grey.shade400),
-                tooltip: 'Sil',
-                onPressed: () {
-                  waterProvider.removeLog(log.id);
-                },
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.edit_outlined,
+                        size: 18, color: Colors.grey.shade600),
+                    tooltip: 'Düzenle',
+                    onPressed: () {
+                      _showEditWaterDialog(context, waterProvider, log);
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete_outline,
+                        size: 18, color: Colors.grey.shade400),
+                    tooltip: 'Sil',
+                    onPressed: () {
+                      waterProvider.removeLog(log.id);
+                    },
+                  ),
+                ],
               ),
             );
           },
@@ -468,9 +482,13 @@ class WaterTrackerScreen extends StatelessWidget {
     if (temp != null) {
       if (temp < 15) {
         weatherEffect += -200;
-      } else if (temp > 25 && temp <= 30) weatherEffect += 300;
-      else if (temp > 30 && temp <= 35) weatherEffect += 500;
-      else if (temp > 35) weatherEffect += 700;
+      } else if (temp > 25 && temp <= 30) {
+        weatherEffect += 300;
+      } else if (temp > 30 && temp <= 35) {
+        weatherEffect += 500;
+      } else if (temp > 35) {
+        weatherEffect += 700;
+      }
     }
 
     int humidityEffect = 0;
@@ -478,7 +496,9 @@ class WaterTrackerScreen extends StatelessWidget {
     if (hum != null) {
       if (hum < 60) {
         humidityEffect += 200;
-      } else if (hum > 75) humidityEffect += 150;
+      } else if (hum > 75) {
+        humidityEffect += 150;
+      }
     }
 
     int herbalifeEffect = 0;
@@ -496,9 +516,13 @@ class WaterTrackerScreen extends StatelessWidget {
           totalProducts++;
           if (name.contains('shake') || name.contains('formul 1') || name.contains('formül 1')) {
             shakeCount++;
-          } else if (name.contains('aloe')) hasAloe = true;
-          else if (name.contains('çay') || name.contains('cay') || name.contains('bitkisel konsantre')) hasTea = true;
-          else if (name.contains('fiber') || name.contains('lif')) hasFiber = true;
+          } else if (name.contains('aloe')) {
+            hasAloe = true;
+          } else if (name.contains('çay') || name.contains('cay') || name.contains('bitkisel konsantre')) {
+            hasTea = true;
+          } else if (name.contains('fiber') || name.contains('lif')) {
+            hasFiber = true;
+          }
         }
       }
       herbalifeEffect += shakeCount * 200;
@@ -592,6 +616,15 @@ class WaterTrackerScreen extends StatelessWidget {
       ),
     );
   }
+
+  void _showEditWaterDialog(BuildContext context, WaterProvider waterProvider, WaterLogModel log) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return EditWaterDialog(waterProvider: waterProvider, log: log);
+      },
+    );
+  }
 }
 
 class CustomWaterDialog extends StatefulWidget {
@@ -659,6 +692,140 @@ class _CustomWaterDialogState extends State<CustomWaterDialog> {
             }
           },
           child: const Text('Ekle'),
+        ),
+      ],
+    );
+  }
+}
+
+class EditWaterDialog extends StatefulWidget {
+  final WaterProvider waterProvider;
+  final WaterLogModel log;
+
+  const EditWaterDialog({
+    super.key,
+    required this.waterProvider,
+    required this.log,
+  });
+
+  @override
+  State<EditWaterDialog> createState() => _EditWaterDialogState();
+}
+
+class _EditWaterDialogState extends State<EditWaterDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _amountController;
+  late TimeOfDay _selectedTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(text: widget.log.amount.toString());
+    _selectedTime = TimeOfDay.fromDateTime(widget.log.time);
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.nightSky,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedTime) {
+      setState(() {
+        _selectedTime = picked;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Su Kaydını Düzenle'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Miktar (ml)',
+                suffixText: 'ml',
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Lütfen bir miktar girin.';
+                }
+                final amount = int.tryParse(value);
+                if (amount == null || amount <= 0) {
+                  return 'Geçerli bir miktar girin.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Kayıt Saati'),
+              subtitle: Text(_selectedTime.format(context)),
+              trailing: const Icon(Icons.access_time, color: AppColors.primary),
+              onTap: () => _selectTime(context),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('İptal'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (_formKey.currentState?.validate() ?? false) {
+              final amount = int.parse(_amountController.text);
+              
+              // Günün tarihiyle seçilen saati birleştir
+              final originalDate = widget.log.time;
+              final newDateTime = DateTime(
+                originalDate.year,
+                originalDate.month,
+                originalDate.day,
+                _selectedTime.hour,
+                _selectedTime.minute,
+              );
+
+              widget.waterProvider.updateWaterLog(widget.log.id, amount, newDateTime);
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context)
+                ..removeCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text('Su tüketim kaydı güncellendi: $amount ml'),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+            }
+          },
+          child: const Text('Kaydet'),
         ),
       ],
     );

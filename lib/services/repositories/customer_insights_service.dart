@@ -105,6 +105,23 @@ class CustomerInsightsService {
                         : latest);
       }
 
+      // Riskli müşteri tespiti için: son **tamamlanmış** rutinin zamanı.
+      // (latestRoutineAt scheduled time'a bakar; risk için "yapıldı mı"
+      //  sorusunun cevabı lazım.)
+      DateTime? latestCompletedRoutineAt;
+      final completedDocs = recentRoutinesSnap.docs
+          .where((d) => d.data()['isCompleted'] == true);
+      if (completedDocs.isNotEmpty) {
+        latestCompletedRoutineAt = completedDocs
+            .map((d) => (d.data()['scheduledTime'] as Timestamp).toDate())
+            .fold<DateTime?>(
+                null,
+                (latest, current) =>
+                    latest == null || current.isAfter(latest)
+                        ? current
+                        : latest);
+      }
+
       DateTime? latestWaterAt;
       if (todayWaterSnap.docs.isNotEmpty) {
         latestWaterAt = todayWaterSnap.docs
@@ -141,6 +158,8 @@ class CustomerInsightsService {
         lastActivityAt: lastActivityCandidates.isEmpty
             ? null
             : lastActivityCandidates.first,
+        lastCompletedRoutineAt: latestCompletedRoutineAt,
+        programStartDate: userProfile?.programStartDate,
       );
     } catch (e) {
       debugPrint('getDistributorCustomerInsights hatası: $e');

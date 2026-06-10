@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/data/latest_10y.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 /// Öğün saatlerinde push bildirimleri yöneten servis.
@@ -28,10 +28,10 @@ class NotificationService {
   static const String actionView = 'ACTION_VIEW';
 
   // Hatırlatma ID offset'i (çakışmayı önler)
-  static const int _reminderIdOffset = 500000;
+  // static const int _reminderIdOffset = 500000;
 
   // Hatırlatma süresi
-  static const Duration _reminderDelay = Duration(minutes: 15);
+  // static const Duration _reminderDelay = Duration(minutes: 15);
 
   // Öğün bildirim ID'leri
   static const int _morningId = 1000;
@@ -80,80 +80,80 @@ class NotificationService {
     // "İncele" tıklandığında showsUserInterface: true olduğu için uygulama açılır.
   }
 
-  /// Payload bilgisinden 15 dk sonrası için hatırlatma bildirimi zamanlar.
-  Future<void> _scheduleReminderFromPayload(int? originalId, String? payload) async {
-    try {
-      if (!_initialized) await initialize();
-
-      final reminderId = (originalId ?? 0) + _reminderIdOffset;
-      String title = '🔔 Hatırlatma';
-      String body = 'Öğününüzü/Ürününüzü almayı unutmayın!';
-
-      // Payload'dan orijinal başlık ve mesajı al
-      if (payload != null && payload.isNotEmpty) {
-        try {
-          final data = jsonDecode(payload) as Map<String, dynamic>;
-          title = '🔔 ${data['title'] ?? 'Hatırlatma'}';
-          body = data['body'] as String? ?? body;
-        } catch (_) {
-          // JSON parse hatası → varsayılan mesaj kullan
-        }
-      }
-
-      final scheduledDate = tz.TZDateTime.now(tz.local).add(_reminderDelay);
-
-      final androidDetails = AndroidNotificationDetails(
-        'meal_reminders',
-        'Öğün Hatırlatıcıları',
-        channelDescription: 'Günlük öğün ve ürün kullanım hatırlatıcıları',
-        importance: Importance.high,
-        priority: Priority.high,
-        icon: '@drawable/ic_notification',
-        color: const Color(0xFF7AC144), // AppColors.primary
-        actions: const <AndroidNotificationAction>[
-          AndroidNotificationAction(
-            actionView,
-            '🔍 İncele',
-            showsUserInterface: true,
-          ),
-          AndroidNotificationAction(
-            actionOk,
-            '✅ Tamam',
-            showsUserInterface: false,
-          ),
-        ],
-      );
-      const iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-      );
-      final details = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      // Android 12+ exact alarm izin kontrolü
-      await _ensureExactAlarmPermission();
-
-      await _plugin.zonedSchedule(
-        id: reminderId,
-        title: title,
-        body: body,
-        scheduledDate: scheduledDate,
-        notificationDetails: details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        // 1 defalık — matchDateTimeComponents null
-      );
-
-      debugPrint(
-        '[NotificationService] ⏰ Hatırlatma zamanlandı: id=$reminderId, '
-        'hedef=$scheduledDate (15 dk sonra)',
-      );
-    } catch (e) {
-      debugPrint('[NotificationService] ❌ Hatırlatma zamanlama hatası: $e');
-    }
-  }
+  // /// Payload bilgisinden 15 dk sonrası için hatırlatma bildirimi zamanlar.
+  // Future<void> _scheduleReminderFromPayload(int? originalId, String? payload) async {
+  //   try {
+  //     if (!_initialized) await initialize();
+  // 
+  //     final reminderId = (originalId ?? 0) + _reminderIdOffset;
+  //     String title = '🔔 Hatırlatma';
+  //     String body = 'Öğününüzü/Ürününüzü almayı unutmayın!';
+  // 
+  //     // Payload'dan orijinal başlık ve mesajı al
+  //     if (payload != null && payload.isNotEmpty) {
+  //       try {
+  //         final data = jsonDecode(payload) as Map<String, dynamic>;
+  //         title = '🔔 ${data['title'] ?? 'Hatırlatma'}';
+  //         body = data['body'] as String? ?? body;
+  //       } catch (_) {
+  //         // JSON parse hatası → varsayılan mesaj kullan
+  //       }
+  //     }
+  // 
+  //     final scheduledDate = tz.TZDateTime.now(tz.local).add(_reminderDelay);
+  // 
+  //     final androidDetails = AndroidNotificationDetails(
+  //       'meal_reminders',
+  //       'Öğün Hatırlatıcıları',
+  //       channelDescription: 'Günlük öğün ve ürün kullanım hatırlatıcıları',
+  //       importance: Importance.high,
+  //       priority: Priority.high,
+  //       icon: '@drawable/ic_notification',
+  //       color: const Color(0xFF7AC144), // AppColors.primary
+  //       actions: const <AndroidNotificationAction>[
+  //         AndroidNotificationAction(
+  //           actionView,
+  //           '🔍 İncele',
+  //           showsUserInterface: true,
+  //         ),
+  //         AndroidNotificationAction(
+  //           actionOk,
+  //           '✅ Tamam',
+  //           showsUserInterface: false,
+  //         ),
+  //       ],
+  //     );
+  //     const iosDetails = DarwinNotificationDetails(
+  //       presentAlert: true,
+  //       presentBadge: true,
+  //       presentSound: true,
+  //     );
+  //     final details = NotificationDetails(
+  //       android: androidDetails,
+  //       iOS: iosDetails,
+  //     );
+  // 
+  //     // Android 12+ exact alarm izin kontrolü
+  //     await _ensureExactAlarmPermission();
+  // 
+  //     await _plugin.zonedSchedule(
+  //       id: reminderId,
+  //       title: title,
+  //       body: body,
+  //       scheduledDate: scheduledDate,
+  //       notificationDetails: details,
+  //       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+  //       // 1 defalık — matchDateTimeComponents null
+  //     );
+  // 
+  //     debugPrint(
+  //       '[NotificationService] ⏰ Hatırlatma zamanlandı: id=$reminderId, '
+  //       'hedef=$scheduledDate (15 dk sonra)',
+  //     );
+  //   } catch (e) {
+  //     debugPrint('[NotificationService] ❌ Hatırlatma zamanlama hatası: $e');
+  //   }
+  // }
 
   /// Bildirim iznini kontrol eder.
   Future<bool> hasPermission() async {

@@ -303,6 +303,19 @@ class CustomerRepository {
     }
   }
 
+  /// Takibi yeni bir tarihe erteler. Dashboard'daki "Yarına ertele"
+  /// hızlı aksiyonu için kullanılır.
+  Future<void> snoozeScheduledFollowUp(String id, DateTime newDueDate) async {
+    try {
+      await scheduledFollowUpsRef().doc(id).update({
+        'dueDate': Timestamp.fromDate(newDueDate),
+      });
+    } catch (e) {
+      debugPrint("snoozeScheduledFollowUp hatası: $e");
+      throw Exception("Takip ertelenemedi: $e");
+    }
+  }
+
   Future<void> deleteScheduledFollowUp(String id) async {
     try {
       await scheduledFollowUpsRef().doc(id).delete();

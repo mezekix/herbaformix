@@ -290,6 +290,21 @@ class WaterProvider with ChangeNotifier {
     }
   }
 
+  /// Belirli bir su logunu günceller.
+  Future<void> updateWaterLog(String logId, int newAmount, DateTime newTime) async {
+    if (_userId == null) return;
+    try {
+      final updatedLog = WaterLogModel(
+        id: logId,
+        time: newTime,
+        amount: newAmount,
+      );
+      await _firestoreService.updateWaterLog(_userId!, updatedLog);
+    } catch (e) {
+      debugPrint('WaterProvider updateWaterLog hatası: $e');
+    }
+  }
+
   /// Belirli miktarda suyu geri alır (en son logdan başlayarak).
   Future<void> removeWater(int amount) async {
     if (_userId == null) return;

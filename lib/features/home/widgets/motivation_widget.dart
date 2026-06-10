@@ -26,33 +26,41 @@ class _MotivationWidgetState extends State<MotivationWidget> {
   static const int _maxSwitches = 5;
   String? _distributorMessage;
   String? _distributorName;
+  String? _loadedGoal;
+  bool _loadingQuotes = false;
 
   @override
   void initState() {
     super.initState();
-    _loadQuotes();
     _loadDistributorMessage();
   }
-  Future<void> _loadQuotes() async {
+
+  Future<void> _loadQuotes(String userGoal) async {
+    if (_loadingQuotes || _loadedGoal == userGoal) return;
+    _loadingQuotes = true;
     try {
-      final authProvider = context.read<AuthProvider>();
       final jsonString = await rootBundle.loadString('assets/motivations.json');
       final Map<String, dynamic> data = json.decode(jsonString);
-      
-      final userGoal = authProvider.userProfile?.userGoal ?? 'healthy_living';
-      
-      final List<dynamic> quotesList = data[userGoal] ?? data['healthy_living'] ?? [];
-      
+
+      final List<dynamic> quotesList =
+          data[userGoal] ?? data['healthy_living'] ?? [];
+
       if (!mounted) return;
       setState(() {
         _quotes = quotesList.cast<String>();
+        _loadedGoal = userGoal;
+        _sessionSwitches = 0;
         if (_quotes.isNotEmpty) {
           final dayIndex = DateTime.now().millisecondsSinceEpoch ~/ 86400000 % _quotes.length;
           _currentIndex = dayIndex;
+        } else {
+          _currentIndex = 0;
         }
       });
     } catch (e) {
       debugPrint('loadQuotes hatası: $e');
+    } finally {
+      _loadingQuotes = false;
     }
   }
 
@@ -102,6 +110,14 @@ class _MotivationWidgetState extends State<MotivationWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final userGoal = context.select<AuthProvider, String>(
+      (ap) => ap.userProfile?.userGoal ?? 'healthy_living',
+    );
+    if (_loadedGoal != userGoal && !_loadingQuotes) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadQuotes(userGoal);
+      });
+    }
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(24),

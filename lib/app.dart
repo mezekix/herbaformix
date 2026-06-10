@@ -11,7 +11,9 @@ import 'features/home/providers/home_provider.dart';
 import 'features/orders/providers/cart_provider.dart';
 import 'features/orders/providers/order_provider.dart';
 import 'features/products/providers/product_provider.dart';
+import 'features/products/providers/recipe_provider.dart';
 import 'features/program/providers/program_provider.dart';
+import 'features/program/providers/program_template_provider.dart';
 import 'features/program/services/notification_service.dart';
 import 'features/progress/providers/progress_provider.dart';
 import 'features/water_tracker/providers/water_provider.dart';
@@ -260,6 +262,9 @@ class _AppState extends State<App> {
               create: (context) =>
                   ProductProvider(context.read<FirestoreService>()),
             ),
+            ChangeNotifierProvider<RecipeProvider>(
+              create: (context) => RecipeProvider()..loadRecipes(),
+            ),
             ChangeNotifierProvider<CustomerProvider>(
               create: (context) => CustomerProvider(
                 context.read<FirestoreService>(),
@@ -314,13 +319,28 @@ class _AppState extends State<App> {
                 return provider;
               },
             ),
-            ChangeNotifierProvider<CalorieProvider>(
-              create: (context) => CalorieProvider(),
+            ChangeNotifierProxyProvider<AuthProvider, CalorieProvider>(
+              create: (_) => CalorieProvider(),
+              update: (context, auth, previous) {
+                final provider = previous ?? CalorieProvider();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (auth.status == AuthStatus.authenticated &&
+                      auth.firebaseUser?.uid != null) {
+                    provider.startListening(auth.firebaseUser!.uid);
+                  } else {
+                    provider.stopListening();
+                  }
+                });
+                return provider;
+              },
             ),
             ChangeNotifierProvider<ProgramProvider>(
               create: (context) => ProgramProvider(
                 notificationService: NotificationService(),
               ),
+            ),
+            ChangeNotifierProvider<ProgramTemplateProvider>(
+              create: (context) => ProgramTemplateProvider(),
             ),
             ChangeNotifierProvider<ProgressProvider>(
               create: (context) => ProgressProvider(

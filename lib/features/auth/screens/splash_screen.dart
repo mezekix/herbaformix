@@ -23,6 +23,10 @@ class _SplashScreenState extends State<SplashScreen>
   static const Color _bgColor = Color(0xFFE6FFC5); // Açık fıstık yeşili (#e6ffc5)
   static const Color _bgGradientEnd = Color(0xFFE6FFC5); // Açık fıstık yeşili (#e6ffc5)
 
+  // Auth durumu kontrol timeout'u: 100 × 100ms = 10 saniye
+  static const int _maxAuthRetries = 100;
+  int _authRetryCount = 0;
+
   // Büyük ekranlar için boyut sınırları
   static const double _minBgImageWidth = 80.0;
   static const double _maxBgImageWidth = 160.0;
@@ -139,8 +143,18 @@ class _SplashScreenState extends State<SplashScreen>
     // Durum henüz netleşmediyse (yükleniyorsa), 100ms gecikmeyle tekrar dene
     if (authProvider.status == AuthStatus.uninitialized ||
         authProvider.status == AuthStatus.authenticating) {
-      Future.delayed(const Duration(milliseconds: 100), _checkAndNavigate);
-      return;
+      _authRetryCount++;
+      if (_authRetryCount < _maxAuthRetries) {
+        Future.delayed(const Duration(milliseconds: 100), _checkAndNavigate);
+        return;
+      }
+      // Timeout: 10 saniye geçti ama auth hâlâ netleşmedi.
+      // Login'e yönlendir. Auth sonradan tamamlanırsa router redirect
+      // otomatik olarak doğru sayfaya yönlendirecek.
+      debugPrint(
+        '[SplashScreen] Auth timeout ($_maxAuthRetries × 100ms). '
+        'Status: ${authProvider.status}. Login\'e yönlendiriliyor.',
+      );
     }
 
     final bool isLoggedIn = authProvider.status == AuthStatus.authenticated;

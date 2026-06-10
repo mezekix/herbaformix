@@ -30,7 +30,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _targetWeightController = TextEditingController();
 
-  String _selectedGoal = ''; // weight_loss, healthy_living, weight_gain
+  String _selectedGoal = ''; // weight_loss, healthy_living, weight_gain, skin_care
   String? _selectedGender;
   TimeOfDay? _wakeTime;
   TimeOfDay? _lunchTime;
@@ -407,6 +407,8 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                 _buildGoalCard('Sağlıklı ve Dengeli Yaşamak', '🥑', Colors.blue.shade100, 'healthy_living'),
                 const SizedBox(height: 16),
                 _buildGoalCard('Kilo Almak ve Güçlenmek', '💪', Colors.orange.shade100, 'weight_gain'),
+                const SizedBox(height: 16),
+                _buildGoalCard('Cilt & Kişisel Bakım', '✨', Colors.pink.shade100, 'skin_care'),
               ],
             ),
           ),

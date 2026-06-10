@@ -247,24 +247,16 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatItem(
-                  'Haftalık Ortalama',
-                  '${weeklyAvg >= 0 ? '+' : ''}${weeklyAvg.toStringAsFixed(2)} kg/hafta',
-                  weeklyAvg == 0 ? AppColors.nightSky : (isGoodAvg ? AppColors.primary : Colors.red),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatItem(
-                  'Toplam Kayıt',
-                  '$totalEntries',
-                  AppColors.nightSky,
-                ),
-              ),
-            ],
+          _buildStatItem(
+            'Haftalık Ortalama',
+            '${weeklyAvg >= 0 ? '+' : ''}${weeklyAvg.toStringAsFixed(2)} kg/hafta',
+            weeklyAvg == 0 ? AppColors.nightSky : (isGoodAvg ? AppColors.primary : Colors.red),
+          ),
+          const SizedBox(height: 8),
+          _buildStatItem(
+            'Toplam Kayıt',
+            '$totalEntries',
+            AppColors.nightSky,
           ),
           const SizedBox(height: 8),
           _buildStatItem(
@@ -281,10 +273,14 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: TextStyle(

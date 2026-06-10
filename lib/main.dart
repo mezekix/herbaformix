@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart'; // Tarih formatlama için lokalizasyon
@@ -14,10 +16,12 @@ import 'services/routine_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await initializeDateFormatting('tr_TR', null);
-  // Bildirim servisini başlat
-  await NotificationService().initialize();
+  // Tarih formatlaması hızlıdır, paralel çalışabilir
+  unawaited(initializeDateFormatting('tr_TR', null));
+  // runApp'ı hemen çağır — kullanıcı beyaz ekranda beklemesin
   runApp(const MyAppInitializer());
+  // Bildirim servisi arka planda başlasın (lazy init zaten mevcut)
+  unawaited(NotificationService().initialize());
 }
 
 class MyAppInitializer extends StatelessWidget {

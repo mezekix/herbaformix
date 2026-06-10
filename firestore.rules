@@ -129,6 +129,13 @@ service cloud.firestore {
         allow write: if isOwner(userId);
       }
 
+      match /calorieLogs/{logId} {
+        // Kullanıcı kendi kalori kayıtlarını okur/yazar.
+        // Atanmış distribütör müşterinin günlük durumunu görebilir.
+        allow read: if isOwner(userId) || isAssignedDistributor(userId);
+        allow write: if isOwner(userId);
+      }
+
       match /dailyRoutines/{routineId} {
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
         allow write: if isOwner(userId) || isAssignedDistributor(userId);

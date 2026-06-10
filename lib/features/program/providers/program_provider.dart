@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../../models/product_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../models/program_model.dart';
+import '../models/program_template_model.dart';
 import '../services/notification_service.dart';
 import '../services/program_service.dart';
 
@@ -471,6 +472,20 @@ class ProgramProvider with ChangeNotifier {
   /// Sadece adımı sıfırla, diğer state'i koru
   void goToFirstStep() {
     _currentStep = ProgramWizardStep.goalSelection;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  /// Şablondan wizard state'ini doldurur ve doğrudan Öğün Planı adımına geçer.
+  ///
+  /// Kullanıcının hedefi, slot'ları ve süre şablondan alınır; kilo bilgileri
+  /// (varsa) önceden seçilmiş profil değerinden korunur. Slot'lar üzerinde
+  /// mealPlan adımında ince ayar yapılabilir.
+  void applyTemplate(ProgramTemplateModel template) {
+    _selectedGoal = template.userGoal;
+    _slots = List<MealSlot>.from(template.slots);
+    _durationMonths = template.defaultDurationMonths;
+    _currentStep = ProgramWizardStep.mealPlan;
     _errorMessage = null;
     notifyListeners();
   }

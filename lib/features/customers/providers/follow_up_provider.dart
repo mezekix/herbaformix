@@ -16,6 +16,7 @@ class FollowUpProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
   final String _userId;
   final String _customerId;
+  final String? _linkedUserId;
 
   /// Bu provider'a bağlı olan anlık veri akışı (stream) aboneliği.
   StreamSubscription<List<FollowUpModel>>? _followUpsSubscription;
@@ -42,9 +43,11 @@ class FollowUpProvider with ChangeNotifier {
     required AuthProvider authProvider,
     required FirestoreService firestoreService,
     required String customerId,
+    String? linkedUserId,
   }) : _firestoreService = firestoreService,
        _userId = authProvider.firebaseUser?.uid ?? '',
-       _customerId = customerId {
+       _customerId = customerId,
+       _linkedUserId = linkedUserId {
     // Eğer kullanıcı ID'si veya müşteri ID'si boş ise işlem yapma.
     if (_userId.isNotEmpty && _customerId.isNotEmpty) {
       _listenToFollowUps();
@@ -94,7 +97,7 @@ class FollowUpProvider with ChangeNotifier {
 
     _scheduledFollowUpsSubscription?.cancel();
     _scheduledFollowUpsSubscription = _firestoreService
-        .getScheduledFollowUpsForCustomer(_userId, _customerId)
+        .getScheduledFollowUpsForCustomer(_userId, _customerId, linkedUserId: _linkedUserId)
         .listen(
           (scheduledData) {
             _scheduledFollowUps = scheduledData;

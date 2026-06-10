@@ -5,10 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../core/avatar_color_helper.dart';
+import '../../../core/utils/whatsapp_helper.dart';
 import '../../../models/customer_model.dart';
+import '../../../models/scheduled_follow_up_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/app_drawer.dart'; // AppDrawer'ı import et
@@ -22,6 +25,8 @@ import '../../orders/screens/add_edit_order_screen.dart';
 import '../../orders/screens/order_list_screen.dart';
 
 import '../../products/providers/product_provider.dart';
+import '../../products/providers/recipe_provider.dart';
+import '../../products/widgets/recipe_card.dart';
 import '../../products/screens/add_edit_product_screen.dart';
 
 import '../../profile/screens/profile_screen.dart';
@@ -37,9 +42,16 @@ import 'customer_support_screen.dart';
 import '../../program/screens/create_program_screen.dart';
 import '../../water_tracker/screens/water_tracker_screen.dart';
 import '../../water_tracker/providers/water_provider.dart';
+import '../../calorie_tracker/screens/calorie_tracker_screen.dart';
+import '../../calorie_tracker/providers/calorie_provider.dart';
 import 'package:intl/intl.dart';
 import '../widgets/motivation_widget.dart';
 import '../widgets/daily_success_ring.dart';
+import '../widgets/vp_pulse_card.dart';
+import '../widgets/today_actions_strip.dart';
+import '../widgets/customer_pipeline_bar.dart';
+import '../widgets/recent_activity_feed.dart';
+import '../widgets/critical_actions_states.dart';
 import '../../../services/exercise_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -501,6 +513,8 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
               _buildCustomerWaterTracker(context),
               const SizedBox(height: 16),
+              _buildCustomerCalorieTracker(context),
+              const SizedBox(height: 16),
               _buildExerciseToggleCard(context),
               const SizedBox(height: 16),
               const MotivationWidget(),
@@ -697,11 +711,14 @@ class _HomeScreenState extends State<HomeScreen> {
   ) {
     final monthlyVPTarget = userProfile?.monthlyVPTarget ?? 0;
     final vpEarnedThisMonth = orderProvider.totalVpEarnedThisMonth;
-    final vpProgress = monthlyVPTarget > 0 ? (vpEarnedThisMonth / monthlyVPTarget) : 0.0;
     final recentActivations = customerProvider.recentlyActivatedCustomers;
 
-    return SingleChildScrollView(
-      child: Column(
+    return RefreshIndicator(
+      onRefresh: () => _refreshConsultantDashboard(userProfile),
+      color: AppColors.primary,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           _buildStitchHeader(
@@ -711,17 +728,44 @@ class _HomeScreenState extends State<HomeScreen> {
             recentActivations.length,
             recentActivations,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          VpPulseCard(
+            vpEarned: vpEarnedThisMonth,
+            vpTarget: monthlyVPTarget,
+            onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)),
+            onSetTarget: () => context.goNamed(ProfileScreen.routeName),
+          ),
+          const SizedBox(height: 16),
+          TodayActionsStrip(
+            dueTodayCount: homeProvider.dueTodayCount,
+            overdueCount: homeProvider.overdueCount,
+            pendingOrdersCount: orderProvider.pendingOrdersCount,
+            onDueTodayTap: () =>
+                homeProvider.setFilter(ActionFilter.all),
+            onOverdueTap: () =>
+                homeProvider.setFilter(ActionFilter.overdue),
+            onPendingOrdersTap: () =>
+                context.goNamed(OrderListScreen.routeName.substring(1)),
+          ),
+          const SizedBox(height: 16),
           FutureBuilder<int>(
             future: _riskCountFuture,
             builder: (context, snapshot) {
-              return _buildKPICarousel(
-                context,
-                activeCustomers: customerProvider.customersCount,
-                vpEarned: vpEarnedThisMonth,
-                vpProgress: vpProgress,
-                targetVp: monthlyVPTarget,
-                riskCount: snapshot.data ?? 0,
+              return CustomerPipelineBar(
+                newCount: customerProvider.newCustomersCount,
+                activeCount: customerProvider.activeCustomersCount,
+                riskCount: snapshot.connectionState == ConnectionState.waiting
+                    ? null
+                    : (snapshot.data ?? 0),
+                passiveCount: customerProvider.passiveCustomersCount,
+                onNewTap: () => _showRecentActivationSheet(
+                    context, customerProvider.recentlyActivatedCustomers),
+                onActiveTap: () =>
+                    context.goNamed(CustomerListScreen.routeName.substring(1)),
+                onRiskTap: () =>
+                    context.goNamed(CustomerListScreen.routeName.substring(1)),
+                onPassiveTap: () =>
+                    context.goNamed(CustomerListScreen.routeName.substring(1)),
               );
             },
           ),
@@ -741,6 +785,11 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 12),
           _buildStitchKritikAksiyonlarList(context, homeProvider, customerProvider),
           const SizedBox(height: 24),
+          RecentActivityFeed(
+            orders: orderProvider.orders,
+            customers: customerProvider.customers,
+          ),
+          const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
@@ -756,7 +805,27 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 80), // Fab için alt boşluk
         ],
       ),
+      ),
     );
+  }
+
+  /// Pull-to-refresh: müşterileri, siparişleri ve risk sayımını yeniden
+  /// çeker. Follow-up'lar zaten stream tabanlı, otomatik güncel.
+  Future<void> _refreshConsultantDashboard(UserProfileModel? userProfile) async {
+    final userId = userProfile?.id;
+    if (userId == null || userId.isEmpty) return;
+
+    if (!mounted) return;
+    context.read<CustomerProvider>().fetchCustomers(userId);
+    context.read<OrderProvider>().fetchOrders(userId);
+
+    setState(() {
+      _riskCountFuture =
+          context.read<FirestoreService>().getAtRiskCustomerCount(userId);
+    });
+
+    // Kısa bir gecikme — kullanıcı yenilemenin gerçekleştiğini hissetsin.
+    await Future<void>.delayed(const Duration(milliseconds: 400));
   }
 
   Widget _buildCustomerHeroProgress(BuildContext context) {
@@ -1292,6 +1361,15 @@ class _HomeScreenState extends State<HomeScreen> {
             orElse: () => ProductModel(id: '', name: 'Silinmiş Ürün', vp: 0),
           );
 
+          Widget? recipeCardWidget;
+          final isShake = product.name.toLowerCase().contains('formül 1') || product.name.toLowerCase().contains('shake');
+          if (isShake) {
+             final dailyRecipe = context.read<RecipeProvider>().getDailyRecipe(userProfile.userGoal);
+             if (dailyRecipe != null) {
+                recipeCardWidget = RecipeCard(recipe: dailyRecipe, isCompact: true);
+             }
+          }
+
           child = _buildStitchChecklistTile(
             context: context,
             timeLabel: timeFormat.format(routine.scheduledTime),
@@ -1301,6 +1379,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 .where((r) => !r.isCompleted)
                 .firstOrNull
                 ?.id == routine.id,
+            childBelowTitle: recipeCardWidget,
             onChanged: (val) async {
               if (val != null && context.mounted) {
                 await context.read<RoutineService>().updateRoutineStatus(
@@ -1404,6 +1483,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required ValueChanged<bool?> onChanged,
     required VoidCallback onTimeTap,
     VoidCallback? onTap,
+    Widget? childBelowTitle,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -1476,6 +1556,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: isCompleted ? TextDecoration.lineThrough : null,
                     ),
                   ),
+                  if (childBelowTitle != null) ...[
+                    const SizedBox(height: 8),
+                    childBelowTitle,
+                  ],
                 ],
               ),
             ),
@@ -1629,6 +1713,234 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Müşteri dashboard'ında bugünün kalori durumunu gösteren kart.
+  /// Su kartıyla aynı kalıp, sıcak (peach) tonda.
+  Widget _buildCustomerCalorieTracker(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Consumer<CalorieProvider>(
+        builder: (context, calorie, _) {
+          final consumed = calorie.totalCalories;
+          final goal = calorie.calorieGoal;
+          final progress = calorie.progress.clamp(0.0, 1.0);
+          final overGoal = consumed > goal;
+          final accent = overGoal
+              ? const Color(0xFFE65100) // koyu turuncu — hedef aşımı
+              : const Color(0xFFE67E22); // amber/turuncu
+
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1E0), // açık peach
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Sol: başlık + miktar + butonlar
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.local_fire_department,
+                              color: accent, size: 20),
+                          const SizedBox(width: 6),
+                          const Text(
+                            'Kalori Takibi',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.nightSky,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '$consumed',
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.nightSky,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '/ $goal kcal',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (overGoal) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Hedefi ${consumed - goal} kcal aştın',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: accent,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                      // Öğün ekle butonu — inline dialog açar
+                      GestureDetector(
+                        onTap: () => _showCalorieAddDialog(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: accent,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: accent.withValues(alpha: 0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add, color: Colors.white, size: 18),
+                              SizedBox(width: 4),
+                              Text(
+                                'Öğün Ekle',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => context
+                            .pushNamed(CalorieTrackerScreen.routeName),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Tüm Kayıtlar',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: accent,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            Icon(Icons.chevron_right,
+                                color: accent, size: 16),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Sağ: progress halkası
+                GestureDetector(
+                  onTap: () =>
+                      context.pushNamed(CalorieTrackerScreen.routeName),
+                  child: _CalorieProgressRing(
+                    progress: progress,
+                    consumed: consumed,
+                    goal: goal,
+                    accent: accent,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Dashboard'dan hızlı kalori girişi.
+  /// CalorieTrackerScreen'deki dialog ile fonksiyonel olarak aynı —
+  /// burada inline kalsın ki kullanıcı ekran değiştirmesin.
+  Future<void> _showCalorieAddDialog(BuildContext context) async {
+    final provider = Provider.of<CalorieProvider>(context, listen: false);
+    final nameController = TextEditingController();
+    final caloriesController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Öğün Ekle'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Öğün Adı',
+                  hintText: 'Örn: Tavuklu salata',
+                ),
+                validator: (v) => (v?.trim().isEmpty ?? true)
+                    ? 'Lütfen bir öğün adı girin.'
+                    : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: caloriesController,
+                decoration: const InputDecoration(labelText: 'Kalori (kcal)'),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'Kalori miktarı girin.';
+                  }
+                  final parsed = int.tryParse(v);
+                  if (parsed == null || parsed <= 0) {
+                    return 'Geçerli bir sayı girin.';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+              final navigator = Navigator.of(ctx);
+              await provider.addMeal(
+                nameController.text,
+                int.parse(caloriesController.text),
+              );
+              navigator.pop();
+            },
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStitchHeader(
     BuildContext context,
     UserProfileModel? userProfile,
@@ -1656,6 +1968,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Text(
                         'Merhaba, $firstName',
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2),
+                  Builder(
+                    builder: (context) {
+                      final now = DateTime.now();
+                      final totalDays = DateTime(now.year, now.month + 1, 0).day;
+                      final daysLeft = totalDays - now.day;
+                      final dateText = DateFormat('d MMMM', 'tr_TR').format(now);
+                      final tail = daysLeft > 0
+                          ? 'Ay sonuna $daysLeft gün'
+                          : 'Ayın son günü';
+                      return Text(
+                        '$dateText · $tail',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade500,
+                        ),
                         overflow: TextOverflow.ellipsis,
                         maxLines: 1,
                       );
@@ -1703,122 +2037,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildKPICarousel(
-    BuildContext context, {
-    required int activeCustomers,
-    required double vpEarned,
-    required double vpProgress,
-    required int targetVp,
-    required int riskCount,
-  }) {
-    return SizedBox(
-      height: 120,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          _buildKPICard(
-            context,
-            icon: Icons.group,
-            value: '$activeCustomers',
-            title: 'Müşteri',
-            color: AppColors.primary,
-            badgeText: '+5',
-            onTap: () => context.goNamed(CustomerListScreen.routeName.substring(1)),
-          ),
-          const SizedBox(width: 12),
-          _buildKPICard(
-            context,
-            icon: Icons.payments,
-            value: '${vpEarned.toStringAsFixed(0)} VP',
-            title: 'Bu Ayki VP',
-            color: AppColors.rosemary,
-            onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)),
-          ),
-          const SizedBox(width: 12),
-          _buildKPICard(
-            context,
-            icon: Icons.emoji_events,
-            value: '%${(vpProgress * 100).toStringAsFixed(0)}',
-            title: 'Hedef Başarısı',
-            color: AppColors.grass,
-            onTap: () => context.goNamed(ProfileScreen.routeName),
-          ),
-          const SizedBox(width: 12),
-          _buildKPICard(
-            context,
-            icon: Icons.warning_amber_rounded,
-            value: '$riskCount',
-            title: 'Riskli Müşteri',
-            color: AppColors.error,
-            onTap: () => context.goNamed(CustomerListScreen.routeName.substring(1)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildKPICard(
-    BuildContext context, {
-    required IconData icon,
-    required String value,
-    required String title,
-    required Color color,
-    String? badgeText,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 150,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-                  child: Icon(icon, color: Colors.white, size: 20),
-                ),
-                if (badgeText != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.trending_up, color: Colors.white, size: 14),
-                        const SizedBox(width: 2),
-                        Text(badgeText, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ),
-                if (onTap != null && badgeText == null)
-                  const Icon(Icons.arrow_forward_ios, color: Colors.white38, size: 12),
-              ],
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1.2)),
-                const SizedBox(height: 4),
-                Text(title, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w500)),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1938,8 +2156,136 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ───── Kritik Aksiyon satır eylemleri ─────────────────────────────────
+
+  /// Follow-up satırından "Ara" tıklandığında çağrılır. Müşterinin
+  /// telefon numarasını normalize edip `tel:` URL ile arar.
+  Future<void> _callFollowUpCustomer(
+    BuildContext context,
+    CustomerModel? customer,
+  ) async {
+    final phone = customer?.phoneNumber;
+    if (phone == null || phone.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bu müşteri için telefon numarası yok.')),
+      );
+      return;
+    }
+    final normalized = normalizePhoneForWhatsApp(phone);
+    final dialNumber = normalized != null ? '+$normalized' : phone;
+    final uri = Uri.parse('tel:$dialNumber');
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Arama başlatılamadı.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Arama hatası: $e')),
+        );
+      }
+    }
+  }
+
+  /// Follow-up satırından "WhatsApp" tıklandığında çağrılır. Hazır
+  /// selamlama mesajıyla wa.me deep link'ini açar.
+  Future<void> _whatsAppFollowUpCustomer(
+    BuildContext context,
+    CustomerModel? customer,
+    ScheduledFollowUpModel task,
+  ) async {
+    final phone = customer?.phoneNumber;
+    if (phone == null || phone.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bu müşteri için telefon numarası yok.')),
+      );
+      return;
+    }
+    final normalized = normalizePhoneForWhatsApp(phone);
+    if (normalized == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Telefon numarası geçersiz.')),
+      );
+      return;
+    }
+    final firstName = task.customerFirstName.trim();
+    final greeting = firstName.isEmpty ? 'Merhaba!' : 'Merhaba $firstName!';
+    final message = '$greeting\nMüsait olduğunda kısaca konuşabilir miyiz?';
+    final uri = Uri.parse(
+      'https://wa.me/$normalized?text=${Uri.encodeComponent(message)}',
+    );
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('WhatsApp açılamadı.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('WhatsApp hatası: $e')),
+        );
+      }
+    }
+  }
+
+  /// Follow-up'ı yarına (24 saat ileri) erteler. SnackBar üzerinden
+  /// "Geri al" eylemiyle reversible.
+  Future<void> _snoozeFollowUp(
+    BuildContext context,
+    ScheduledFollowUpModel task,
+  ) async {
+    final firestore = context.read<FirestoreService>();
+    final originalDate = task.dueDate.toDate();
+    final newDate = originalDate.add(const Duration(days: 1));
+    try {
+      await firestore.snoozeScheduledFollowUp(task.id, newDate);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Takip yarına ertelendi.'),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Geri al',
+            onPressed: () async {
+              try {
+                await firestore.snoozeScheduledFollowUp(task.id, originalDate);
+              } catch (_) {/* sessiz */}
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erteleme hatası: $e')),
+      );
+    }
+  }
+
+  /// Follow-up customerId'sine karşılık gelen CustomerModel'i provider
+  /// listesinden çözer. Bulunmazsa null döner (silinmiş müşteri).
+  CustomerModel? _resolveFollowUpCustomer(
+    CustomerProvider provider,
+    String customerId,
+  ) {
+    try {
+      return provider.customers.firstWhere(
+        (c) =>
+            c.id == customerId ||
+            (c.linkedUserId != null && c.linkedUserId == customerId),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Widget _buildStitchKritikAksiyonlarList(BuildContext context, HomeProvider provider, CustomerProvider customerProvider) {
-    if (provider.isLoading) return const Center(child: CircularProgressIndicator());
+    if (provider.isLoading) return const CriticalActionsSkeleton();
 
     final customerCounts = <String, int>{};
     final filteredTasks = provider.upcomingFollowUps.where((task) {
@@ -1952,10 +2298,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
 
     if (filteredTasks.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16.0),
-        child: Text('Harika! Şu an için kritik bir aksiyon yok.'),
-      );
+      return const CriticalActionsEmptyState();
     }
     return ListView.builder(
       shrinkWrap: true,
@@ -1964,65 +2307,143 @@ class _HomeScreenState extends State<HomeScreen> {
       itemCount: filteredTasks.length,
       itemBuilder: (context, index) {
         final task = filteredTasks[index];
-        final isOverdue = task.dueDate.toDate().isBefore(DateTime.now());
-        final color = isOverdue ? AppColors.error : AppColors.laguna;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border(left: BorderSide(color: color, width: 4)),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))],
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: _buildCustomerInitialsAvatar(
-              task.customerFirstName,
-              task.customerLastName,
-              task.customerId,
-            ),
-            title: Text('${task.customerFirstName} ${task.customerLastName}',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.nightSky), maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text(isOverdue ? 'Gecikmiş: ${task.title}' : task.title,
-                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-            trailing: Container(
-              decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle, border: Border.all(color: Colors.green.shade100)),
-              child: IconButton(
-                icon: Icon(Icons.chat, color: Colors.green.shade600, size: 20),
-                onPressed: () {
-                  // Önce provider'daki müşteri listesinde ara
-                  final CustomerModel? found = () {
-                    try {
-                      return customerProvider.customers
-                          .firstWhere((c) => c.id == task.customerId);
-                    } catch (_) {
-                      return null;
-                    }
-                  }();
-
-                  if (found != null) {
-                    context.goNamed(CustomerDetailScreen.routeName, extra: found);
-                  } else {
-                    // Müşteri listede yok — geçici bir CustomerModel ile detay ekranını aç
-                    // (linkedUserId olmadığı için sağlık verileri görünmez ama takip notları eklenebilir)
-                    final fallback = CustomerModel(
-                      id: task.customerId,
-                      consultantId: '',
-                      firstName: task.customerFirstName,
-                      lastName: task.customerLastName,
-                      phoneNumber: '',
-                      firstContactDate: task.dueDate,
-                      isActive: false,
-                      notes: 'Bu müşteri kaydı silinmiş veya erişilemiyor.',
-                    );
-                    context.goNamed(CustomerDetailScreen.routeName, extra: fallback);
-                  }
-                },
-              ),
-            ),
-          ),
-        );
+        return _buildCriticalActionTile(context, task, customerProvider);
       },
+    );
+  }
+
+  /// Tek bir kritik aksiyon satırı: üstte avatar + müşteri + görev,
+  /// altta 3 mini aksiyon (Ara / WhatsApp / Ertele).
+  Widget _buildCriticalActionTile(
+    BuildContext context,
+    ScheduledFollowUpModel task,
+    CustomerProvider customerProvider,
+  ) {
+    final isOverdue = task.dueDate.toDate().isBefore(DateTime.now());
+    final color = isOverdue ? AppColors.papaya : AppColors.laguna;
+    final customer = _resolveFollowUpCustomer(customerProvider, task.customerId);
+    final hasPhone =
+        customer != null && customer.phoneNumber.trim().isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: color, width: 4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            final target = customer ??
+                CustomerModel(
+                  id: task.customerId,
+                  consultantId: '',
+                  firstName: task.customerFirstName,
+                  lastName: task.customerLastName,
+                  phoneNumber: '',
+                  firstContactDate: task.dueDate,
+                  isActive: false,
+                  notes: 'Bu müşteri kaydı silinmiş veya erişilemiyor.',
+                );
+            context.goNamed(CustomerDetailScreen.routeName, extra: target);
+          },
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _buildCustomerInitialsAvatar(
+                      task.customerFirstName,
+                      task.customerLastName,
+                      task.customerId,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${task.customerFirstName} ${task.customerLastName}'
+                                .trim(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: AppColors.nightSky,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isOverdue
+                                ? 'Gecikmiş: ${task.title}'
+                                : task.title,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _MiniActionButton(
+                        icon: Icons.call_outlined,
+                        label: 'Ara',
+                        color: AppColors.lake,
+                        enabled: hasPhone,
+                        onTap: () => _callFollowUpCustomer(context, customer),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _MiniActionButton(
+                        icon: Icons.chat_outlined,
+                        label: 'WhatsApp',
+                        color: AppColors.grass,
+                        enabled: hasPhone,
+                        onTap: () => _whatsAppFollowUpCustomer(
+                            context, customer, task),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _MiniActionButton(
+                        icon: Icons.schedule_outlined,
+                        label: 'Ertele',
+                        color: AppColors.mango,
+                        enabled: true,
+                        onTap: () => _snoozeFollowUp(context, task),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -2030,14 +2451,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: GridView.count(
-        crossAxisCount: 2,
+        crossAxisCount: 3,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.5,
+        childAspectRatio: 1.0,
         children: [
-          // Yeni müşteri ekle → AddEditCustomerScreen
           _buildQuickActionCard(
             context,
             icon: Icons.person_add,
@@ -2045,55 +2465,37 @@ class _HomeScreenState extends State<HomeScreen> {
             color: AppColors.primary,
             onTap: () => context.goNamed(AddEditCustomerScreen.routeName),
           ),
-          // Yeni sipariş oluştur → AddEditOrderScreen (etiket düzeltildi: "Stok Ekle" → "Yeni Sipariş")
           _buildQuickActionCard(
             context,
             icon: Icons.receipt_long,
             label: 'Yeni Sipariş',
-            color: AppColors.rosemary,
+            color: AppColors.laguna,
             onTap: () => context.goNamed(AddEditOrderScreen.routeName),
           ),
-          // Program yazmak için önce müşteri seçilmeli → CustomerListScreen
           _buildQuickActionCard(
             context,
             icon: Icons.people_alt_outlined,
             label: 'Müşterilerim',
-            color: AppColors.grass,
+            color: AppColors.lake,
             onTap: () => context.goNamed(CustomerListScreen.routeName.substring(1)),
-          ),
-          // Toplu mesaj henüz hazır değil → bilgilendirici snackbar
-          _buildQuickActionCard(
-            context,
-            icon: Icons.broadcast_on_personal,
-            label: 'Toplu Mesaj',
-            color: Colors.grey.shade400,
-            isDisabled: true,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Toplu mesaj özelliği yakında geliyor.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActionCard(BuildContext context, {required IconData icon, required String label, required Color color, required VoidCallback onTap, bool isDisabled = false}) {
+  Widget _buildQuickActionCard(BuildContext context, {required IconData icon, required String label, required Color color, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         decoration: BoxDecoration(
-          color: isDisabled ? Colors.grey.shade50 : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.grey.shade200),
-          boxShadow: isDisabled
-              ? []
-              : [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2))],
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -2101,31 +2503,20 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isDisabled
-                    ? Colors.grey.shade100
-                    : color.withValues(alpha: 0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: isDisabled ? Colors.grey.shade400 : color, size: 24),
+              child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(height: 8),
             Text(
               label,
               style: TextStyle(
-                color: isDisabled ? Colors.grey.shade400 : Colors.grey.shade800,
+                color: Colors.grey.shade800,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            if (isDisabled)
-              Text(
-                'Yakında',
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
           ],
         ),
       ),
@@ -2724,6 +3115,137 @@ class _WaterGlassWidget extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Kalori kartının sağında gösterilen dairesel ilerleme halkası.
+/// Su bardağı widget'ının kalori karşılığı.
+class _CalorieProgressRing extends StatelessWidget {
+  final double progress; // 0.0 - 1.0 (clamp'lı)
+  final int consumed;
+  final int goal;
+  final Color accent;
+
+  const _CalorieProgressRing({
+    required this.progress,
+    required this.consumed,
+    required this.goal,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 88,
+      height: 88,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            width: 88,
+            height: 88,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeInOut,
+              builder: (context, value, _) {
+                return CircularProgressIndicator(
+                  value: value,
+                  strokeWidth: 8,
+                  backgroundColor: Colors.white.withValues(alpha: 0.6),
+                  valueColor: AlwaysStoppedAnimation<Color>(accent),
+                );
+              },
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${(progress * 100).round()}%',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: accent,
+                ),
+              ),
+              Text(
+                goal > 0 ? 'hedef' : '-',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Kritik Aksiyonlar listesindeki satır içi 3 mini buton (Ara / WA / Ertele).
+/// Kompakt, ikonlu, renk-vurgulu. Disabled state için soluk gri.
+class _MiniActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _MiniActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveColor = enabled ? color : Colors.grey.shade400;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            color: enabled
+                ? color.withValues(alpha: 0.08)
+                : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: enabled
+                  ? color.withValues(alpha: 0.25)
+                  : Colors.grey.shade200,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: effectiveColor),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: effectiveColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

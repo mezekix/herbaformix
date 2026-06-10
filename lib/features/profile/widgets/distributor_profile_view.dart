@@ -547,6 +547,18 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
                   ),
             const SizedBox(height: 12),
 
+            // Program Şablonlarım butonu (distribütöre özel)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.assignment_outlined),
+              label: const Text('Program Şablonlarım'),
+              onPressed: () => context.goNamed('program-templates'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: const TextStyle(fontSize: 16),
+              ),
+            ),
+            const SizedBox(height: 12),
+
             // Uygulama Ayarları butonu
             OutlinedButton.icon(
               icon: const Icon(Icons.settings_outlined),

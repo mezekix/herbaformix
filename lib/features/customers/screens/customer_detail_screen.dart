@@ -79,7 +79,7 @@ class CustomerDetailScreen extends StatelessWidget {
                   _buildHealthSection(context, currentCustomer),
                   const SizedBox(height: 12),
                   if (currentCustomer.linkedUserId != null &&
-                      currentCustomer.linkedUserId!.isNotEmpty)
+                      currentCustomer.linkedUserId!.isNotEmpty) ...[
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -98,6 +98,20 @@ class CustomerDetailScreen extends StatelessWidget {
                         label: const Text('Bu Müşteri İçin Program Yaz'),
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showMotivationMessageSheet(
+                          context,
+                          currentCustomer.linkedUserId!,
+                          '${currentCustomer.firstName} ${currentCustomer.lastName}'.trim(),
+                        ),
+                        icon: const Icon(Icons.favorite_outline),
+                        label: const Text('Günün Motivasyon Mesajı'),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Text(
                     'Planlanmış Takipler (Yapılacaklar)',
@@ -186,6 +200,30 @@ class CustomerDetailScreen extends StatelessWidget {
             followUpProvider: provider,
             followUp: followUp,
             scheduledFollowUpId: scheduledFollowUpId,
+          ),
+        );
+      },
+    );
+  }
+
+  void _showMotivationMessageSheet(
+    BuildContext context,
+    String customerUserId,
+    String customerName,
+  ) {
+    final firestoreService = context.read<FirestoreService>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (builderContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(builderContext).viewInsets.bottom,
+          ),
+          child: _MotivationMessageSheet(
+            customerUserId: customerUserId,
+            customerName: customerName,
+            firestoreService: firestoreService,
           ),
         );
       },
@@ -895,6 +933,8 @@ class CustomerDetailScreen extends StatelessWidget {
         return 'Kilo Alma';
       case 'healthy_living':
         return 'Sağlıklı Yaşam';
+      case 'skin_care':
+        return 'Cilt & Kişisel Bakım';
       default:
         return goal == null || goal.isEmpty ? 'Hedef yok' : goal;
     }
@@ -1391,6 +1431,182 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MotivationMessageSheet extends StatefulWidget {
+  final String customerUserId;
+  final String customerName;
+  final FirestoreService firestoreService;
+
+  const _MotivationMessageSheet({
+    required this.customerUserId,
+    required this.customerName,
+    required this.firestoreService,
+  });
+
+  @override
+  State<_MotivationMessageSheet> createState() =>
+      _MotivationMessageSheetState();
+}
+
+class _MotivationMessageSheetState extends State<_MotivationMessageSheet> {
+  final _messageController = TextEditingController();
+  bool _isLoadingExisting = true;
+  bool _isSaving = false;
+  bool _hadExisting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingMessage();
+  }
+
+  Future<void> _loadExistingMessage() async {
+    try {
+      final existing = await widget.firestoreService
+          .getDistributorMotivationMessage(widget.customerUserId);
+      if (!mounted) return;
+      setState(() {
+        if (existing != null && existing.trim().isNotEmpty) {
+          _messageController.text = existing;
+          _hadExisting = true;
+        }
+        _isLoadingExisting = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingExisting = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mesaj boş olamaz.')),
+      );
+      return;
+    }
+    setState(() => _isSaving = true);
+    try {
+      await widget.firestoreService.saveDistributorMotivationMessage(
+        widget.customerUserId,
+        text,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _hadExisting
+                ? 'Motivasyon mesajı güncellendi.'
+                : 'Motivasyon mesajı gönderildi.',
+          ),
+        ),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Kaydetme hatası: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.favorite_outline, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Günün Motivasyon Mesajı',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Alıcı: ${widget.customerName}',
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 16),
+          if (_isLoadingExisting)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else ...[
+            TextField(
+              controller: _messageController,
+              maxLines: 5,
+              maxLength: 500,
+              autofocus: !_hadExisting,
+              decoration: InputDecoration(
+                labelText: 'Mesaj',
+                hintText: _hadExisting
+                    ? 'Bugünkü mesajı düzenle…'
+                    : 'Müşterine bugün için kısa bir motivasyon mesajı yaz…',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.message_outlined),
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (_hadExisting)
+              Text(
+                'Bugün zaten bir mesaj göndermişsin. Kaydedersen mevcut mesajın üzerine yazılır.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.orange.shade800,
+                    ),
+              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                    child: const Text('İptal'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isSaving ? null : _save,
+                    icon: _isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_outlined),
+                    label: Text(_hadExisting ? 'Güncelle' : 'Gönder'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

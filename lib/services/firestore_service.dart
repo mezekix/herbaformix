@@ -168,6 +168,8 @@ class FirestoreService {
       _customerRepo.addScheduledFollowUpBatch(f);
   Future<void> markScheduledFollowUpAsCompleted(String id) =>
       _customerRepo.markScheduledFollowUpAsCompleted(id);
+  Future<void> snoozeScheduledFollowUp(String id, DateTime newDueDate) =>
+      _customerRepo.snoozeScheduledFollowUp(id, newDueDate);
   Future<void> deleteScheduledFollowUp(String id) =>
       _customerRepo.deleteScheduledFollowUp(id);
 

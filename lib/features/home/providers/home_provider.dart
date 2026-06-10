@@ -53,6 +53,18 @@ class HomeProvider with ChangeNotifier {
 
   int get allCount => _allFollowUps.length;
 
+  /// Bugün (00:00 – 23:59 arası) vadesi olan tüm follow-up sayısı.
+  /// Dashboard'daki "Bugün'ün Aksiyonları" çağırıcı chip'i için.
+  int get dueTodayCount {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = start.add(const Duration(days: 1));
+    return _allFollowUps.where((f) {
+      final d = f.dueDate.toDate();
+      return !d.isBefore(start) && d.isBefore(end);
+    }).length;
+  }
+
   int get returnRiskCount {
     final keywords = ['iade', '3. gün', '7. gün', 'ilk hafta', 'başlangıç'];
     return _allFollowUps.where((f) {

@@ -86,6 +86,29 @@ class CustomerProvider with ChangeNotifier {
     return list;
   }
 
+  // ───── Müşteri Pipeline segment'leri (Dashboard) ─────
+  // Toplam = newCount + activeCount + passiveCount (overlap yok).
+  // "Risk altı" Aktif'in alt kümesidir, insights servisinden ayrıca gelir.
+
+  /// Son 7 gün içinde uygulamayı aktive eden müşteriler.
+  int get newCustomersCount => recentlyActivatedCustomers.length;
+
+  /// Uygulamayı kullanan, aktif olarak işaretlenmiş, "Yeni" olmayan müşteriler.
+  int get activeCustomersCount {
+    final newIds = recentlyActivatedCustomers.map((c) => c.id).toSet();
+    return _customers
+        .where((c) =>
+            c.linkedUserId != null && c.isActive && !newIds.contains(c.id))
+        .length;
+  }
+
+  /// Uygulamayı bağlamamış veya manuel olarak pasif işaretlenmiş müşteriler.
+  int get passiveCustomersCount {
+    return _customers
+        .where((c) => c.linkedUserId == null || !c.isActive)
+        .length;
+  }
+
   void fetchCustomers(String userId) {
     if (userId.isEmpty) {
       _customers = [];
@@ -205,15 +228,24 @@ class CustomerProvider with ChangeNotifier {
     if (_currentUserId == null) return null;
 
     try {
-      return _customers.firstWhere((c) => c.id == customerId);
+      return _customers.firstWhere(
+        (c) => c.id == customerId || (c.linkedUserId != null && c.linkedUserId == customerId),
+      );
     } catch (_) {}
 
     try {
-      return await _firestoreService.getCustomer(_currentUserId!, customerId);
+      final doc = await _firestoreService.getCustomer(_currentUserId!, customerId);
+      if (doc != null) return doc;
+    } catch (_) {}
+
+    try {
+      final doc = await _firestoreService.getCustomerByLinkedUserId(_currentUserId!, customerId);
+      if (doc != null) return doc;
     } catch (e) {
       debugPrint("CustomerProvider Hata (getCustomerById): $e");
-      return null;
     }
+
+    return null;
   }
 
   Future<CustomerModel?> getLinkedCustomerFallback(

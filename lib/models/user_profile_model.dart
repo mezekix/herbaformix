@@ -27,7 +27,7 @@ class UserProfileModel {
   final DateTime? programStartDate;
 
   // Yeni eklenen alanlar (Distribütör Takip Aracı)
-  final String? userGoal; // String: weight_loss, healthy_living, weight_gain
+  final String? userGoal; // String: weight_loss, healthy_living, weight_gain, skin_care
   final String? wakeTime; // Örn: "07:30"
   final String? lunchTime; // Örn: "13:00"
   final String? sleepTime; // Örn: "23:00"

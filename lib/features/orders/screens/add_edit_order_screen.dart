@@ -71,7 +71,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
       );
       try {
         _selectedCustomer = customerProvider.customers.firstWhere(
-          (c) => c.id == order.customerId,
+          (c) => c.id == order.customerId || (c.linkedUserId != null && c.linkedUserId == order.customerId),
         );
       } catch (e) {
         // Eğer müşteri listede bulunamazsa, sipariş verilerinden bir tane oluştur.
@@ -190,7 +190,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
     final orderData = OrderModel(
       id: _isEditing ? widget.order!.id : '',
       userId: currentUserId,
-      customerId: _selectedCustomer!.id,
+      customerId: _selectedCustomer!.linkedUserId ?? _selectedCustomer!.id,
       customerName:
           '${_selectedCustomer!.firstName} ${_selectedCustomer!.lastName}'
               .trim(),
