@@ -181,14 +181,20 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
                           ],
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                    : GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.78,
+                        ),
                         itemCount: filteredRecipes.length,
                         itemBuilder: (context, index) {
                           final recipe = filteredRecipes[index];
                           return RecipeCard(
                             recipe: recipe,
-                            isHorizontal: false,
+                            isGrid: true,
                           );
                         },
                       ),

@@ -64,6 +64,7 @@ class RecipeModel {
   final String title;
   final String description;
   final String? imageUrl;
+  final String? videoUrl;
   final int prepTimeMin;
   final int calories;
   final List<String> goals;
@@ -80,6 +81,7 @@ class RecipeModel {
     required this.title,
     required this.description,
     this.imageUrl,
+    this.videoUrl,
     required this.prepTimeMin,
     required this.calories,
     required this.goals,
@@ -98,6 +100,7 @@ class RecipeModel {
       title: map['title'] ?? '',
       description: map['description'] ?? '',
       imageUrl: map['imageUrl'],
+      videoUrl: map['videoUrl'],
       prepTimeMin: map['prepTimeMin'] ?? 0,
       calories: map['calories'] ?? 0,
       goals: List<String>.from(map['goals'] ?? []),
@@ -121,6 +124,7 @@ class RecipeModel {
       'title': title,
       'description': description,
       'imageUrl': imageUrl,
+      'videoUrl': videoUrl,
       'prepTimeMin': prepTimeMin,
       'calories': calories,
       'goals': goals,

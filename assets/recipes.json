@@ -6,6 +6,7 @@
       "title": "Klasik Vanilyalı Shake",
       "description": "Günlük en temel tarifiniz. Sabahları hızlıca hazırlayın.",
       "imageUrl": "",
+      "videoUrl": "",
       "prepTimeMin": 3,
       "calories": 220,
       "goals": ["weight_loss", "healthy_living", "weight_gain"],
@@ -35,6 +36,7 @@
       "title": "Muzlu Çikolatalı Fit Shake",
       "description": "Tatlı krizlerini önleyen ve enerji veren harika bir karışım.",
       "imageUrl": "",
+      "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 280,
       "goals": ["healthy_living", "weight_gain"],
@@ -65,6 +67,7 @@
       "title": "Orman Meyveli Antioksidan Shake",
       "description": "Kilo kontrolü döneminde ferahlatıcı ve düşük kalorili bir seçenek.",
       "imageUrl": "",
+      "videoUrl": "",
       "prepTimeMin": 4,
       "calories": 190,
       "goals": ["weight_loss"],
@@ -86,6 +89,736 @@
         "fiber": 6
       },
       "tips": "Su yerine şekersiz badem sütü kullanarak lezzetini artırabilirsiniz.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_cinnamon_linden",
+      "productId": "formul1_id",
+      "title": "Tarçınlı Ihlamur Shake",
+      "description": "Ihlamurun rahatlatıcı aromasıyla tarçının sıcak dokunuşunu birleştiren, yulaflı ve doyurucu bir tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192179/formul1_cikolata_tarcinli_ihlamur_t8uepz.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 310,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["rahatlatıcı", "doyurucu", "tarçın"],
+      "ingredients": [
+        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "200 ml", "note": "%1,5 yağ" },
+        { "name": "Demlenmiş ıhlamur çayı", "amount": "1 çay bardağı", "note": "soğutulmuş" },
+        { "name": "Yulaf ezmesi", "amount": "2 yemek kaşığı" },
+        { "name": "Tarçın", "amount": "1/2 çay kaşığı" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve hemen servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 20,
+        "carbs": 37,
+        "fat": 9,
+        "fiber": 4
+      },
+      "tips": "Ihlamur çayını bir gece önceden demleyip buzdolabında soğutursanız tat daha yoğun olur.",
+      "isRecommended": true
+    },
+    {
+      "id": "f1_surprising_flavor",
+      "productId": "formul1_id",
+      "title": "Şaşırtan Lezzet",
+      "description": "Ispanak, lor peyniri ve dolmalık fıstığın beklenmedik birleşimi: yüksek proteinli, doyurucu yeşil shake.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192162/formul1_vanilya_sasirtan_lezzet_odqduo.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 300,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["yeşil", "yüksek protein", "doyurucu"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Lor peyniri", "amount": "2 yemek kaşığı" },
+        { "name": "Taze ıspanak", "amount": "6 yaprak" },
+        { "name": "Dolmalık fıstık", "amount": "1 tatlı kaşığı" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 25,
+        "carbs": 21,
+        "fat": 11,
+        "fiber": 4
+      },
+      "tips": "Ispanak yaprakları taze olduğunda tat çok daha hafif olur, korkmadan deneyin.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_ginger_freshness",
+      "productId": "formul1_id",
+      "title": "Zencefil Ferahlığı",
+      "description": "Karışık meyve suyu, fındık ve taze zencefil ile canlandırıcı, ferahlatıcı bir kombinasyon.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192158/formul1_vanilya_zencefil_ferahligi_axqs8q.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 301,
+      "goals": ["healthy_living"],
+      "tags": ["ferah", "meyveli", "zencefil"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Karışık meyve suyu", "amount": "250 ml" },
+        { "name": "Fındık", "amount": "6 adet" },
+        { "name": "Taze nane", "amount": "3 yaprak" },
+        { "name": "Taze zencefil", "amount": "1 tutam", "note": "rendelenmiş" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Meyve suyuna birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 11,
+        "carbs": 39,
+        "fat": 10,
+        "fiber": 3
+      },
+      "tips": "Zencefili ihtiyacınıza göre artırıp azaltabilirsiniz; az başlayıp lezzeti dengeleyin.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_cherry_cottage_cheese",
+      "productId": "formul1_id",
+      "title": "Vişneli Peynirli Shake",
+      "description": "Yağsız lor peyniri ve donmuş vişne ile yüksek proteinli, tatlı bir tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192159/formul1_vanilya_visneli_peynirli_zsmpbp.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 329,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["yüksek protein", "meyveli", "tatlı"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Vişne", "amount": "75 gr", "note": "donmuş" },
+        { "name": "Lor peyniri", "amount": "80 gr", "note": "yağsız" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 32,
+        "carbs": 30,
+        "fat": 7,
+        "fiber": 3
+      },
+      "tips": "Antrenman sonrası için ideal — yüksek protein, dengeli karbonhidrat.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_vanilla_cherry_compote",
+      "productId": "formul1_id",
+      "title": "Vanilyalı Vişne Kompostosu",
+      "description": "Ev yapımı vişne kompostosu ve yer fıstığı ile hafif, az kalorili tatlı bir tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192159/formul1_vanilya_visne_kompostosu_eeudzy.webp",
+      "videoUrl": "",
+      "prepTimeMin": 15,
+      "calories": 229,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["hafif", "düşük kalori", "ev yapımı"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Vişne kompostosu", "amount": "250 ml" },
+        { "name": "Kabuksuz yer fıstığı", "amount": "12 adet" },
+        { "name": "Vişne", "amount": "1 kase", "note": "taze ya da donmuş (komposto için)" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Vişne kompostosu için: 1 lt suya 1 kase vişne ekleyip kaynatın ve soğutun.",
+        "Vişne kompostosuna birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 14,
+        "carbs": 22,
+        "fat": 8,
+        "fiber": 3
+      },
+      "tips": "Kompostoyu önceden büyük miktarda hazırlayıp buzdolabında saklayabilirsiniz.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_peach_almond",
+      "productId": "formul1_id",
+      "title": "Şeftalili Bademli Shake",
+      "description": "Taze şeftali, badem ekstresi ve zencefil ile aromatik, yaza yakışan bir tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192161/formul1_vanilya_seftalili_bademli_dpk2hk.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 319,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["yaz", "meyveli", "aromatik"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Şeftali", "amount": "150 gr" },
+        { "name": "Badem ekstresi", "amount": "1/4 yemek kaşığı" },
+        { "name": "Taze zencefil", "amount": "birkaç parça" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 20,
+        "carbs": 35,
+        "fat": 9,
+        "fiber": 4
+      },
+      "tips": "Şeftali olgun olduğunda ek tatlandırıcıya ihtiyaç olmaz.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_molasses_apple_compote",
+      "productId": "formul1_id",
+      "title": "Pekmezli Elma Kompostosu",
+      "description": "Ev yapımı elma kompostosu ve pekmez ile geleneksel tatları buluşturan yüksek karbonhidratlı tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192164/formul1_vanilya_pekmezli_elma_kompostosu_wfkdaw.webp",
+      "videoUrl": "",
+      "prepTimeMin": 15,
+      "calories": 316,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["geleneksel", "ev yapımı", "enerji"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Elma kompostosu", "amount": "250 ml" },
+        { "name": "Pekmez", "amount": "2 çay kaşığı" },
+        { "name": "Tatlı elma", "amount": "2 adet", "note": "komposto için" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Elma kompostosu için: 1 lt suya 2 tatlı elmayı kabuklarını soymadan küp küp doğrayıp ekleyin, kaynatın ve soğutun.",
+        "Elma kompostosuna birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 11,
+        "carbs": 56,
+        "fat": 4,
+        "fiber": 3
+      },
+      "tips": "Kompostoyu büyük miktarda hazırlayıp buzdolabında 3-4 gün saklayabilirsiniz.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_banana_pumpkin",
+      "productId": "formul1_id",
+      "title": "Muzlu Balkabaklı Shake",
+      "description": "Haşlanmış balkabağı, muz ve tarçın ile sonbahar lezzetlerini hatırlatan doyurucu tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192165/formul1_vanilya_muzlu_balkabakli_owgn2h.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 322,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["sonbahar", "tarçın", "doyurucu"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Balkabağı", "amount": "100 gr", "note": "haşlanmış" },
+        { "name": "Küçük boy muz", "amount": "1 adet" },
+        { "name": "Tarçın", "amount": "1 çay kaşığı" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 20,
+        "carbs": 41,
+        "fat": 6,
+        "fiber": 5
+      },
+      "tips": "Balkabağını haftalık önceden haşlayıp porsiyonlara bölüp dondurursanız hazırlık kısalır.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_red_love",
+      "productId": "formul1_id",
+      "title": "Kırmızı Aşkı",
+      "description": "Vişne, böğürtlen, ahududu ve karpuz ile antioksidan dolu, hafif bir kırmızı meyve karışımı.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192166/formul1_vanilya_kirmizi_aski_zq9q7u.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 299,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["antioksidan", "kırmızı meyve", "hafif"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Vişne", "amount": "3 adet", "note": "taze ya da donmuş" },
+        { "name": "Böğürtlen", "amount": "3 adet", "note": "taze ya da donmuş" },
+        { "name": "Ahududu", "amount": "3 adet", "note": "taze ya da donmuş" },
+        { "name": "Karpuz", "amount": "1/2 dilim", "note": "yarım avuç içi büyüklüğünde" },
+        { "name": "Taze nane", "amount": "4 yaprak" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 19,
+        "carbs": 37,
+        "fat": 7,
+        "fiber": 6
+      },
+      "tips": "Meyveleri donmuş kullanırsanız buza ihtiyacınız kalmaz.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_watermelon_cottage",
+      "productId": "formul1_id",
+      "title": "Karpuz Peynir Klasiği",
+      "description": "Karpuz, lor peyniri ve nane ile yaz aylarının vazgeçilmez ikilisini shake olarak sunan düşük kalorili tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192168/formul1_vanilya_karpuz_peynir_klasigi_vifzg3.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 251,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["yaz", "düşük kalori", "ferah"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Lor peyniri", "amount": "1,5 yemek kaşığı" },
+        { "name": "Misket limonu suyu", "amount": "3-4 damla" },
+        { "name": "Karpuz dilimi", "amount": "1 avuç içi büyüklüğünde" },
+        { "name": "Taze nane", "amount": "4 yaprak" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 21,
+        "carbs": 24,
+        "fat": 6,
+        "fiber": 2
+      },
+      "tips": "Karpuzu önceden dondurursanız serinletici etki ikiye katlanır.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_carrot_cake",
+      "productId": "formul1_id",
+      "title": "Havuçlu Kek Tadında",
+      "description": "Haşlanmış havuç, krem peynir, tarçın ve ceviz ile havuçlu kek lezzetini hatırlatan shake.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192169/formul1_vanilya_havuclu_kek_qwzxgq.webp",
+      "videoUrl": "",
+      "prepTimeMin": 10,
+      "calories": 340,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["tatlı", "kek tadı", "tarçın"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Orta boy havuç", "amount": "1 adet", "note": "haşlanmış, dilimlenmiş" },
+        { "name": "Yağsız krem peynir", "amount": "1 yemek kaşığı" },
+        { "name": "Kuru üzüm", "amount": "8 adet" },
+        { "name": "Ceviz", "amount": "1 tam" },
+        { "name": "Tarçın", "amount": "1 çay kaşığı" },
+        { "name": "Toz Hindistan cevizi", "amount": "1 çay kaşığı" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 23,
+        "carbs": 32,
+        "fat": 12,
+        "fiber": 4
+      },
+      "tips": "Havucu haftalık önceden haşlayıp porsiyonlamak işi çok kolaylaştırır.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_vanilla_rose_sherbet",
+      "productId": "formul1_id",
+      "title": "Vanilyalı Gül Şerbeti",
+      "description": "Sadece su, gül suyu ve shake ile çok düşük kalorili, hafif ve aromatik bir içecek.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192170/formul1_vanilya_gul_serbeti_elhrau.webp",
+      "videoUrl": "",
+      "prepTimeMin": 3,
+      "calories": 105,
+      "goals": ["weight_loss"],
+      "tags": ["çok hafif", "düşük kalori", "aromatik"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Su", "amount": "250 ml" },
+        { "name": "Gül suyu", "amount": "3 tatlı kaşığı" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Suya birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 9,
+        "carbs": 7,
+        "fat": 2,
+        "fiber": 0
+      },
+      "tips": "Gül suyunun aroması yoğundur — fazla koymayın, dengeyi kaçırır.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_apple_pie",
+      "productId": "formul1_id",
+      "title": "Elmalı Pasta Tadında",
+      "description": "Yeşil elma, tarçın, Hindistan cevizi ve karanfil ile elmalı pasta tadını yakalayan tatlı tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192171/formul1_vanilya_elmali_pasta_sfuvqm.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 308,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["tatlı", "pasta tadı", "baharatlı"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Küçük boy yeşil elma", "amount": "1 adet", "note": "kabuğu soyulmuş" },
+        { "name": "Tarçın", "amount": "1 çay kaşığı" },
+        { "name": "Toz Hindistan cevizi", "amount": "1 çay kaşığı" },
+        { "name": "Karanfil", "amount": "2 parça" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 19,
+        "carbs": 36,
+        "fat": 9,
+        "fiber": 4
+      },
+      "tips": "Karanfili önceden hafifçe ezerseniz aroması daha iyi açılır.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_sour_apple",
+      "productId": "formul1_id",
+      "title": "Ekşi Elmalı Lezzet",
+      "description": "Maden suyu, yeşil elma, salatalık ve misket limonu ile çok düşük kalorili ferahlatıcı tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192173/formul1_vanilya_eksi_elmali_nkiaiz.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 120,
+      "goals": ["weight_loss"],
+      "tags": ["ferah", "düşük kalori", "ekşi"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Maden suyu", "amount": "250 ml", "note": "soğuk" },
+        { "name": "Yeşil elma", "amount": "1/4 adet" },
+        { "name": "Rende salatalık", "amount": "1 yemek kaşığı", "note": "çeyrek salatalık rendesi" },
+        { "name": "Misket limonu suyu", "amount": "4 damla" },
+        { "name": "Taze nane", "amount": "6 yaprak" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Maden suyuna birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 10,
+        "carbs": 13,
+        "fat": 2,
+        "fiber": 2
+      },
+      "tips": "Sıcak yaz günlerinde ideal — maden suyunun gazı çabuk kaçmasın diye en son ekleyin.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_strawberry_kiwi",
+      "productId": "formul1_id",
+      "title": "Çilekli Kivili Shake",
+      "description": "Donmuş çilek, çok olgun kivi ve portakal ile C vitamini dolu, doyurucu meyve karışımı.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192174/formul1_vanilya_cilekli_kivili_r2scq6.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 351,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["meyveli", "C vitamini", "doyurucu"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Çilek", "amount": "75 gr", "note": "donmuş" },
+        { "name": "Kivi", "amount": "1 adet", "note": "çok olgun" },
+        { "name": "Orta boy portakal", "amount": "1/2 adet" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 20,
+        "carbs": 54,
+        "fat": 7,
+        "fiber": 5
+      },
+      "tips": "Kivi çok olgun olmazsa ekşi kalır — yumuşayana kadar bekletin.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_spiced_chai",
+      "productId": "formul1_id",
+      "title": "Baharatlı Chai Shake",
+      "description": "Muz, chai baharatları (tarçın, karanfil, beyaz biber, kakule) ve Herbalife konsantre çay ile sıcak ülke esintisi.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192176/formul1_vanilya_baharata_chai_kmdapj.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 320,
+      "goals": ["healthy_living", "weight_gain"],
+      "tags": ["baharatlı", "chai", "egzotik"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Küçük boy muz", "amount": "1 adet" },
+        { "name": "Chai baharat karışımı", "amount": "1/2 kaşık", "note": "tarçın, karanfil, beyaz biber, kakule" },
+        { "name": "Herbalife Bitkisel Konsantre Çay", "amount": "1/2 çay kaşığı", "note": "Klasik Lezzet" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 20,
+        "carbs": 39,
+        "fat": 8,
+        "fiber": 3
+      },
+      "tips": "Baharat karışımını hazır chai masala kullanırsanız iş kolaylaşır.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_yogurt_flavor",
+      "productId": "formul1_id",
+      "title": "Yoğurtlu Lezzet",
+      "description": "Light yoğurt, yulaf ezmesi ve portakal kabuğu ile düşük kalorili, doyurucu bir tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192177/formul1_cikolata_yogurtlu_lezzet_dlonr6.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 212,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["düşük kalori", "doyurucu", "yoğurtlu"],
+      "ingredients": [
+        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Su", "amount": "200 ml" },
+        { "name": "Light yoğurt", "amount": "3 yemek kaşığı" },
+        { "name": "Yulaf ezmesi", "amount": "1 yemek kaşığı" },
+        { "name": "Portakal kabuğu rendesi", "amount": "1 çay kaşığı" },
+        { "name": "Kuru üzüm", "amount": "8 adet" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Suya birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 15,
+        "carbs": 27,
+        "fat": 5,
+        "fiber": 3
+      },
+      "tips": "Portakal kabuğunu organik portakaldan alın, aroma daha temiz olur.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_orange_peanut_butter",
+      "productId": "formul1_id",
+      "title": "Portakallı Fıstık Ezmesi",
+      "description": "Fıstık ezmesi, portakal kabuğu ve misket limonu ile yüksek proteinli, aromatik tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192181/formul1_cikolata_portakalli_fistik_ezmesi_r0w5h5.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 255,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["yüksek protein", "aromatik", "fıstık"],
+      "ingredients": [
+        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Fıstık ezmesi", "amount": "1 tatlı kaşığı" },
+        { "name": "Portakal kabuğu rendesi", "amount": "1 çay kaşığı" },
+        { "name": "Misket limonu suyu", "amount": "3 damla" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 20,
+        "carbs": 23,
+        "fat": 10,
+        "fiber": 2
+      },
+      "tips": "Şekersiz fıstık ezmesi kullanırsanız kalori daha da düşer.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_pomegranate_mint",
+      "productId": "formul1_id",
+      "title": "Narlı Naneli",
+      "description": "Nar suyu ve taze nane ile antioksidan dolu, ferahlatıcı çikolatalı shake.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192182/formul1_cikolata_narli_naneli_avxi7d.webp",
+      "videoUrl": "",
+      "prepTimeMin": 4,
+      "calories": 236,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["antioksidan", "ferah", "nar"],
+      "ingredients": [
+        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "150 ml", "note": "%1,5 yağ" },
+        { "name": "Nar suyu", "amount": "100 ml" },
+        { "name": "Taze nane", "amount": "4 yaprak" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 14,
+        "carbs": 33,
+        "fat": 5,
+        "fiber": 2
+      },
+      "tips": "Taze sıkılmış nar suyu kullanırsanız tat çok daha temiz olur.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_magnificent_duo",
+      "productId": "formul1_id",
+      "title": "Muhteşem İkili",
+      "description": "Çilek, rende havuç ve file badem ile çikolata aromasını dengeleyen yüksek kalorili tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192184/formul1_cikolata_muhtesem_ikili_feoqoh.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 386,
+      "goals": ["weight_gain", "healthy_living"],
+      "tags": ["yüksek kalori", "antrenman", "doyurucu"],
+      "ingredients": [
+        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Çilek", "amount": "4 adet" },
+        { "name": "Rende havuç", "amount": "2 yemek kaşığı", "note": "yarım havuç rendesi" },
+        { "name": "File badem", "amount": "1 yemek kaşığı" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 23,
+        "carbs": 32,
+        "fat": 19,
+        "fiber": 4
+      },
+      "tips": "Bademleri önceden ıslatırsanız sindirimi kolaylaşır.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_pistachio_cheese",
+      "productId": "formul1_id",
+      "title": "Fıstıklı Peynirli Lezzet",
+      "description": "Labne peyniri, toz antep fıstığı ve rende salatalık ile yüksek proteinli, kremsi bir tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192185/formul1_cikolata_fistikli_peynirli_sqi5s7.webp",
+      "videoUrl": "",
+      "prepTimeMin": 5,
+      "calories": 357,
+      "goals": ["weight_gain", "healthy_living"],
+      "tags": ["yüksek protein", "kremsi", "antep fıstığı"],
+      "ingredients": [
+        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
+        { "name": "Labne peyniri", "amount": "2 tatlı kaşığı" },
+        { "name": "Toz antep fıstığı", "amount": "2 tatlı kaşığı" },
+        { "name": "Rende salatalık", "amount": "2 yemek kaşığı", "note": "yarım salatalık rendesi" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Süte birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 22,
+        "carbs": 26,
+        "fat": 19,
+        "fiber": 3
+      },
+      "tips": "Salatalık rendesini soyup süzdükten sonra eklerseniz çok daha az suluk verir.",
+      "isRecommended": false
+    },
+    {
+      "id": "f1_mastic_coffee",
+      "productId": "formul1_id",
+      "title": "Damla Sakızlı Kahve Tadında",
+      "description": "Soya sütü, hazır kahve ve damla sakızı ile sabah enerjisi veren özgün bir tarif.",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192187/formul1_cikolata_damla_sakizli_kahve_lanto5.webp",
+      "videoUrl": "",
+      "prepTimeMin": 4,
+      "calories": 221,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["sabah", "kahveli", "enerji"],
+      "ingredients": [
+        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
+        { "name": "Soya sütü", "amount": "250 ml" },
+        { "name": "Hazır kahve", "amount": "1 tatlı kaşığı" },
+        { "name": "Damla sakızı", "amount": "1 çay kaşığı" },
+        { "name": "Buz", "amount": "4-5 küp" }
+      ],
+      "steps": [
+        "Soya sütüne birkaç parça buz ekleyip karıştırın.",
+        "Buzlar yeterince parçalandıktan sonra tüm malzemeleri karıştırıcıya ekleyin.",
+        "İstediğiniz kıvama gelene kadar karıştırın ve servis edin."
+      ],
+      "nutritionInfo": {
+        "protein": 21,
+        "carbs": 22,
+        "fat": 7,
+        "fiber": 1
+      },
+      "tips": "Damla sakızını az kullanın — fazlası tadı sertleştirir.",
       "isRecommended": false
     }
   ]

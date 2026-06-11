@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:video_player/video_player.dart';
 import '../../../../core/app_colors.dart';
+import '../../../../core/utils/cloudinary_helper.dart';
 import '../../../../models/recipe_model.dart';
 
 class RecipeDetailSheet extends StatelessWidget {
@@ -38,7 +40,7 @@ class RecipeDetailSheet extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Tarif Görseli
+                  // Tarif Görseli / Videosu
                   Container(
                     height: 200,
                     width: double.infinity,
@@ -48,20 +50,7 @@ class RecipeDetailSheet extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: recipe.imageUrl != null && recipe.imageUrl!.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: recipe.imageUrl!,
-                              fit: BoxFit.cover,
-                              placeholder: (_, _) => const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                              errorWidget: (_, _, _) => const Center(
-                                child: Icon(Icons.blender, size: 48, color: AppColors.primary),
-                              ),
-                            )
-                          : const Center(
-                              child: Icon(Icons.blender, size: 64, color: AppColors.primary),
-                            ),
+                      child: _buildMedia(),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -256,6 +245,31 @@ class RecipeDetailSheet extends StatelessWidget {
     );
   }
 
+  Widget _buildMedia() {
+    final videoUrl = recipe.videoUrl;
+    if (videoUrl != null && videoUrl.isNotEmpty) {
+      return _RecipeVideoPlayer(
+        videoUrl: CloudinaryHelper.optimizeVideo(videoUrl) ?? videoUrl,
+        posterUrl: CloudinaryHelper.videoPoster(videoUrl) ??
+            CloudinaryHelper.optimizeImage(recipe.imageUrl),
+      );
+    }
+    final imageUrl = CloudinaryHelper.optimizeImage(recipe.imageUrl);
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: BoxFit.contain,
+        placeholder: (_, _) => const Center(child: CircularProgressIndicator()),
+        errorWidget: (_, _, _) => const Center(
+          child: Icon(Icons.blender, size: 48, color: AppColors.primary),
+        ),
+      );
+    }
+    return const Center(
+      child: Icon(Icons.blender, size: 64, color: AppColors.primary),
+    );
+  }
+
   Widget _buildInfoChip(IconData icon, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -305,6 +319,141 @@ class RecipeDetailSheet extends StatelessWidget {
           style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
       ],
+    );
+  }
+}
+
+class _RecipeVideoPlayer extends StatefulWidget {
+  final String videoUrl;
+  final String? posterUrl;
+
+  const _RecipeVideoPlayer({required this.videoUrl, this.posterUrl});
+
+  @override
+  State<_RecipeVideoPlayer> createState() => _RecipeVideoPlayerState();
+}
+
+class _RecipeVideoPlayerState extends State<_RecipeVideoPlayer> {
+  VideoPlayerController? _controller;
+  bool _initialized = false;
+  bool _loading = false;
+  bool _showControls = true;
+
+  Future<void> _initialize() async {
+    if (_loading || _initialized) return;
+    setState(() => _loading = true);
+    final controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl));
+    try {
+      await controller.initialize();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      _controller = controller;
+      controller.addListener(_onTick);
+      setState(() {
+        _initialized = true;
+        _loading = false;
+      });
+      await controller.play();
+    } catch (_) {
+      await controller.dispose();
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  void _onTick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onTick);
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _togglePlay() {
+    final c = _controller;
+    if (c == null) return;
+    setState(() {
+      c.value.isPlaying ? c.pause() : c.play();
+      _showControls = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_initialized) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          if (widget.posterUrl != null && widget.posterUrl!.isNotEmpty)
+            CachedNetworkImage(
+              imageUrl: widget.posterUrl!,
+              fit: BoxFit.cover,
+              errorWidget: (_, _, _) => Container(color: AppColors.background),
+            ),
+          Container(color: Colors.black.withAlpha(80)),
+          Center(
+            child: _loading
+                ? const CircularProgressIndicator(color: Colors.white)
+                : IconButton(
+                    iconSize: 64,
+                    icon: const Icon(Icons.play_circle_fill, color: Colors.white),
+                    onPressed: _initialize,
+                  ),
+          ),
+        ],
+      );
+    }
+
+    final c = _controller!;
+    return GestureDetector(
+      onTap: () => setState(() => _showControls = !_showControls),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FittedBox(
+            fit: BoxFit.cover,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              width: c.value.size.width,
+              height: c.value.size.height,
+              child: VideoPlayer(c),
+            ),
+          ),
+          if (_showControls) ...[
+            Container(color: Colors.black.withAlpha(60)),
+            Center(
+              child: IconButton(
+                iconSize: 56,
+                icon: Icon(
+                  c.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                  color: Colors.white,
+                ),
+                onPressed: _togglePlay,
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: VideoProgressIndicator(
+                c,
+                allowScrubbing: true,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                colors: const VideoProgressColors(
+                  playedColor: AppColors.primary,
+                  bufferedColor: Colors.white54,
+                  backgroundColor: Colors.white24,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

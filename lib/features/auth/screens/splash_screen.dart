@@ -200,87 +200,91 @@ class _SplashScreenState extends State<SplashScreen>
               end: Alignment.bottomCenter,
             ),
           ),
-          child: Stack(
+          child: Column(
             children: [
-              // --- f1 resmi: ekranın üst bölgesinde ---
-              Align(
-                alignment: _bgImage1Alignment,
-                child: ScaleTransition(
-                  scale: _bgImage1Scale,
-                  child: Image.asset(
-                    'assets/f1.png',
-                    width: f1Width,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox.shrink(),
+              // --- Üst bölge: f1 resmi (alt kenarı H logosundan en az 24px uzakta) ---
+              Expanded(
+                child: Align(
+                  alignment: _bgImage1Alignment,
+                  child: ScaleTransition(
+                    scale: _bgImage1Scale,
+                    child: Image.asset(
+                      'assets/f1.png',
+                      width: f1Width,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox.shrink(),
+                    ),
                   ),
                 ),
               ),
-              // --- f2 resmi: ekranın alt bölgesinde ---
-              Align(
-                alignment: _bgImage2Alignment,
-                child: ScaleTransition(
-                  scale: _bgImage2Scale,
-                  child: Image.asset(
-                    'assets/f2.png',
-                    width: f2Width,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const SizedBox.shrink(),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 24),
               // --- Ortada: H Logo + Slogan ---
-              Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // H Logo
-                    FadeTransition(
-                      opacity: _logoFade,
-                      child: ScaleTransition(
-                        scale: _logoScale,
-                        child: Image.asset(
-                          'assets/logo/logo_h.png',
-                          width: logoWidth,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return SizedBox(
-                              width: logoWidth,
-                              height: 100,
-                              child: const Center(
-                                child: Text(
-                                  'H',
-                                  style: TextStyle(
-                                    color: Color(0xFF1B4D26),
-                                    fontSize: 60,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // H Logo
+                  FadeTransition(
+                    opacity: _logoFade,
+                    child: ScaleTransition(
+                      scale: _logoScale,
+                      child: Image.asset(
+                        'assets/logo/logo_h.png',
+                        width: logoWidth,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return SizedBox(
+                            width: logoWidth,
+                            height: 100,
+                            child: const Center(
+                              child: Text(
+                                'H',
+                                style: TextStyle(
+                                  color: Color(0xFF1B4D26),
+                                  fontSize: 60,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            );
-                          },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Slogan
+                  SlideTransition(
+                    position: _textSlide,
+                    child: FadeTransition(
+                      opacity: _textFade,
+                      child: const Text(
+                        'Doğadan gelen güç, seninle başlar',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1B4D26),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    // Slogan
-                    SlideTransition(
-                      position: _textSlide,
-                      child: FadeTransition(
-                        opacity: _textFade,
-                        child: const Text(
-                          'Doğadan gelen güç, seninle başlar',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1B4D26),
-                          ),
-                        ),
-                      ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // --- Alt bölge: f2 resmi (üst kenarı slogandan en az 24px uzakta) ---
+              Expanded(
+                child: Align(
+                  alignment: _bgImage2Alignment,
+                  child: ScaleTransition(
+                    scale: _bgImage2Scale,
+                    child: Image.asset(
+                      'assets/f2.png',
+                      width: f2Width,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const SizedBox.shrink(),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],

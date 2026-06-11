@@ -369,7 +369,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ---
 
-## FAZ 9 — ÜRÜN KATALOĞU, SİPARİŞ VE TARİFLER ✅
+## FAZ 9 — ÜRÜN KATALOĞU, SİPARİŞ VE TARİFLER 🔄 (Kısmen Tamamlandı)
 
 > Herbalife ürün yönetimi, sipariş sistemi ve ürün bazlı tarifler.
 
@@ -397,7 +397,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 ### 9.3 — Ürün Kullanım İstatistikleri
 - [x] `DistributorProductUsageScreen` — hangi ürün kaç müşteri tarafından kullanılıyor
 
-### 9.4 — Tarifler (Recipes) Modülü ✅
+### 9.4 — Tarifler (Recipes) Modülü 🔄
 - [x] `RecipeModel` — tarif veri modeli (malzemeler, besin değerleri)
 - [x] `RecipeIngredient` ve `RecipeNutrition` alt modelleri
 - [x] `RecipeProvider` — JSON tabanlı (`assets/recipes.json`) tarif yükleme
