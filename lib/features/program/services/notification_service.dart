@@ -27,6 +27,17 @@ class NotificationService {
   static const String actionOk = 'ACTION_OK';
   static const String actionView = 'ACTION_VIEW';
 
+  // ── Kanal ID'leri ─────────────────────────────────────────────────────────
+  // Android 8+ ile bir kanal oluşturulduktan sonra ses/titreşim/önem ayarları
+  // değiştirilemez — yalnızca silinip yeniden oluşturulduğunda yeni ayarlar
+  // geçerli olur. Bu sebeple ID'leri versiyonladık: eski sessiz kanallar
+  // (`meal_reminders`, `test_channel`) initialize() sırasında silinir ve
+  // aşağıdaki yeni kanallar (ses+titreşim açık) yerini alır.
+  static const String _mealChannelId = 'meal_reminders_v2';
+  static const String _mealChannelName = 'Öğün Hatırlatıcıları';
+  static const String _testChannelId = 'test_channel_v2';
+  static const String _testChannelName = 'Test Bildirimleri';
+
   // Hatırlatma ID offset'i (çakışmayı önler)
   // static const int _reminderIdOffset = 500000;
 
@@ -62,10 +73,57 @@ class NotificationService {
         onDidReceiveNotificationResponse: _onNotificationResponse,
       );
       _initialized = result ?? false;
+      if (_initialized) {
+        await _setupAndroidChannels();
+      }
       return _initialized;
     } catch (e) {
       debugPrint('[NotificationService] initialize hatası: $e');
       return false;
+    }
+  }
+
+  /// Android için bildirim kanallarını ses+titreşim açık olacak şekilde
+  /// (yeniden) oluşturur. Eski sessiz sürümler ('meal_reminders',
+  /// 'test_channel') silinir; yeni ID'lerle (`_v2`) yerine geçer.
+  /// iOS'ta no-op.
+  Future<void> _setupAndroidChannels() async {
+    try {
+      final androidImpl = _plugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImpl == null) return;
+
+      // 1) Eski sessiz kanalları temizle (varsa).
+      await androidImpl.deleteNotificationChannel(channelId: 'meal_reminders');
+      await androidImpl.deleteNotificationChannel(channelId: 'test_channel');
+
+      // 2) Yeni kanalları oluştur (ses + titreşim açık).
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _mealChannelId,
+          _mealChannelName,
+          description: 'Günlük öğün ve ürün kullanım hatırlatıcıları',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _testChannelId,
+          _testChannelName,
+          description: 'Sistem testi için anlık bildirimler',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+      debugPrint(
+        '[NotificationService] Android kanalları kuruldu (ses+titreşim açık).',
+      );
+    } catch (e) {
+      debugPrint('[NotificationService] _setupAndroidChannels hatası: $e');
     }
   }
 
@@ -244,11 +302,13 @@ class NotificationService {
       final payload = jsonEncode({'title': title, 'body': body});
 
       final androidDetails = AndroidNotificationDetails(
-        'meal_reminders',
-        'Öğün Hatırlatıcıları',
+        _mealChannelId,
+        _mealChannelName,
         channelDescription: 'Günlük öğün ve ürün kullanım hatırlatıcıları',
         importance: Importance.high,
         priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
         icon: '@drawable/ic_notification',
         color: const Color(0xFF7AC144), // AppColors.primary
         actions: const <AndroidNotificationAction>[
@@ -345,11 +405,13 @@ class NotificationService {
       });
 
       const androidDetails = AndroidNotificationDetails(
-        'test_channel',
-        'Test Bildirimleri',
+        _testChannelId,
+        _testChannelName,
         channelDescription: 'Sistem testi için anlık bildirimler',
         importance: Importance.max,
         priority: Priority.max,
+        playSound: true,
+        enableVibration: true,
         icon: '@drawable/ic_notification',
         color: Color(0xFF7AC144),
         actions: <AndroidNotificationAction>[

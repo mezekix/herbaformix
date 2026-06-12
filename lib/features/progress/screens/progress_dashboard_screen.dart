@@ -205,7 +205,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             title: 'Seri',
             value: '$streak Gün',
             subtitle: 'Harika gidiyorsun!',
-            subtitleColor: AppColors.mango,
+            subtitleColor: AppColors.mangoDeep,
             icon: Icons.local_fire_department,
           ),
         ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart'; // Tarih formatlama için lokalizasyon
@@ -16,6 +17,14 @@ import 'services/routine_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Firestore offline persistence — okumalar cache'lenir, ağ kesintisinde de çalışır.
+  // Mobilde varsayılan açık; web'de IndexedDB tabanlı. cacheSize sınırsız.
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
   // Tarih formatlaması hızlıdır, paralel çalışabilir
   unawaited(initializeDateFormatting('tr_TR', null));
   // runApp'ı hemen çağır — kullanıcı beyaz ekranda beklemesin

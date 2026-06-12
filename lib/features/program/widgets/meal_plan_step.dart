@@ -348,6 +348,7 @@ class _SlotCardState extends State<_SlotCard> {
                 if (widget.onDelete != null) ...[
                   const SizedBox(width: 4),
                   IconButton(
+                    tooltip: 'Öğünü sil',
                     icon: const Icon(Icons.close,
                         size: 18, color: Colors.grey),
                     onPressed: widget.onDelete,

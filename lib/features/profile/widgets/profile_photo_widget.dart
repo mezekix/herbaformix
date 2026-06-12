@@ -314,7 +314,9 @@ class ProfilePhotoWidget extends StatelessWidget {
     try {
       final XFile? pickedFile = await picker.pickImage(
         source: source,
-        imageQuality: 85,
+        imageQuality: 80,
+        maxWidth: 1080,
+        maxHeight: 1080,
       );
       if (pickedFile == null) return;
 

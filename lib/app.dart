@@ -222,8 +222,10 @@ class _AppState extends State<App> {
         ),
 
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: AppColors.accent, // Vurgu rengi
-          foregroundColor: AppColors.textOnPrimary,
+          backgroundColor: AppColors.accent, // Vurgu rengi (mango)
+          // a11y: mango üstünde beyaz 1.95:1 — WCAG AA fail. Koyu metin (nightSky)
+          // ~10.8:1 sağlar.
+          foregroundColor: AppColors.nightSky,
         ),
 
         progressIndicatorTheme: const ProgressIndicatorThemeData(

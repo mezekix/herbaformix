@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'delete_account_dialog.dart';
 
 class CustomerProfileMenu extends StatelessWidget {
   const CustomerProfileMenu({super.key});
@@ -130,7 +131,30 @@ class CustomerProfileMenu extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 12),
+
+          // Hesabımı Sil — daha sade, küçük link gibi durarak yanlışlık
+          // riskini azaltır. Gerçek friction onay diyaloğunda.
+          Center(
+            child: TextButton.icon(
+              onPressed: () => DeleteAccountDialog.show(context),
+              icon: Icon(
+                Icons.delete_forever_outlined,
+                size: 16,
+                color: AppColors.error.withValues(alpha: 0.8),
+              ),
+              label: Text(
+                'Hesabımı Kalıcı Olarak Sil',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.error.withValues(alpha: 0.8),
+                  decoration: TextDecoration.underline,
+                  decorationColor: AppColors.error.withValues(alpha: 0.4),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );

@@ -9,6 +9,10 @@ class AppColors {
 
   // Vurgu ve Diğer Renkler (Paletten)
   static const Color mango = Color(0xFFEFAC29); // Sarı/Turuncu
+  // Açık zemin üzerinde mango yerine — WCAG AA (≥4.5:1) kontrast için
+  // metin/ikon rengi olarak `mangoDeep` kullanın. Mango'yu yalnızca dolgu/arka plan
+  // (progress bar, FAB bg, badge bg) olarak bırakın; o zaman da üstteki yazı koyu (nightSky) olmalı.
+  static const Color mangoDeep = Color(0xFF8A5A00); // Mango'nun erişilebilir koyu varyantı
   static const Color blueberry = Color(0xFF4A28A9); // Mor
   static const Color papaya = Color(0xFFD24A39); // Kırmızı/Turuncu
   static const Color bay = Color(0xFF224945); // Çok Koyu Yeşil/Mavi

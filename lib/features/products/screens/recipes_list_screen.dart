@@ -81,6 +81,7 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
+          tooltip: 'Geri',
           icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.nightSky, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
@@ -113,6 +114,7 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
+                          tooltip: 'Aramayı temizle',
                           icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
                           onPressed: () => _searchController.clear(),
                         )
@@ -187,7 +189,7 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
                           crossAxisCount: 2,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
-                          childAspectRatio: 0.78,
+                          childAspectRatio: 0.68,
                         ),
                         itemCount: filteredRecipes.length,
                         itemBuilder: (context, index) {

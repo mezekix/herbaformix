@@ -13,7 +13,6 @@ import '../../../models/invite_code_model.dart';
 import '../../../models/distributor_customer_insights.dart';
 import '../../../models/follow_up_model.dart';
 import '../../../models/progress_entry_model.dart';
-import '../../../models/scheduled_follow_up_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../models/user_role.dart';
 import '../../../services/firestore_service.dart';
@@ -23,6 +22,16 @@ import '../../program/screens/create_program_screen.dart';
 import '../providers/customer_provider.dart';
 import '../providers/follow_up_provider.dart';
 
+/// Distribütörün bağlı bir müşterinin detayını görüntülediği ekran.
+///
+/// 3 sekmeli yapı:
+/// - **Takip**: Planlanmış işler, hızlı aksiyonlar, son 7 gün özeti, gelişim grafiği.
+/// - **Profil & Sağlık**: Distribütör başvurusu (varsa), iletişim, kişisel
+///   bilgiler, sağlık notları, davet kodu (müşteri henüz aktive olmamışsa).
+/// - **Geçmiş**: Tüm ölçümler ve geçmiş takip görüşmeleri.
+///
+/// Üstte sabit bir durum çubuğu (Aktif/Pasif + Riskli/Takipte) her sekmede
+/// görünür kalır.
 class CustomerDetailScreen extends StatelessWidget {
   static const String routeName = 'customer-detail';
 
@@ -45,923 +54,332 @@ class CustomerDetailScreen extends StatelessWidget {
         customerId: currentCustomer.id,
         linkedUserId: currentCustomer.linkedUserId,
       ),
-      child: Consumer<FollowUpProvider>(
-        builder: (context, followUpProvider, child) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('${currentCustomer.firstName} ${currentCustomer.lastName}'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  tooltip: 'Müşteriyi Düzenle',
-                  onPressed: () {
-                    context.goNamed(
-                      AddEditCustomerScreen.routeName,
-                      extra: currentCustomer,
-                    );
-                  },
-                ),
-              ],
-            ),
-            body: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCustomerHeader(context, currentCustomer),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Sağlık Bilgileri',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  _buildHealthSection(context, currentCustomer),
-                  const SizedBox(height: 12),
-                  if (currentCustomer.linkedUserId != null &&
-                      currentCustomer.linkedUserId!.isNotEmpty) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          context.goNamed(
-                            CreateProgramScreen.routeName,
-                            extra: ProgramEditorArgs(
-                              targetUserId: currentCustomer.linkedUserId!,
-                              targetCustomerName:
-                                  '${currentCustomer.firstName} ${currentCustomer.lastName}'.trim(),
-                              isDistributorMode: true,
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.edit_calendar_outlined),
-                        label: const Text('Bu Müşteri İçin Program Yaz'),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _showMotivationMessageSheet(
-                          context,
-                          currentCustomer.linkedUserId!,
-                          '${currentCustomer.firstName} ${currentCustomer.lastName}'.trim(),
-                        ),
-                        icon: const Icon(Icons.favorite_outline),
-                        label: const Text('Günün Motivasyon Mesajı'),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  Text(
-                    'Planlanmış Takipler (Yapılacaklar)',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Divider(),
-                  if (followUpProvider.isLoading &&
-                      followUpProvider.pendingScheduledFollowUps.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                  if (!followUpProvider.isLoading &&
-                      followUpProvider.pendingScheduledFollowUps.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24.0),
-                        child: Text('Yaklaşan planlanmış takip görevi yok.'),
-                      ),
-                    ),
-                  if (followUpProvider.pendingScheduledFollowUps.isNotEmpty)
-                    _buildScheduledFollowUpsList(
-                      context,
-                      followUpProvider.pendingScheduledFollowUps,
-                      followUpProvider,
-                    ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Geçmiş Görüşmeler',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const Divider(),
-                  if (followUpProvider.isLoading &&
-                      followUpProvider.followUps.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    ),
-                  if (!followUpProvider.isLoading &&
-                      followUpProvider.followUps.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 32.0),
-                        child: Text('Henüz takip görüşmesi eklenmemiş.'),
-                      ),
-                    ),
-                  if (followUpProvider.followUps.isNotEmpty)
-                    _buildFollowUpsList(context, followUpProvider.followUps),
-                ],
-              ),
-            ),
-            floatingActionButton: FloatingActionButton(
-              onPressed: () {
-                _showAddFollowUpSheet(context, currentCustomer, followUpProvider);
-              },
-              tooltip: 'Plansız Takip Ekle',
-              child: const Icon(Icons.add),
-            ),
-          );
-        },
-      ),
+      child: _CustomerDetailContent(customer: currentCustomer),
     );
   }
+}
 
-  void _showAddFollowUpSheet(
-    BuildContext context,
-    CustomerModel customer,
-    FollowUpProvider provider, {
-    FollowUpModel? followUp,
-    String? scheduledFollowUpId,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (builderContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(builderContext).viewInsets.bottom,
-          ),
-          child: _AddFollowUpSheet(
-            customer: customer,
-            followUpProvider: provider,
-            followUp: followUp,
-            scheduledFollowUpId: scheduledFollowUpId,
-          ),
-        );
-      },
-    );
-  }
+/// Profil + insights verilerini yükleyip [_CustomerDetailScaffold]'a iletir.
+class _CustomerDetailContent extends StatelessWidget {
+  final CustomerModel customer;
 
-  void _showMotivationMessageSheet(
-    BuildContext context,
-    String customerUserId,
-    String customerName,
-  ) {
-    final firestoreService = context.read<FirestoreService>();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (builderContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(builderContext).viewInsets.bottom,
-          ),
-          child: _MotivationMessageSheet(
-            customerUserId: customerUserId,
-            customerName: customerName,
-            firestoreService: firestoreService,
-          ),
-        );
-      },
-    );
-  }
+  const _CustomerDetailContent({required this.customer});
 
-  Widget _buildCustomerHeader(BuildContext context, CustomerModel customer) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: CircleAvatar(
-                radius: 28,
-                child: Text(
-                  customer.firstName.isNotEmpty ? customer.firstName[0] : '?',
-                ),
-              ),
-              title: Text(
-                '${customer.firstName} ${customer.lastName}',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              subtitle: Text(customer.phoneNumber),
-            ),
-            const Divider(),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.email_outlined, size: 16),
-                const SizedBox(width: 8),
-                Expanded(child: Text(customer.email ?? 'E-posta yok')),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.calendar_today_outlined, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  'İlk Temas: ${DateFormat('dd MMMM yyyy', 'tr_TR').format(customer.firstContactDate.toDate())}',
-                ),
-              ],
-            ),
-            if (customer.activatedAt != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.verified_user_outlined, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Aktive Oldu: ${DateFormat('dd MMMM yyyy HH:mm', 'tr_TR').format(customer.activatedAt!.toDate())}',
-                  ),
-                ],
-              ),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  customer.isActive
-                      ? Icons.check_circle_outline
-                      : Icons.cancel_outlined,
-                  size: 16,
-                  color: customer.isActive ? Colors.green : Colors.red,
-                ),
-                const SizedBox(width: 8),
-                Text(customer.isActive ? 'Aktif Müşteri' : 'Pasif Müşteri'),
-              ],
-            ),
-            if (customer.notes != null && customer.notes!.trim().isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 8),
-              Text(
-                'Notlar',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.notes_outlined, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(customer.notes!)),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  @override
+  Widget build(BuildContext context) {
+    final hasLinkedUser =
+        customer.linkedUserId != null && customer.linkedUserId!.isNotEmpty;
 
-  Widget _buildHealthSection(BuildContext context, CustomerModel customer) {
-    if (customer.linkedUserId == null || customer.linkedUserId!.isEmpty) {
-      final firestoreService = context.read<FirestoreService>();
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildInfoMessage(
-            icon: Icons.link_off_outlined,
-            color: Colors.orange,
-            text:
-                'Bu müşteri henüz hesabını aktive etmedi. Sağlık verileri ve günlük takip bilgileri aktivasyondan sonra görünür.',
-          ),
-          const SizedBox(height: 16),
-          FutureBuilder<InviteCodeModel?>(
-            future: firestoreService.getInviteCodeForCustomer(customer.id),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                );
-              }
-              final invite = snapshot.data;
-              if (invite == null) {
-                return _buildInfoMessage(
-                  icon: Icons.info_outline,
-                  color: Colors.blue,
-                  text: 'Bu müşteri için oluşturulmuş bir davet kodu bulunamadı.',
-                );
-              }
-
-              return Card(
-                elevation: 0,
-                color: AppColors.primary.withValues(alpha: 0.08),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Müşteri Aktivasyon Kodu',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Müşterinizin sizinle bağlantı kurması için uygulamaya kaydolurken aşağıdaki kodu girmesi gerekmektedir:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Text(
-                              invite.code,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 2,
-                                fontFamily: 'monospace',
-                                color: AppColors.primary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.copy, size: 16),
-                            label: const Text('Kopyala'),
-                            onPressed: () {
-                              Clipboard.setData(ClipboardData(text: invite.code));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Davet kodu kopyalandı!'),
-                                  backgroundColor: AppColors.primary,
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+    if (!hasLinkedUser) {
+      return _CustomerDetailScaffold(
+        customer: customer,
+        profile: null,
+        insights: null,
       );
     }
 
     final firestoreService = context.read<FirestoreService>();
-
     return StreamBuilder<UserProfileModel?>(
       stream: firestoreService.watchUserProfile(customer.linkedUserId!),
-      builder: (context, profileSnapshot) {
-        if (profileSnapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final profile = profileSnapshot.data;
-        if (profile == null) {
-          return _buildInfoMessage(
-            icon: Icons.info_outline,
-            color: Colors.blue,
-            text: 'Bağlı müşteri profili bulunamadı.',
-          );
-        }
-
+      builder: (context, profileSnap) {
         return FutureBuilder<DistributorCustomerInsights>(
           future: firestoreService.getDistributorCustomerInsights(
             customer.linkedUserId!,
           ),
-          builder: (context, insightsSnapshot) {
-            if (insightsSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final insights = insightsSnapshot.data;
-            if (insights == null) {
-              return _buildInfoMessage(
-                icon: Icons.error_outline,
-                color: Colors.red,
-                text: 'Müşteri içgörüleri yüklenemedi.',
-              );
-            }
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (profile.distributorRequestStatus == 'pending') ...[
-                  _buildDistributorRequestCard(context, profile),
-                  const SizedBox(height: 12),
-                ],
-                _buildProfileSummaryCard(context, profile),
-                const SizedBox(height: 12),
-                _buildInsightsCard(context, profile, insights),
-                const SizedBox(height: 12),
-                _buildProgressSection(context, profile, insights),
-              ],
+          builder: (context, insightsSnap) {
+            return _CustomerDetailScaffold(
+              customer: customer,
+              profile: profileSnap.data,
+              insights: insightsSnap.data,
+              isProfileLoading:
+                  profileSnap.connectionState == ConnectionState.waiting,
+              isInsightsLoading:
+                  insightsSnap.connectionState == ConnectionState.waiting,
             );
           },
         );
       },
     );
   }
+}
 
-  Widget _buildProfileSummaryCard(
-    BuildContext context,
-    UserProfileModel profile,
-  ) {
-    return Card(
-      elevation: 0,
-      color: Colors.green.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildDataChip(Icons.person_outline, profile.name ?? 'İsim yok'),
-                _buildDataChip(
-                  Icons.phone_outlined,
-                  profile.phoneNumber ?? 'Telefon yok',
-                ),
-                _buildDataChip(
-                  Icons.straighten,
-                  profile.height != null
-                      ? '${profile.height!.toStringAsFixed(0)} cm'
-                      : 'Boy yok',
-                ),
-                _buildDataChip(
-                  Icons.monitor_weight_outlined,
-                  profile.weight != null
-                      ? '${profile.weight!.toStringAsFixed(1)} kg'
-                      : 'Kilo yok',
-                ),
-                _buildDataChip(
-                  Icons.flag_outlined,
-                  _formatGoal(profile.userGoal),
-                ),
-                _buildDataChip(
-                  Icons.cake_outlined,
-                  profile.age != null ? '${profile.age} yaş' : 'Yaş yok',
-                ),
-              ],
+/// Ana iskelet: AppBar + durum çubuğu + 3 sekmeli TabBarView.
+class _CustomerDetailScaffold extends StatelessWidget {
+  final CustomerModel customer;
+  final UserProfileModel? profile;
+  final DistributorCustomerInsights? insights;
+  final bool isProfileLoading;
+  final bool isInsightsLoading;
+
+  const _CustomerDetailScaffold({
+    required this.customer,
+    required this.profile,
+    required this.insights,
+    this.isProfileLoading = false,
+    this.isInsightsLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final followUpProvider = context.watch<FollowUpProvider>();
+
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('${customer.firstName} ${customer.lastName}'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: 'Müşteriyi Düzenle',
+              onPressed: () {
+                context.goNamed(
+                  AddEditCustomerScreen.routeName,
+                  extra: customer,
+                );
+              },
             ),
-            if ((profile.healthNotes ?? '').trim().isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Sağlık Notu',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(profile.healthNotes!.trim()),
+          ],
+          bottom: TabBar(
+            labelColor: AppColors.white,
+            unselectedLabelColor: AppColors.white.withValues(alpha: 0.65),
+            indicatorColor: AppColors.white,
+            indicatorWeight: 3,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            ),
+            tabs: const [
+              Tab(icon: Icon(Icons.event_available_outlined), text: 'Takip'),
+              Tab(icon: Icon(Icons.person_outline), text: 'Profil & Sağlık'),
+              Tab(icon: Icon(Icons.history), text: 'Geçmiş'),
             ],
-          ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildProgressSection(
-    BuildContext context,
-    UserProfileModel profile,
-    DistributorCustomerInsights insights,
-  ) {
-    final entries = insights.progressEntries;
-    final hasEntries = entries.isNotEmpty;
-
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        body: Column(
           children: [
-            Row(
-              children: [
-                const Icon(Icons.trending_down, color: AppColors.primary, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Gelişim Takibi',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            if (!hasEntries) ...[
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Text(
-                    'Henüz ölçüm kaydı yok.',
-                    style: TextStyle(color: Colors.grey.shade500),
+            _StatusBar(customer: customer, insights: insights),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _FollowUpTab(
+                    customer: customer,
+                    profile: profile,
+                    insights: insights,
+                    followUpProvider: followUpProvider,
+                    isInsightsLoading: isInsightsLoading,
                   ),
-                ),
+                  _ProfileHealthTab(
+                    customer: customer,
+                    profile: profile,
+                    isProfileLoading: isProfileLoading,
+                  ),
+                  _HistoryTab(
+                    customer: customer,
+                    insights: insights,
+                    followUpProvider: followUpProvider,
+                    isInsightsLoading: isInsightsLoading,
+                  ),
+                ],
               ),
-            ] else ...[
-              // Kilo değişim grafiği
-              WeightChartWidget(
-                entries: entries,
-                targetWeight: profile.targetWeight,
-                initialWeight: profile.weight,
-              ),
-
-              // Toplam değişim
-              if (entries.length >= 2) ...[
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildChangeChip(
-                      'Kilo',
-                      insights.totalWeightChange,
-                      'kg',
-                    ),
-                    if (entries.any((e) => e.waist != null))
-                      _buildChangeChip(
-                        'Bel',
-                        _calcChange(entries, (e) => e.waist),
-                        'cm',
-                      ),
-                    if (entries.any((e) => e.hip != null))
-                      _buildChangeChip(
-                        'Kalça',
-                        _calcChange(entries, (e) => e.hip),
-                        'cm',
-                      ),
-                    if (entries.any((e) => e.chest != null))
-                      _buildChangeChip(
-                        'Göğüs',
-                        _calcChange(entries, (e) => e.chest),
-                        'cm',
-                      ),
-                  ],
-                ),
-              ],
-
-              // Son 5 ölçüm listesi
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-              Text(
-                'Son Ölçümler',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              ...entries.reversed.take(5).map((entry) => _buildEntryRow(entry)),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  double? _calcChange(List<ProgressEntryModel> entries, double? Function(ProgressEntryModel) getter) {
-    final first = entries.firstWhere((e) => getter(e) != null, orElse: () => entries.first);
-    final last = entries.lastWhere((e) => getter(e) != null, orElse: () => entries.last);
-    final firstVal = getter(first);
-    final lastVal = getter(last);
-    if (firstVal == null || lastVal == null) return null;
-    return lastVal - firstVal;
-  }
-
-  Widget _buildChangeChip(String label, double? change, String unit) {
-    final isPositive = (change ?? 0) >= 0;
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          change != null
-              ? '${isPositive ? '+' : ''}${change.toStringAsFixed(1)} $unit'
-              : '—',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: change != null && change < 0 ? AppColors.primary : Colors.red,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEntryRow(ProgressEntryModel entry) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              DateFormat('dd.MM.yy').format(entry.date),
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-          ),
-          Expanded(
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                _entryChip('${entry.weight.toStringAsFixed(1)} kg', Icons.monitor_weight_outlined),
-                if (entry.waist != null)
-                  _entryChip('${entry.waist!.toStringAsFixed(1)} cm', Icons.straighten),
-                if (entry.hip != null)
-                  _entryChip('${entry.hip!.toStringAsFixed(1)} cm', Icons.straighten),
-                if (entry.chest != null)
-                  _entryChip('${entry.chest!.toStringAsFixed(1)} cm', Icons.straighten),
-                if (entry.bodyFat != null)
-                  _entryChip('%${entry.bodyFat!.toStringAsFixed(1)}', Icons.water_drop_outlined),
-                if (entry.muscleMass != null)
-                  _entryChip('${entry.muscleMass!.toStringAsFixed(1)} kg', Icons.fitness_center),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _entryChip(String text, IconData icon) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: Colors.grey.shade400),
-        const SizedBox(width: 2),
-        Text(text, style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
-      ],
-    );
-  }
-
-  Widget _buildInsightsCard(
-    BuildContext context,
-    UserProfileModel profile,
-    DistributorCustomerInsights insights,
-  ) {
-    final latestProgress = insights.latestProgress;
-    final waterPercent =
-        insights.waterGoalMl == 0 ? 0.0 : insights.todayWaterMl / insights.waterGoalMl;
-    final lastActivityText = insights.lastActivityAt == null
-        ? 'Aktivite yok'
-        : DateFormat('dd.MM.yyyy HH:mm').format(insights.lastActivityAt!);
-
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Son 7 Gün Özeti',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: insights.isAtRisk
-                        ? Colors.red.shade100
-                        : Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    insights.isAtRisk ? 'Riskli' : 'Takipte',
-                    style: TextStyle(
-                      color: insights.isAtRisk
-                          ? Colors.red.shade900
-                          : Colors.green.shade900,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _buildMetricCard(
-                  context,
-                  title: 'Son Kilo',
-                  value: latestProgress != null
-                      ? '${latestProgress.weight.toStringAsFixed(1)} kg'
-                      : (profile.weight != null
-                          ? '${profile.weight!.toStringAsFixed(1)} kg'
-                          : 'Yok'),
-                  subtitle: latestProgress != null
-                      ? DateFormat('dd.MM').format(latestProgress.date)
-                      : 'Kayıt yok',
-                ),
-                _buildMetricCard(
-                  context,
-                  title: 'Su Takibi',
-                  value: '${insights.todayWaterMl}/${insights.waterGoalMl} ml',
-                  subtitle: '%${(waterPercent * 100).clamp(0, 100).round()}',
-                ),
-                _buildMetricCard(
-                  context,
-                  title: 'Öğün Tamamlama',
-                  value:
-                      '${insights.completedRoutinesLast7Days}/${insights.totalRoutinesLast7Days}',
-                  subtitle:
-                      '%${(insights.completionRate * 100).clamp(0, 100).round()}',
-                ),
-                _buildMetricCard(
-                  context,
-                  title: 'Son Aktivite',
-                  value: lastActivityText,
-                  subtitle: insights.lastActivityAt == null
-                      ? 'Henüz yok'
-                      : _relativeTime(insights.lastActivityAt!),
-                ),
-              ],
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildMetricCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-  }) {
+/// Her sekmenin üstünde sabit duran ince durum çubuğu.
+///
+/// Sol: Aktif/Pasif. Sağ: Riskli/Takipte (sadece aktive olmuş müşteride) veya
+/// "Aktivasyon bekleniyor" (aktive olmamışsa).
+class _StatusBar extends StatelessWidget {
+  final CustomerModel customer;
+  final DistributorCustomerInsights? insights;
+
+  const _StatusBar({required this.customer, required this.insights});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasLinkedUser =
+        customer.linkedUserId != null && customer.linkedUserId!.isNotEmpty;
+
     return Container(
-      width: 150,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade700,
-                ),
+          _statusChip(
+            icon: customer.isActive
+                ? Icons.check_circle
+                : Icons.cancel_outlined,
+            label: customer.isActive ? 'Aktif Müşteri' : 'Pasif Müşteri',
+            color: customer.isActive ? Colors.green : Colors.grey,
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          const Spacer(),
+          if (!hasLinkedUser)
+            _statusChip(
+              icon: Icons.hourglass_empty,
+              label: 'Aktivasyon bekleniyor',
+              color: Colors.orange,
+            )
+          else if (insights != null)
+            _statusChip(
+              icon: insights!.isAtRisk
+                  ? Icons.warning_amber_outlined
+                  : Icons.trending_up,
+              label: insights!.isAtRisk ? 'Riskli' : 'Takipte',
+              color: insights!.isAtRisk ? Colors.red : Colors.green,
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildDataChip(IconData icon, String label) {
+  Widget _statusChip({
+    required IconData icon,
+    required String label,
+    required MaterialColor color,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.green.shade100),
+        color: color.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.shade200),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.green.shade800),
+          Icon(icon, size: 14, color: color.shade700),
           const SizedBox(width: 6),
-          Text(label),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoMessage({
-    required IconData icon,
-    required MaterialColor color,
-    required String text,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.shade100),
-      ),
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color.shade700, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(color: color.shade800, fontSize: 14),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color.shade900,
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  String _formatGoal(String? goal) {
-    switch (goal) {
-      case 'weight_loss':
-        return 'Zayıflama';
-      case 'weight_gain':
-        return 'Kilo Alma';
-      case 'healthy_living':
-        return 'Sağlıklı Yaşam';
-      case 'skin_care':
-        return 'Cilt & Kişisel Bakım';
-      default:
-        return goal == null || goal.isEmpty ? 'Hedef yok' : goal;
+// ============================================================================
+// Tab 1 — Takip (varsayılan açılan)
+// ============================================================================
+
+class _FollowUpTab extends StatelessWidget {
+  final CustomerModel customer;
+  final UserProfileModel? profile;
+  final DistributorCustomerInsights? insights;
+  final FollowUpProvider followUpProvider;
+  final bool isInsightsLoading;
+
+  const _FollowUpTab({
+    required this.customer,
+    required this.profile,
+    required this.insights,
+    required this.followUpProvider,
+    required this.isInsightsLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasLinkedUser =
+        customer.linkedUserId != null && customer.linkedUserId!.isNotEmpty;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1) Planlanmış takipler (en önemli — en üstte)
+          _sectionTitle(context, 'Planlanmış Takipler', Icons.calendar_today_outlined),
+          const SizedBox(height: 8),
+          _buildScheduledFollowUps(context),
+          const SizedBox(height: 24),
+
+          // 2) Hızlı aksiyonlar — Plansız Takip Ekle her zaman; Program/Motivasyon
+          //    yalnızca müşteri aktive olduysa
+          _sectionTitle(context, 'Hızlı Aksiyon', Icons.bolt_outlined),
+          const SizedBox(height: 8),
+          _buildQuickActions(context, hasLinkedUser),
+          const SizedBox(height: 24),
+
+          // 3) Müşteri aktive olmamışsa burada dur
+          if (!hasLinkedUser) ...[
+            _buildInfoMessage(
+              icon: Icons.link_off_outlined,
+              color: Colors.orange,
+              text:
+                  'Müşteri henüz hesabını aktive etmedi. Aktivasyon sonrası gelişim takibi ve son 7 gün özeti burada görünür. Davet kodunu Profil sekmesinde bulabilirsin.',
+            ),
+            const SizedBox(height: 16),
+          ] else ...[
+            // 4) Son 7 Gün Özeti — profile stream'den geç gelse bile insights'la
+            //    birlikte gösteririz (profile sadece kilo fallback için).
+            if (insights != null)
+              _buildInsightsCard(context, profile, insights!)
+            else if (isInsightsLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            const SizedBox(height: 12),
+
+            // 5) Gelişim grafiği + toplam değişim
+            if (insights != null)
+              _buildProgressChartCard(context, profile, insights!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScheduledFollowUps(BuildContext context) {
+    if (followUpProvider.isLoading &&
+        followUpProvider.pendingScheduledFollowUps.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
-  }
 
-  String _relativeTime(DateTime dateTime) {
-    final difference = DateTime.now().difference(dateTime);
-    if (difference.inDays >= 1) return '${difference.inDays} gün önce';
-    if (difference.inHours >= 1) return '${difference.inHours} saat önce';
-    if (difference.inMinutes >= 1) return '${difference.inMinutes} dk önce';
-    return 'Az önce';
-  }
+    if (followUpProvider.pendingScheduledFollowUps.isEmpty) {
+      return _buildInfoMessage(
+        icon: Icons.check_circle_outline,
+        color: Colors.green,
+        text: 'Yaklaşan planlanmış takip görevi yok.',
+      );
+    }
 
-  Widget _buildScheduledFollowUpsList(
-    BuildContext context,
-    List<ScheduledFollowUpModel> scheduledFollowUps,
-    FollowUpProvider provider,
-  ) {
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      itemCount: scheduledFollowUps.length,
+      padding: EdgeInsets.zero,
+      itemCount: followUpProvider.pendingScheduledFollowUps.length,
       itemBuilder: (context, index) {
-        final scheduledFollowUp = scheduledFollowUps[index];
-        final isOverdue = scheduledFollowUp.dueDate.toDate().isBefore(
-          DateTime.now(),
-        );
+        final scheduledFollowUp =
+            followUpProvider.pendingScheduledFollowUps[index];
+        final isOverdue =
+            scheduledFollowUp.dueDate.toDate().isBefore(DateTime.now());
 
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -994,7 +412,7 @@ class CustomerDetailScreen extends StatelessWidget {
                 _showAddFollowUpSheet(
                   context,
                   customer,
-                  provider,
+                  followUpProvider,
                   scheduledFollowUpId: scheduledFollowUp.id,
                 );
               },
@@ -1005,15 +423,794 @@ class CustomerDetailScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildQuickActions(BuildContext context, bool hasLinkedUser) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (hasLinkedUser)
+          _actionButton(
+            icon: Icons.edit_calendar_outlined,
+            label: 'Program Yaz',
+            onPressed: () {
+              context.goNamed(
+                CreateProgramScreen.routeName,
+                extra: ProgramEditorArgs(
+                  targetUserId: customer.linkedUserId!,
+                  targetCustomerName:
+                      '${customer.firstName} ${customer.lastName}'.trim(),
+                  isDistributorMode: true,
+                ),
+              );
+            },
+            filled: true,
+          ),
+        if (hasLinkedUser)
+          _actionButton(
+            icon: Icons.favorite_outline,
+            label: 'Motivasyon Mesajı',
+            onPressed: () => _showMotivationMessageSheet(
+              context,
+              customer.linkedUserId!,
+              '${customer.firstName} ${customer.lastName}'.trim(),
+            ),
+          ),
+        _actionButton(
+          icon: Icons.add_task_outlined,
+          label: 'Plansız Takip Ekle',
+          onPressed: () =>
+              _showAddFollowUpSheet(context, customer, followUpProvider),
+        ),
+      ],
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+    bool filled = false,
+  }) {
+    if (filled) {
+      return ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 18),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        ),
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      ),
+    );
+  }
+
+  Widget _buildInsightsCard(
+    BuildContext context,
+    UserProfileModel? profile,
+    DistributorCustomerInsights insights,
+  ) {
+    final latestProgress = insights.latestProgress;
+    final waterPercent = insights.waterGoalMl == 0
+        ? 0.0
+        : insights.todayWaterMl / insights.waterGoalMl;
+    final lastActivityText = insights.lastActivityAt == null
+        ? 'Aktivite yok'
+        : DateFormat('dd.MM.yyyy HH:mm').format(insights.lastActivityAt!);
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.insights, color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Son 7 Gün Özeti',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildMetricCard(
+                  context,
+                  title: 'Son Kilo',
+                  value: latestProgress != null
+                      ? '${latestProgress.weight.toStringAsFixed(1)} kg'
+                      : (profile?.weight != null
+                          ? '${profile!.weight!.toStringAsFixed(1)} kg'
+                          : 'Yok'),
+                  subtitle: latestProgress != null
+                      ? DateFormat('dd.MM').format(latestProgress.date)
+                      : 'Kayıt yok',
+                ),
+                _buildMetricCard(
+                  context,
+                  title: 'Su Takibi',
+                  value: '${insights.todayWaterMl}/${insights.waterGoalMl} ml',
+                  subtitle:
+                      '%${(waterPercent * 100).clamp(0, 100).round()}',
+                ),
+                _buildMetricCard(
+                  context,
+                  title: 'Öğün Tamamlama',
+                  value:
+                      '${insights.completedRoutinesLast7Days}/${insights.totalRoutinesLast7Days}',
+                  subtitle:
+                      '%${(insights.completionRate * 100).clamp(0, 100).round()}',
+                ),
+                _buildMetricCard(
+                  context,
+                  title: 'Son Aktivite',
+                  value: lastActivityText,
+                  subtitle: insights.lastActivityAt == null
+                      ? 'Henüz yok'
+                      : _relativeTime(insights.lastActivityAt!),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressChartCard(
+    BuildContext context,
+    UserProfileModel? profile,
+    DistributorCustomerInsights insights,
+  ) {
+    final entries = insights.progressEntries;
+    final hasEntries = entries.isNotEmpty;
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.trending_down,
+                    color: AppColors.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Gelişim Takibi',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (!hasEntries)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    'Henüz ölçüm kaydı yok.',
+                    style: TextStyle(color: Colors.grey.shade500),
+                  ),
+                ),
+              )
+            else ...[
+              WeightChartWidget(
+                entries: entries,
+                targetWeight: profile?.targetWeight,
+                initialWeight: profile?.weight,
+              ),
+              if (entries.length >= 2) ...[
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildChangeChip('Kilo', insights.totalWeightChange, 'kg'),
+                    if (entries.any((e) => e.waist != null))
+                      _buildChangeChip(
+                          'Bel', _calcChange(entries, (e) => e.waist), 'cm'),
+                    if (entries.any((e) => e.hip != null))
+                      _buildChangeChip(
+                          'Kalça', _calcChange(entries, (e) => e.hip), 'cm'),
+                    if (entries.any((e) => e.chest != null))
+                      _buildChangeChip(
+                          'Göğüs', _calcChange(entries, (e) => e.chest), 'cm'),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    DefaultTabController.of(context).animateTo(2);
+                  },
+                  icon: const Icon(Icons.history, size: 16),
+                  label: const Text('Tüm ölçümleri gör'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Tab 2 — Profil & Sağlık
+// ============================================================================
+
+class _ProfileHealthTab extends StatelessWidget {
+  final CustomerModel customer;
+  final UserProfileModel? profile;
+  final bool isProfileLoading;
+
+  const _ProfileHealthTab({
+    required this.customer,
+    required this.profile,
+    required this.isProfileLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasLinkedUser =
+        customer.linkedUserId != null && customer.linkedUserId!.isNotEmpty;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Distribütör başvuru kartı — pending ise en üstte (aksiyon gerektirir)
+          if (hasLinkedUser && profile?.distributorRequestStatus == 'pending') ...[
+            _buildDistributorRequestCard(context, profile!),
+            const SizedBox(height: 16),
+          ],
+
+          // İletişim
+          _sectionTitle(context, 'İletişim', Icons.contact_mail_outlined),
+          const SizedBox(height: 8),
+          _buildContactCard(context),
+          const SizedBox(height: 20),
+
+          // Kişisel & sağlık — yalnızca aktive olmuş müşteride
+          if (hasLinkedUser) ...[
+            if (isProfileLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (profile != null) ...[
+              _sectionTitle(context, 'Kişisel Bilgiler', Icons.person_outline),
+              const SizedBox(height: 8),
+              _buildPersonalCard(context, profile!),
+              const SizedBox(height: 20),
+              _sectionTitle(context, 'Sağlık Bilgileri',
+                  Icons.medical_information_outlined),
+              const SizedBox(height: 8),
+              _buildHealthCard(context, profile!),
+              const SizedBox(height: 20),
+            ],
+          ] else
+            // Müşteri aktive olmamışsa davet kodu kartı
+            _buildInviteCodeSection(context),
+
+          // Distribütörün kendi notu (her durumda gösterilir)
+          if (customer.notes != null && customer.notes!.trim().isNotEmpty) ...[
+            _sectionTitle(context, 'Distribütör Notu', Icons.notes_outlined),
+            const SizedBox(height: 8),
+            Card(
+              elevation: 0,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(customer.notes!),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactCard(BuildContext context) {
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _infoRow(Icons.phone_outlined, 'Telefon', customer.phoneNumber),
+            const SizedBox(height: 10),
+            _infoRow(Icons.email_outlined, 'E-posta',
+                customer.email ?? 'Belirtilmemiş'),
+            const SizedBox(height: 10),
+            _infoRow(
+              Icons.calendar_today_outlined,
+              'İlk Temas',
+              DateFormat('dd MMMM yyyy', 'tr_TR')
+                  .format(customer.firstContactDate.toDate()),
+            ),
+            if (customer.activatedAt != null) ...[
+              const SizedBox(height: 10),
+              _infoRow(
+                Icons.verified_user_outlined,
+                'Aktive Olduğu Tarih',
+                DateFormat('dd MMMM yyyy HH:mm', 'tr_TR')
+                    .format(customer.activatedAt!.toDate()),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPersonalCard(BuildContext context, UserProfileModel profile) {
+    // İkon + ufak başlık + büyük değer formatında ölçü tile'ları.
+    // Ad ve telefon iletişim kartında zaten var; burada tekrarlanmaz.
+    final tiles = <_DataTile>[
+      _DataTile(
+        icon: Icons.height,
+        label: 'Boy',
+        value: profile.height != null
+            ? '${profile.height!.toStringAsFixed(0)} cm'
+            : '—',
+      ),
+      _DataTile(
+        icon: Icons.monitor_weight_outlined,
+        label: 'Kilo',
+        value: profile.weight != null
+            ? '${profile.weight!.toStringAsFixed(1)} kg'
+            : '—',
+      ),
+      _DataTile(
+        icon: Icons.cake_outlined,
+        label: 'Yaş',
+        value: profile.age != null ? '${profile.age}' : '—',
+      ),
+      if (profile.gender != null && profile.gender!.isNotEmpty)
+        _DataTile(
+          icon: Icons.wc_outlined,
+          label: 'Cinsiyet',
+          value: profile.gender!,
+        ),
+      if (profile.targetWeight != null)
+        _DataTile(
+          icon: Icons.flag_outlined,
+          label: 'Hedef Kilo',
+          value: '${profile.targetWeight!.toStringAsFixed(1)} kg',
+          highlight: true,
+        ),
+      _DataTile(
+        icon: Icons.track_changes_outlined,
+        label: 'Hedef',
+        value: _formatGoal(profile.userGoal),
+        highlight: true,
+      ),
+    ];
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const spacing = 8.0;
+            final tileWidth = (constraints.maxWidth - spacing) / 2;
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: tiles
+                  .map(
+                    (t) => SizedBox(
+                      width: tileWidth,
+                      child: _personalTile(context, t),
+                    ),
+                  )
+                  .toList(),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _personalTile(BuildContext context, _DataTile tile) {
+    final accent = tile.highlight ? AppColors.primary : Colors.grey.shade700;
+    final bg = tile.highlight
+        ? AppColors.primary.withValues(alpha: 0.06)
+        : Colors.grey.shade50;
+    final border = tile.highlight
+        ? AppColors.primary.withValues(alpha: 0.25)
+        : Colors.grey.shade200;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(tile.icon, size: 18, color: accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  tile.label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  tile.value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthCard(BuildContext context, UserProfileModel profile) {
+    final notes = (profile.healthNotes ?? '').trim();
+    final allergies = (profile.allergies ?? '').trim();
+    final meds = (profile.medications ?? '').trim();
+
+    if (notes.isEmpty && allergies.isEmpty && meds.isEmpty) {
+      return _buildInfoMessage(
+        icon: Icons.info_outline,
+        color: Colors.blue,
+        text: 'Müşteri henüz sağlık bilgisi girmedi.',
+      );
+    }
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (notes.isNotEmpty)
+              _labeledBlock('Sağlık Notu', notes, Icons.note_alt_outlined),
+            if (allergies.isNotEmpty) ...[
+              if (notes.isNotEmpty) const SizedBox(height: 14),
+              _labeledBlock('Alerjiler', allergies, Icons.warning_amber_outlined,
+                  color: Colors.orange.shade700),
+            ],
+            if (meds.isNotEmpty) ...[
+              if (notes.isNotEmpty || allergies.isNotEmpty)
+                const SizedBox(height: 14),
+              _labeledBlock(
+                'Kullandığı İlaçlar',
+                meds,
+                Icons.medication_outlined,
+                color: Colors.deepPurple.shade400,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _labeledBlock(String label, String value, IconData icon,
+      {Color? color}) {
+    final iconColor = color ?? Colors.grey.shade700;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: iconColor),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: iconColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(value),
+      ],
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey.shade600),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(value, style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInviteCodeSection(BuildContext context) {
+    final firestoreService = context.read<FirestoreService>();
+    return FutureBuilder<InviteCodeModel?>(
+      future: firestoreService.getInviteCodeForCustomer(customer.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(12.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        final invite = snapshot.data;
+        if (invite == null) {
+          return _buildInfoMessage(
+            icon: Icons.info_outline,
+            color: Colors.blue,
+            text:
+                'Bu müşteri için oluşturulmuş bir davet kodu bulunamadı.',
+          );
+        }
+
+        return Card(
+          elevation: 0,
+          color: AppColors.primary.withValues(alpha: 0.08),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: AppColors.primary.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Müşteri Aktivasyon Kodu',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Müşterinizin sizinle bağlantı kurması için uygulamaya kaydolurken aşağıdaki kodu girmesi gerekmektedir:',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        invite.code,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                          fontFamily: 'monospace',
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.copy, size: 16),
+                      label: const Text('Kopyala'),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: invite.code));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Davet kodu kopyalandı!'),
+                            backgroundColor: AppColors.primary,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Kişisel bilgiler grid'inde tek bir hücreyi tanımlar.
+class _DataTile {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool highlight;
+
+  const _DataTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+}
+
+// ============================================================================
+// Tab 3 — Geçmiş
+// ============================================================================
+
+class _HistoryTab extends StatelessWidget {
+  final CustomerModel customer;
+  final DistributorCustomerInsights? insights;
+  final FollowUpProvider followUpProvider;
+  final bool isInsightsLoading;
+
+  const _HistoryTab({
+    required this.customer,
+    required this.insights,
+    required this.followUpProvider,
+    required this.isInsightsLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasLinkedUser =
+        customer.linkedUserId != null && customer.linkedUserId!.isNotEmpty;
+    final entries = insights?.progressEntries ?? const <ProgressEntryModel>[];
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Tüm ölçümler
+          if (hasLinkedUser) ...[
+            _sectionTitle(
+                context, 'Tüm Ölçümler', Icons.straighten),
+            const SizedBox(height: 8),
+            if (isInsightsLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (entries.isEmpty)
+              _buildInfoMessage(
+                icon: Icons.info_outline,
+                color: Colors.blue,
+                text: 'Henüz ölçüm kaydı yok.',
+              )
+            else
+              Card(
+                elevation: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    children: entries.reversed
+                        .map((entry) => _buildEntryRow(entry))
+                        .toList(),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 24),
+          ],
+
+          // Geçmiş görüşmeler
+          _sectionTitle(context, 'Geçmiş Görüşmeler', Icons.chat_outlined),
+          const SizedBox(height: 8),
+          if (followUpProvider.isLoading && followUpProvider.followUps.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (followUpProvider.followUps.isEmpty)
+            _buildInfoMessage(
+              icon: Icons.info_outline,
+              color: Colors.blue,
+              text: 'Henüz takip görüşmesi eklenmemiş.',
+            )
+          else
+            _buildFollowUpsList(context, followUpProvider.followUps),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFollowUpsList(
     BuildContext context,
     List<FollowUpModel> followUps,
   ) {
-    final followUpProvider = context.read<FollowUpProvider>();
-
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       itemCount: followUps.length,
       itemBuilder: (context, index) {
         final followUp = followUps[index];
@@ -1085,175 +1282,400 @@ class CustomerDetailScreen extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _getFollowUpIcon(FollowUpType type) {
-    switch (type) {
-      case FollowUpType.phoneCall:
-        return const Icon(Icons.phone_in_talk_outlined);
-      case FollowUpType.whatsappMessage:
-        return const Icon(Icons.chat_outlined);
-      case FollowUpType.email:
-        return const Icon(Icons.alternate_email_outlined);
-      case FollowUpType.inPerson:
-        return const Icon(Icons.people_alt_outlined);
-    }
-  }
+// ============================================================================
+// Ortak yardımcılar (top-level — tüm tab widget'larından erişilebilir)
+// ============================================================================
 
-  Widget _buildDistributorRequestCard(BuildContext context, UserProfileModel profile) {
-    return Card(
-      elevation: 4,
-      shadowColor: AppColors.primary.withValues(alpha: 0.2),
-      color: AppColors.primary.withValues(alpha: 0.05),
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(color: AppColors.primary, width: 1.5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.business_center, color: AppColors.primary, size: 28),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Distribütörlük Başvurusu',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.nightSky,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${profile.name ?? 'Müşteri'} distribütör olmak için başvuruda bulundu.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+Widget _sectionTitle(BuildContext context, String text, IconData icon) {
+  return Row(
+    children: [
+      Icon(icon, size: 18, color: AppColors.primary),
+      const SizedBox(width: 8),
+      Text(
+        text,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: () => _approveDistributorRequest(context, profile),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: const Icon(Icons.check),
-                label: const Text(
-                  'Distribütör Yap ve Onayla',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+    ],
+  );
+}
+
+Widget _buildInfoMessage({
+  required IconData icon,
+  required MaterialColor color,
+  required String text,
+}) {
+  return Container(
+    decoration: BoxDecoration(
+      color: color.shade50,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: color.shade100),
+    ),
+    padding: const EdgeInsets.all(16.0),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: color.shade700, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(color: color.shade800, fontSize: 14),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildMetricCard(
+  BuildContext context, {
+  required String title,
+  required String value,
+  required String subtitle,
+}) {
+  return Container(
+    width: 150,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.grey.shade200),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey.shade700,
+              ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildChangeChip(String label, double? change, String unit) {
+  final isPositive = (change ?? 0) >= 0;
+  return Column(
+    children: [
+      Text(
+        label,
+        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        change != null
+            ? '${isPositive ? '+' : ''}${change.toStringAsFixed(1)} $unit'
+            : '—',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.bold,
+          color: change != null && change < 0 ? AppColors.primary : Colors.red,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildEntryRow(ProgressEntryModel entry) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            DateFormat('dd.MM.yy').format(entry.date),
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+        ),
+        Expanded(
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            children: [
+              _entryChip('${entry.weight.toStringAsFixed(1)} kg',
+                  Icons.monitor_weight_outlined),
+              if (entry.waist != null)
+                _entryChip(
+                    '${entry.waist!.toStringAsFixed(1)} cm', Icons.straighten),
+              if (entry.hip != null)
+                _entryChip(
+                    '${entry.hip!.toStringAsFixed(1)} cm', Icons.straighten),
+              if (entry.chest != null)
+                _entryChip(
+                    '${entry.chest!.toStringAsFixed(1)} cm', Icons.straighten),
+              if (entry.bodyFat != null)
+                _entryChip('%${entry.bodyFat!.toStringAsFixed(1)}',
+                    Icons.water_drop_outlined),
+              if (entry.muscleMass != null)
+                _entryChip('${entry.muscleMass!.toStringAsFixed(1)} kg',
+                    Icons.fitness_center),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _entryChip(String text, IconData icon) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 12, color: Colors.grey.shade400),
+      const SizedBox(width: 2),
+      Text(text, style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+    ],
+  );
+}
+
+double? _calcChange(List<ProgressEntryModel> entries,
+    double? Function(ProgressEntryModel) getter) {
+  final first = entries.firstWhere((e) => getter(e) != null,
+      orElse: () => entries.first);
+  final last = entries.lastWhere((e) => getter(e) != null,
+      orElse: () => entries.last);
+  final firstVal = getter(first);
+  final lastVal = getter(last);
+  if (firstVal == null || lastVal == null) return null;
+  return lastVal - firstVal;
+}
+
+Widget _getFollowUpIcon(FollowUpType type) {
+  switch (type) {
+    case FollowUpType.phoneCall:
+      return const Icon(Icons.phone_in_talk_outlined);
+    case FollowUpType.whatsappMessage:
+      return const Icon(Icons.chat_outlined);
+    case FollowUpType.email:
+      return const Icon(Icons.alternate_email_outlined);
+    case FollowUpType.inPerson:
+      return const Icon(Icons.people_alt_outlined);
+  }
+}
+
+String _formatGoal(String? goal) {
+  switch (goal) {
+    case 'weight_loss':
+      return 'Zayıflama';
+    case 'weight_gain':
+      return 'Kilo Alma';
+    case 'healthy_living':
+      return 'Sağlıklı Yaşam';
+    case 'skin_care':
+      return 'Cilt & Kişisel Bakım';
+    default:
+      return goal == null || goal.isEmpty ? 'Hedef yok' : goal;
+  }
+}
+
+String _relativeTime(DateTime dateTime) {
+  final difference = DateTime.now().difference(dateTime);
+  if (difference.inDays >= 1) return '${difference.inDays} gün önce';
+  if (difference.inHours >= 1) return '${difference.inHours} saat önce';
+  if (difference.inMinutes >= 1) return '${difference.inMinutes} dk önce';
+  return 'Az önce';
+}
+
+void _showAddFollowUpSheet(
+  BuildContext context,
+  CustomerModel customer,
+  FollowUpProvider provider, {
+  FollowUpModel? followUp,
+  String? scheduledFollowUpId,
+}) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (builderContext) {
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(builderContext).viewInsets.bottom,
+        ),
+        child: _AddFollowUpSheet(
+          customer: customer,
+          followUpProvider: provider,
+          followUp: followUp,
+          scheduledFollowUpId: scheduledFollowUpId,
+        ),
+      );
+    },
+  );
+}
+
+void _showMotivationMessageSheet(
+  BuildContext context,
+  String customerUserId,
+  String customerName,
+) {
+  final firestoreService = context.read<FirestoreService>();
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (builderContext) {
+      return Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(builderContext).viewInsets.bottom,
+        ),
+        child: _MotivationMessageSheet(
+          customerUserId: customerUserId,
+          customerName: customerName,
+          firestoreService: firestoreService,
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildDistributorRequestCard(
+    BuildContext context, UserProfileModel profile) {
+  return Card(
+    elevation: 4,
+    shadowColor: AppColors.primary.withValues(alpha: 0.2),
+    color: AppColors.primary.withValues(alpha: 0.05),
+    shape: RoundedRectangleBorder(
+      side: const BorderSide(color: AppColors.primary, width: 1.5),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.business_center,
+                  color: AppColors.primary, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Distribütörlük Başvurusu',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.nightSky,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${profile.name ?? 'Müşteri'} distribütör olmak için başvuruda bulundu.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _approveDistributorRequest(BuildContext context, UserProfileModel profile) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Başvuruyu Onayla'),
-        content: Text(
-          '${profile.name ?? 'Müşteri'} isimli müşteriyi distribütör olarak onaylamak istediğinizden emin misiniz? '
-          'Bu işlem geri alınamaz.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('İptal'),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: () => _approveDistributorRequest(context, profile),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.check),
+              label: const Text(
+                'Distribütör Yap ve Onayla',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
-            child: const Text('Onayla'),
           ),
         ],
       ),
+    ),
+  );
+}
+
+Future<void> _approveDistributorRequest(
+    BuildContext context, UserProfileModel profile) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Başvuruyu Onayla'),
+      content: Text(
+        '${profile.name ?? 'Müşteri'} isimli müşteriyi distribütör olarak onaylamak istediğinizden emin misiniz? '
+        'Bu işlem geri alınamaz.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('İptal'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Onayla'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  try {
+    final firestoreService = context.read<FirestoreService>();
+    final updatedProfile = profile.copyWith(
+      role: UserRole.distributor,
+      distributorRequestStatus: 'approved',
     );
+    await firestoreService.setUserProfile(updatedProfile);
 
-    if (confirmed != true || !context.mounted) return;
-
-    try {
-      final firestoreService = context.read<FirestoreService>();
-
-      final updatedProfile = UserProfileModel(
-        id: profile.id,
-        email: profile.email,
-        role: UserRole.distributor,
-        name: profile.name,
-        distributorLevel: profile.distributorLevel,
-        monthlyVPTarget: profile.monthlyVPTarget,
-        isOnboarded: profile.isOnboarded,
-        age: profile.age,
-        phoneNumber: profile.phoneNumber,
-        weight: profile.weight,
-        height: profile.height,
-        targetWeight: profile.targetWeight,
-        programStartDate: profile.programStartDate,
-        userGoal: profile.userGoal,
-        wakeTime: profile.wakeTime,
-        lunchTime: profile.lunchTime,
-        sleepTime: profile.sleepTime,
-        birthDate: profile.birthDate,
-        gender: profile.gender,
-        healthNotes: profile.healthNotes,
-        allergies: profile.allergies,
-        medications: profile.medications,
-        assignedDistributorId: profile.assignedDistributorId,
-        profilePhotoUrl: profile.profilePhotoUrl,
-        profilePhotoUpdatedAt: profile.profilePhotoUpdatedAt,
-        earnedBadges: profile.earnedBadges,
-        waterDailyGoal: profile.waterDailyGoal,
-        waterMinLimit: profile.waterMinLimit,
-        waterMaxLimit: profile.waterMaxLimit,
-        distributorRequestStatus: 'approved',
-      );
-
-      await firestoreService.setUserProfile(updatedProfile);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Müşteri başarıyla distribütör olarak onaylandı.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (!context.mounted) return;
+    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Onaylama sırasında hata oluştu: ${e.toString().replaceFirst('Exception: ', '')}',
-          ),
-          backgroundColor: Colors.red,
+        const SnackBar(
+          content: Text('Müşteri başarıyla distribütör olarak onaylandı.'),
+          backgroundColor: Colors.green,
         ),
       );
     }
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Onaylama sırasında hata oluştu: ${e.toString().replaceFirst('Exception: ', '')}',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 }
+
+// ============================================================================
+// Modal sheet'ler (değişmedi — eski sürümle aynı)
+// ============================================================================
 
 class _AddFollowUpSheet extends StatefulWidget {
   final CustomerModel customer;
@@ -1585,7 +2007,8 @@ class _MotivationMessageSheetState extends State<_MotivationMessageSheet> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                    onPressed:
+                        _isSaving ? null : () => Navigator.of(context).pop(),
                     child: const Text('İptal'),
                   ),
                 ),

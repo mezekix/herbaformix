@@ -320,7 +320,7 @@ class WaterTrackerScreen extends StatelessWidget {
                 backgroundColor: AppColors.aqua,
                 child: Icon(
                   Icons.water_drop_outlined,
-                  color: Colors.white,
+                  color: AppColors.bay,
                   size: 20,
                 ),
               ),
@@ -392,26 +392,27 @@ class WaterTrackerScreen extends StatelessWidget {
     );
   }
 
-  void _showAddCustomWaterDialog(BuildContext context) {
+  Future<void> _showAddCustomWaterDialog(BuildContext context) async {
     final waterProvider = Provider.of<WaterProvider>(context, listen: false);
     final amountController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
-    showDialog(
+    await showDialog(
       context: context,
       builder: (context) {
         return CustomWaterDialog(formKey: formKey, amountController: amountController, waterProvider: waterProvider);
       },
     );
+    amountController.dispose();
   }
 
-  void _showSettingsDialog(BuildContext context) {
+  Future<void> _showSettingsDialog(BuildContext context) async {
     final waterProvider = Provider.of<WaterProvider>(context, listen: false);
     final goalController = TextEditingController(
       text: waterProvider.dailyGoal.toString(),
     );
 
-    showDialog(
+    await showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -446,6 +447,7 @@ class WaterTrackerScreen extends StatelessWidget {
         );
       },
     );
+    goalController.dispose();
   }
 
   void _showTargetDetailsBottomSheet(BuildContext context, WaterProvider waterProvider) {

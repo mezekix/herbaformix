@@ -214,6 +214,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       foregroundColor: AppColors.textPrimary,
       elevation: 0.5,
       leading: IconButton(
+        tooltip: 'Geri',
         icon: const Icon(Icons.arrow_back),
         onPressed: () => context.pop(),
       ),
@@ -328,7 +329,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
         _buildSectionTitle('🥤 Tarif Önerileri'),
         const SizedBox(height: 16),
         SizedBox(
-          height: 200,
+          height: 250,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: recipes.length,

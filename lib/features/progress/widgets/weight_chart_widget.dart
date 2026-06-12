@@ -133,8 +133,16 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
           SizedBox(
             height: 140,
             child: hasData
-                ? _buildChart(entries)
-                : _buildEmptyState(),
+                ? Semantics(
+                    label: _semanticsSummary(entries, totalChange, unit, isWeight),
+                    excludeSemantics: true,
+                    child: _buildChart(entries),
+                  )
+                : Semantics(
+                    label: '${widget.measurementType.label} grafiği — henüz yeterli veri yok',
+                    excludeSemantics: true,
+                    child: _buildEmptyState(),
+                  ),
           ),
 
           const SizedBox(height: 16),
@@ -251,6 +259,33 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
         ],
       ),
     );
+  }
+
+  /// Ekran okuyucu için grafik özetini Türkçe metne çevirir.
+  String _semanticsSummary(
+    List<ProgressEntryModel> entries,
+    double totalChange,
+    String unit,
+    bool isWeight,
+  ) {
+    final rangeLabel = switch (_range) {
+      ChartRange.week => 'son 1 hafta',
+      ChartRange.month => 'son 1 ay',
+      ChartRange.threeMonths => 'son 3 ay',
+    };
+    if (widget.isPrivacyMode) {
+      return '${widget.measurementType.label} grafiği — gizlilik modu aktif, $rangeLabel ${entries.length} ölçüm.';
+    }
+    final first = _getValue(entries.first)!.toStringAsFixed(1);
+    final last = _getValue(entries.last)!.toStringAsFixed(1);
+    final changeText = totalChange == 0
+        ? 'değişim yok'
+        : '${totalChange > 0 ? 'artış' : 'azalış'} ${totalChange.abs().toStringAsFixed(1)} $unit';
+    final target = (isWeight && widget.targetWeight != null)
+        ? ' Hedef ${widget.targetWeight!.toStringAsFixed(1)} $unit.'
+        : '';
+    return '${widget.measurementType.label} grafiği. $rangeLabel ${entries.length} ölçüm. '
+        'İlk $first $unit, son $last $unit. Toplam $changeText.$target';
   }
 
   Widget _buildChart(List<ProgressEntryModel> entries) {
@@ -460,38 +495,43 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildTab('1H', ChartRange.week),
-          _buildTab('1A', ChartRange.month),
-          _buildTab('3A', ChartRange.threeMonths),
+          _buildTab('1H', ChartRange.week, '1 hafta'),
+          _buildTab('1A', ChartRange.month, '1 ay'),
+          _buildTab('3A', ChartRange.threeMonths, '3 ay'),
         ],
       ),
     );
   }
 
-  Widget _buildTab(String text, ChartRange range) {
+  Widget _buildTab(String text, ChartRange range, String semanticLabel) {
     final isActive = _range == range;
-    return GestureDetector(
-      onTap: () => setState(() => _range = range),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: isActive ? AppColors.primary : Colors.grey.shade500,
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: semanticLabel,
+      child: GestureDetector(
+        onTap: () => setState(() => _range = range),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: isActive ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isActive ? AppColors.primary : Colors.grey.shade500,
+            ),
           ),
         ),
       ),

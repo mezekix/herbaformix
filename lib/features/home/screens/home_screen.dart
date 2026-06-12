@@ -44,6 +44,7 @@ import '../../water_tracker/screens/water_tracker_screen.dart';
 import '../../water_tracker/providers/water_provider.dart';
 import '../../calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../../calorie_tracker/providers/calorie_provider.dart';
+import '../../calorie_tracker/widgets/food_search_sheet.dart';
 import 'package:intl/intl.dart';
 import '../widgets/motivation_widget.dart';
 import '../widgets/daily_success_ring.dart';
@@ -1871,73 +1872,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Dashboard'dan hızlı kalori girişi.
-  /// CalorieTrackerScreen'deki dialog ile fonksiyonel olarak aynı —
-  /// burada inline kalsın ki kullanıcı ekran değiştirmesin.
+  /// Dashboard'dan hızlı kalori girişi — FoodSearchSheet'i açar.
+  /// CalorieTrackerScreen'deki sheet ile aynı widget, kullanıcı ekran
+  /// değiştirmek zorunda kalmadan ana ekrandan ekleyebilir.
   Future<void> _showCalorieAddDialog(BuildContext context) async {
-    final provider = Provider.of<CalorieProvider>(context, listen: false);
-    final nameController = TextEditingController();
-    final caloriesController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    await showDialog<void>(
+    await showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Öğün Ekle'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: nameController,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Öğün Adı',
-                  hintText: 'Örn: Tavuklu salata',
-                ),
-                validator: (v) => (v?.trim().isEmpty ?? true)
-                    ? 'Lütfen bir öğün adı girin.'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: caloriesController,
-                decoration: const InputDecoration(labelText: 'Kalori (kcal)'),
-                keyboardType: TextInputType.number,
-                validator: (v) {
-                  if (v == null || v.isEmpty) {
-                    return 'Kalori miktarı girin.';
-                  }
-                  final parsed = int.tryParse(v);
-                  if (parsed == null || parsed <= 0) {
-                    return 'Geçerli bir sayı girin.';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (!formKey.currentState!.validate()) return;
-              final navigator = Navigator.of(ctx);
-              await provider.addMeal(
-                nameController.text,
-                int.parse(caloriesController.text),
-              );
-              navigator.pop();
-            },
-            child: const Text('Ekle'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const FoodSearchSheet(),
     );
   }
 
@@ -2432,7 +2375,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: _MiniActionButton(
                         icon: Icons.schedule_outlined,
                         label: 'Ertele',
-                        color: AppColors.mango,
+                        color: AppColors.mangoDeep,
                         enabled: true,
                         onTap: () => _snoozeFollowUp(context, task),
                       ),
@@ -3250,3 +3193,4 @@ class _MiniActionButton extends StatelessWidget {
     );
   }
 }
+

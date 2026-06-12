@@ -200,7 +200,11 @@ class _SplashScreenState extends State<SplashScreen>
               end: Alignment.bottomCenter,
             ),
           ),
-          child: Column(
+          child: SafeArea(
+            // Üstte status bar, altta nav bar boşluklarına ek 12px tampon —
+            // f1/f2 saat/pil simgelerine veya alt nav'a değmesin.
+            minimum: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
             children: [
               // --- Üst bölge: f1 resmi (alt kenarı H logosundan en az 24px uzakta) ---
               Expanded(
@@ -288,6 +292,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),

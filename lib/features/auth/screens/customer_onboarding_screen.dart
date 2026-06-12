@@ -236,6 +236,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                   children: [
                     _currentPage > 0
                         ? IconButton(
+                            tooltip: 'Önceki adım',
                             icon: const Icon(Icons.arrow_back, color: AppColors.nightSky),
                             onPressed: () {
                               FocusScope.of(context).unfocus();
@@ -628,24 +629,28 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                   children: [
                     SizedBox(
                       width: 80,
-                      child: TextField(
-                        controller: controller,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-                        decoration: const InputDecoration(
-                          hintText: '00.0',
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+                      child: Semantics(
+                        label: '$label ($unit)',
+                        textField: true,
+                        child: TextField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                          decoration: const InputDecoration(
+                            hintText: '00.0',
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          onChanged: (val) {
+                            setState(() {});
+                            if (label == 'Mevcut Kilo' || label == 'Boy') {
+                              _calculateTargetWeight();
+                            } else if (label == 'Hedef Kilo') {
+                              _userChangedTargetWeight = true;
+                            }
+                          },
                         ),
-                        onChanged: (val) {
-                          setState(() {});
-                          if (label == 'Mevcut Kilo' || label == 'Boy') {
-                            _calculateTargetWeight();
-                          } else if (label == 'Hedef Kilo') {
-                            _userChangedTargetWeight = true;
-                          }
-                        },
                       ),
                     ),
                     Padding(
@@ -777,7 +782,12 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                                     title: const Text('Kamera ile Çek'),
                                     onTap: () async {
                                       Navigator.pop(context);
-                                      final image = await _picker.pickImage(source: ImageSource.camera);
+                                      final image = await _picker.pickImage(
+                                        source: ImageSource.camera,
+                                        imageQuality: 80,
+                                        maxWidth: 1080,
+                                        maxHeight: 1080,
+                                      );
                                       if (image != null) {
                                         setState(() {
                                           _selfieImage = image;
@@ -790,7 +800,12 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                                     title: const Text('Galeriden Seç'),
                                     onTap: () async {
                                       Navigator.pop(context);
-                                      final image = await _picker.pickImage(source: ImageSource.gallery);
+                                      final image = await _picker.pickImage(
+                                        source: ImageSource.gallery,
+                                        imageQuality: 80,
+                                        maxWidth: 1080,
+                                        maxHeight: 1080,
+                                      );
                                       if (image != null) {
                                         setState(() {
                                           _selfieImage = image;
@@ -896,26 +911,30 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 14)),
         const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType: type,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: AppColors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.shade200),
+        Semantics(
+          label: label,
+          textField: true,
+          child: TextField(
+            controller: controller,
+            keyboardType: type,
+            decoration: InputDecoration(
+              hintText: hint,
+              filled: true,
+              fillColor: AppColors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: AppColors.garden, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.garden, width: 2),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),
         ),
       ],

@@ -266,6 +266,7 @@ class _DurationCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
+                tooltip: 'Süreyi kısalt',
                 onPressed: selectedDuration > minDuration
                     ? () => onChanged(selectedDuration - 1)
                     : null,
@@ -292,6 +293,7 @@ class _DurationCard extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               IconButton(
+                tooltip: 'Süreyi uzat',
                 onPressed: () => onChanged(selectedDuration + 1),
                 icon: const Icon(Icons.add_circle_outline),
                 color: AppColors.primary,

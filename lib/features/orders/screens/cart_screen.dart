@@ -362,6 +362,7 @@ class _CartScreenState extends State<CartScreen> {
             Row(
               children: [
                 IconButton(
+                  tooltip: 'Adeti azalt',
                   icon: const Icon(Icons.remove_circle_outline, size: 20),
                   onPressed: () {
                     cartProvider.updateQuantity(item.productId, item.quantity - 1);
@@ -372,6 +373,7 @@ class _CartScreenState extends State<CartScreen> {
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 IconButton(
+                  tooltip: 'Adeti artır',
                   icon: const Icon(Icons.add_circle_outline, size: 20),
                   onPressed: () {
                     cartProvider.updateQuantity(item.productId, item.quantity + 1);

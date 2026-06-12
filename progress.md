@@ -1,6 +1,6 @@
 # HERBAFORMIX — Proje İlerleme Takibi (Progress)
 
-> **Son Güncelleme:** 2026-06-09
+> **Son Güncelleme:** 2026-06-13
 > **Mevcut Sürüm:** v1.0.0-beta+1
 > **Genel İlerleme:** ~%78 (Beta aşaması)
 > **Bir sonraki kilometre taşı:** v1.0 Production (Faz 11–14)
@@ -441,15 +441,15 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 > **Hedef Sürüm:** v1.0
 > **Bağımlılıklar:** —
-> **İlerleme:** %35
+> **İlerleme:** %75
 
 - [x] **`firestore_service.dart` modüllere bölme** ✅ (P2.10 — 9 repository)
 - [x] **`ProgressProvider` sadeleştirme** ✅ (P2.13)
-- [ ] Firestore offline persistence aktifleştirme
-- [ ] Resim sıkıştırma optimizasyonu (1080px max, JPEG %80 — `flutter_image_compress`)
+- [x] **Firestore offline persistence aktifleştirme** ✅ — `Settings(persistenceEnabled: true, cacheSizeBytes: CACHE_SIZE_UNLIMITED)` `main.dart`'ta
+- [x] **Resim sıkıştırma optimizasyonu** ✅ — `image_picker`'ın built-in `maxWidth: 1080, maxHeight: 1080, imageQuality: 80` parametreleri 7 `pickImage` çağrısında standartlaştırıldı (yeni paket eklenmedi)
+- [x] **Memory leak kontrolü** ✅ — Tüm StreamSubscription/AnimationController dispose'ları temiz; dialog helper'larındaki 7 yetim `TextEditingController` dispose eklendi (home/calorie/water)
+- [x] **Uygulama boyutu optimizasyonu** ✅ — Kullanılmayan `assets/logo/logo_new.png` (1.4 MB) ve `assets/logo/image.png` (661 KB) silindi (~2 MB bundle tasarrufu). Tree shaking varsayılan açık.
 - [ ] Lazy loading ve sayfalama (büyük listeler için: müşteri listesi, ölçüm geçmişi)
-- [ ] Memory leak kontrolü (stream subscription'lar)
-- [ ] Uygulama boyutu optimizasyonu (tree shaking, asset optimizasyonu)
 - [ ] Soğuk başlatma süresi ölçümü ve hedefe çekme (< 2 sn)
 
 ---
@@ -458,14 +458,14 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 > **Hedef Sürüm:** v1.0
 > **Bağımlılıklar:** —
-> **İlerleme:** %10
+> **İlerleme:** %65
 
-- [ ] Tüm butonlara `Semantics` label ekleme
-- [ ] Grafik barları için erişilebilir açıklamalar
-- [ ] Form alanları için anlamlı etiketler
-- [ ] Kontrast oranı doğrulaması (WCAG AA — 4.5:1)
-- [ ] Mango sarısı (#EFAC29) üzerinde beyaz yazı sorunu düzeltme
-- [ ] Büyük yazı tipi desteği
+- [x] **Tüm `IconButton`'lara `tooltip` eklendi** — 22 farklı IconButton'a tooltip eklendi; projedeki 64 IconButton'un tamamı artık ekran okuyucu için anlamlı bir etiket sunuyor. Tooltip Flutter'da hem üzerinde uzun basıldığında popup gösterir hem de TalkBack/VoiceOver tarafından okunur (Semantics label görevi görür).
+- [x] **Grafik barları için erişilebilir açıklamalar eklendi** — `WeightChartWidget` ve `CalorieHistoryScreen` bar chart'ı `Semantics` ile sarıldı; özet metin (ölçüm sayısı, ilk/son değer, toplam değişim, hedef / ortalama kalori, hedef üstü gün sayısı) ekran okuyucu için üretiliyor. WeightChart'taki 1H/1A/3A zaman aralığı tab'leri `Semantics(button: true, selected: ...)` ile bildiriliyor.
+- [x] **Onboarding form alanları Semantics ile etiketlendi** — Onboarding'in `_buildTextField` helper'ı ve kilo/boy/hedef özel sayı girişi `Semantics(label: ..., textField: true)` ile sarıldı. Diğer ekranlarda zaten `InputDecoration.labelText/hintText` mevcut (25 dosyada 77 alan, 96 etiket; sadece onboarding'de boşluk vardı).
+- [x] **Mango sarısı (#EFAC29) ve düşük kontrast noktaları düzeltildi** — `AppColors.mangoDeep` (#8A5A00, ~5.9:1 AA) eklendi ve metin/ikon kullanımlarına uygulandı; mango'nun arka plan olarak kullanıldığı yerlerde (FAB tema, cart Badge'i) ön plan beyazdan `nightSky`'a çevrildi; aqua zemin + beyaz su damlası ikonu da koyu renge (`bay`) çevrildi. **7 noktada WCAG AA uyumu sağlandı.**
+- [ ] Kontrast oranı doğrulaması (WCAG AA — 4.5:1) — kalan ekranlar için sistematik tarama
+- [ ] Büyük yazı tipi desteği — `MediaQuery.textScaler` test edilmedi, taşma noktaları taranmalı
 - [ ] Ekran okuyucu ile uçtan uca test (TalkBack/VoiceOver)
 
 ---
@@ -954,7 +954,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | 09 | Ürün, Sipariş ve Tarifler | — | ⚠️ | %85 |
 | 10 | Güvenlik Kuralları | — | ✅ | %90 |
 | **11** | **Performans Optimizasyonu** | **v1.0** | 🔄 | %35 |
-| **12** | **Erişilebilirlik** | **v1.0** | 🔄 | %10 |
+| **12** | **Erişilebilirlik** | **v1.0** | 🔄 | %65 |
 | **13** | **Test Altyapısı** | **v1.0** | ❌ | %0 |
 | **14** | **Push Bildirimleri (FCM)** | **v1.0** | ❌ | %0 |
 | **15** | **Üretim Çıkış Hazırlığı** | **v1.0** | ❌ | %0 |
@@ -986,13 +986,13 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | 2 | 🟡 Orta | `scheduled_follow_ups` ve `careerRoadmap` güvenlik kuralları audit edilmedi | `firestore.rules:157-174` |
 | 3 | 🟡 Orta | **iOS Google Sign-In yapılandırması eksik** — `GoogleService-Info.plist` yok, `Info.plist`'te `CFBundleURLSchemes` (REVERSED_CLIENT_ID) tanımlı değil. iOS'ta Firebase de Google Sign-In de çalışmaz. | `ios/Runner/` |
 | 4 | 🟡 Orta | **Login Screen — Apple ve Face/Biometric sosyal butonları işlevsiz** — `onTap` parametresi geçilmemiş, tıklanınca hiçbir şey olmuyor; kullanıcıyı yanıltıyor. Ya implemente edilmeli ya gizlenmeli. | `login_screen.dart:407-421` |
-| 5 | 🟢 Düşük | Mango sarısı üzerinde beyaz yazı kontrast sorunu | `app_colors.dart` |
+| ~~5~~ | ✅ Kapandı | ~~Mango sarısı üzerinde beyaz yazı kontrast sorunu~~ → `AppColors.mangoDeep` eklendi + 7 noktada düzeltildi | `app_colors.dart` |
 | 6 | 🟢 Düşük | Test dosyaları eksik (unit/widget/integration) | `test/` dizini |
 | 7 | 🟢 Düşük | Recipes — tüm tarifler `formul1_id` ile mock; gerçek `productId` eşleştirmesi yok | `recipe_provider.dart:38` |
 | 8 | 🟢 Düşük | Confetti animasyonu rozet kazanılırken devreye girmiyor (paket hazır) | `progress_provider.dart` |
 | 9 | 🟢 Düşük | Android SHA-1 hash'inin Firebase Console'a kayıtlı olduğu manuel doğrulanmalı (Google Sign-In Android için kritik) | Firebase Console |
 
-> **Kapanan eski bug'lar:** ~~products koleksiyonu açık~~ (P0 ile düzeltildi), ~~firestore_service.dart 37 KB~~ (P2.10 ile 9 repository'ye bölündü), ~~Google Sign-In uçtan uca test edilmedi~~ (Faz 2.1 ile kapatıldı), ~~CalorieProvider Firestore kaydı yok~~ (Faz 5.2 ile kapatıldı — `/users/{uid}/calorieLogs/` koleksiyonu + auth-aware ProxyProvider).
+> **Kapanan eski bug'lar:** ~~products koleksiyonu açık~~ (P0 ile düzeltildi), ~~firestore_service.dart 37 KB~~ (P2.10 ile 9 repository'ye bölündü), ~~Google Sign-In uçtan uca test edilmedi~~ (Faz 2.1 ile kapatıldı), ~~CalorieProvider Firestore kaydı yok~~ (Faz 5.2 ile kapatıldı — `/users/{uid}/calorieLogs/` koleksiyonu + auth-aware ProxyProvider), ~~Mango üzeri beyaz yazı kontrast sorunu~~ (Faz 12 ile `mangoDeep` eklenerek kapatıldı).
 
 ---
 

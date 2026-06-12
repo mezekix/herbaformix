@@ -17,12 +17,25 @@ class CalorieDailyLog {
   final int totalCalories;
   final DateTime updatedAt;
 
+  /// `true` ise [dailyGoal], profil (cinsiyet/kilo/boy/yaş/hedef) ve günün
+  /// aktivite seviyesinden otomatik hesaplanır — provider, profil veya
+  /// aktivite değişirse hedefi tazeler.
+  ///
+  /// `false` ise kullanıcı manuel girdiği değeri korur, otomatik recompute
+  /// ezmeyi denemez.
+  ///
+  /// Eski (alanı olmayan) kayıtlar `true` sayılır — uygulamanın varsayılan
+  /// davranışı otomatik, kullanıcı bilinçli olarak manuel seçmedikçe otomatik
+  /// kalır.
+  final bool isAutoGoal;
+
   const CalorieDailyLog({
     required this.date,
     required this.meals,
     required this.dailyGoal,
     required this.totalCalories,
     required this.updatedAt,
+    this.isAutoGoal = false,
   });
 
   /// Tarihten 'YYYY-MM-DD' string üretir.
@@ -33,10 +46,13 @@ class CalorieDailyLog {
     return '$y-$m-$day';
   }
 
-  /// Boş log (yeni gün başlarken).
+  /// Boş log (yeni gün başlarken). Yeni günler varsayılan olarak otomatik
+  /// modda açılır — provider profil bilgileri tamamsa gerçek hedefi hemen
+  /// hesaplayıp üzerine yazar.
   factory CalorieDailyLog.empty({
     required DateTime date,
     int dailyGoal = 2000,
+    bool isAutoGoal = true,
   }) {
     return CalorieDailyLog(
       date: dateKey(date),
@@ -44,6 +60,7 @@ class CalorieDailyLog {
       dailyGoal: dailyGoal,
       totalCalories: 0,
       updatedAt: date,
+      isAutoGoal: isAutoGoal,
     );
   }
 
@@ -63,6 +80,7 @@ class CalorieDailyLog {
           meals.fold<int>(0, (acc, m) => acc + m.calories),
       updatedAt:
           (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isAutoGoal: map['isAutoGoal'] as bool? ?? true,
     );
   }
 
@@ -72,6 +90,7 @@ class CalorieDailyLog {
         'dailyGoal': dailyGoal,
         'totalCalories': totalCalories,
         'updatedAt': Timestamp.fromDate(updatedAt),
+        'isAutoGoal': isAutoGoal,
       };
 
   CalorieDailyLog copyWith({
@@ -80,6 +99,7 @@ class CalorieDailyLog {
     int? dailyGoal,
     int? totalCalories,
     DateTime? updatedAt,
+    bool? isAutoGoal,
   }) {
     final newMeals = meals ?? this.meals;
     return CalorieDailyLog(
@@ -89,6 +109,7 @@ class CalorieDailyLog {
       totalCalories:
           totalCalories ?? newMeals.fold<int>(0, (acc, m) => acc + m.calories),
       updatedAt: updatedAt ?? DateTime.now(),
+      isAutoGoal: isAutoGoal ?? this.isAutoGoal,
     );
   }
 

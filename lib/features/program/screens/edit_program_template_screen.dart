@@ -563,6 +563,7 @@ class _TemplateSlotCard extends StatelessWidget {
                 ),
                 if (onDelete != null)
                   IconButton(
+                    tooltip: 'Öğünü sil',
                     icon: const Icon(Icons.close,
                         size: 18, color: Colors.grey),
                     onPressed: onDelete,

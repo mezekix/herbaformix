@@ -400,6 +400,7 @@ class _RecipeVideoPlayerState extends State<_RecipeVideoPlayer> {
             child: _loading
                 ? const CircularProgressIndicator(color: Colors.white)
                 : IconButton(
+                    tooltip: 'Videoyu oynat',
                     iconSize: 64,
                     icon: const Icon(Icons.play_circle_fill, color: Colors.white),
                     onPressed: _initialize,
@@ -428,6 +429,7 @@ class _RecipeVideoPlayerState extends State<_RecipeVideoPlayer> {
             Container(color: Colors.black.withAlpha(60)),
             Center(
               child: IconButton(
+                tooltip: c.value.isPlaying ? 'Duraklat' : 'Oynat',
                 iconSize: 56,
                 icon: Icon(
                   c.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,

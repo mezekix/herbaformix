@@ -8,9 +8,9 @@ import '../../../core/app_colors.dart';
 /// görüldüğü hero kart. Sol tarafta dairesel gauge, sağda tempo metrikleri.
 ///
 /// Renk durumu:
-///   - Hedefte / önünde   → AppColors.grass   (yeşil)
-///   - Sınırda            → AppColors.mango   (amber)
-///   - Yavaş / riskte     → AppColors.papaya  (kırmızı)
+///   - Hedefte / önünde   → AppColors.grass     (yeşil)
+///   - Sınırda            → AppColors.mangoDeep (amber — kontrast uyumlu)
+///   - Yavaş / riskte     → AppColors.papaya    (kırmızı)
 class VpPulseCard extends StatelessWidget {
   final double vpEarned;
   final int vpTarget;
@@ -256,7 +256,7 @@ class VpPulseCard extends StatelessWidget {
     if (paceRatio >= 0.85) {
       return const _PaceStatus(
         label: 'Tempo sınırda',
-        color: AppColors.mango,
+        color: AppColors.mangoDeep,
         icon: Icons.schedule,
       );
     }

@@ -64,6 +64,30 @@ class AuthService {
     }
   }
 
+  /// Google sign-in akışını tetikler ve sadece [AuthCredential]'ı döner —
+  /// signIn yapmaz. Reauth (örn. hesap silme öncesi kimlik doğrulama) için
+  /// kullanılır. Kullanıcı seçimi iptal ederse `null` döner.
+  Future<AuthCredential?> getGoogleAuthCredential() async {
+    try {
+      // Yeni bir hesap seçim ekranı için önce mevcut Google oturumunu kapat
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
+
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final googleAuth = await googleUser.authentication;
+      return GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+    } catch (e) {
+      debugPrint('getGoogleAuthCredential hatası: $e');
+      rethrow;
+    }
+  }
+
   // E-posta ve şifre ile kayıt
   Future<UserCredential?> createUserWithEmailAndPassword(
     String email,

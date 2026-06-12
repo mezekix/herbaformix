@@ -3,18 +3,21 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/utils/calorie_calculation_engine.dart';
+import '../../../models/user_profile_model.dart';
 import '../../../services/repositories/calorie_repository.dart';
 import '../models/calorie_daily_log.dart';
 import '../models/meal_model.dart';
 
 /// Bugünkü kalori durumunu Firestore'dan dinleyen ve geçmişi sorgulayan provider.
 ///
-/// `WaterProvider` pattern'iyle hizalanmış: auth-aware,
-/// `startListening(uid)`/`stopListening()` ile yönetilir. Çıkışta cache
-/// temizlenir, yeni kullanıcı girince yeni stream başlar.
+/// **Otomatik hedef**: Yeni gün log'u veya kullanıcının "otomatik" seçtiği
+/// günler için, Mifflin-St Jeor BMR + TDEE + userGoal offset'i hesaplanır.
 ///
-/// Eski SharedPreferences tabanlı sürüm Bilinen Hatalar #1 nedeniyle terk
-/// edildi — cihaz bağımlı, geçmiş yok.
+/// Provider artık AuthProvider/WaterProvider'a listener bağlamaz — bu tree
+/// cycle'a yol açıyordu. Onun yerine UI bu provider'ı `Consumer3` ile
+/// dinleyip, post-frame'de [recomputeIfAuto] / [computeGoalPreview] çağırır
+/// ve gerekli profil + aktivite parametrelerini dışarıdan verir.
 class CalorieProvider with ChangeNotifier {
   CalorieProvider({CalorieRepository? repository})
       : _repo = repository ?? CalorieRepository();
@@ -28,6 +31,11 @@ class CalorieProvider with ChangeNotifier {
   CalorieDailyLog? _todayLog;
   bool _isLoading = false;
   String? _errorMessage;
+
+  // Reentrancy ve sync koruması — otomatik recompute aynı değer için
+  // gereksiz Firestore yazması yapmasın.
+  bool _isRecomputing = false;
+  int? _lastWrittenAutoGoal;
 
   // ── Eski API yüzeyini koru ────────────────────────────────────────────────
 
@@ -45,6 +53,27 @@ class CalorieProvider with ChangeNotifier {
 
   /// Hedef tutturma oranı (0..1+).
   double get progress => _todayLog?.progress ?? 0.0;
+
+  /// Bugünün hedefinin otomatik mi manuel mi olduğunu döner.
+  bool get isAutoGoal => _todayLog?.isAutoGoal ?? false;
+
+  /// UI'nın anlık önizleme için: verilen profil + aktivite seviyesinden
+  /// hesaplanan kalori sonucunu döner. Profil yoksa null.
+  CalorieGoalResult? computeGoalPreview({
+    required UserProfileModel? profile,
+    required String exerciseLevel,
+  }) {
+    if (profile == null) return null;
+    return CalorieCalculationEngine.calculateGoal(
+      profile: profile,
+      exerciseLevel: exerciseLevel,
+    );
+  }
+
+  /// Otomatik hesaplama için profilde eksik olan alanların Türkçe isimleri.
+  /// Liste boşsa profil tamam; UI banner göstermez.
+  List<String> missingProfileFields(UserProfileModel? profile) =>
+      CalorieCalculationEngine.missingFieldsFor(profile);
 
   // ── Yaşam döngüsü ─────────────────────────────────────────────────────────
 
@@ -87,7 +116,50 @@ class CalorieProvider with ChangeNotifier {
     _todayLog = null;
     _isLoading = false;
     _errorMessage = null;
+    _lastWrittenAutoGoal = null;
     notifyListeners();
+  }
+
+  // ── Otomatik hedef recompute ──────────────────────────────────────────────
+
+  /// Bugünün log'u **otomatik** moddaysa, verilen profil + aktivite
+  /// seviyesinden hesaplanmış hedefi Firestore'a yazar. Manuel moddaysa
+  /// dokunmaz. Aynı değer son yazılandan farklı değilse Firestore'a
+  /// yazmaz — gereksiz roundtrip'i önler.
+  ///
+  /// UI tarafı her Consumer build'inde (post-frame) çağırır.
+  Future<void> recomputeIfAuto({
+    required UserProfileModel? profile,
+    required String exerciseLevel,
+  }) async {
+    if (_isRecomputing) return;
+    final uid = _userId;
+    final log = _todayLog;
+    if (uid == null || log == null || profile == null) return;
+    if (!log.isAutoGoal) return;
+
+    final result = CalorieCalculationEngine.calculateGoal(
+      profile: profile,
+      exerciseLevel: exerciseLevel,
+    );
+    if (!result.isComplete) return;
+    if (result.totalKcal == log.dailyGoal) return;
+    if (result.totalKcal == _lastWrittenAutoGoal) return;
+
+    _isRecomputing = true;
+    _lastWrittenAutoGoal = result.totalKcal;
+    try {
+      await _repo.setTodayGoal(
+        uid,
+        result.totalKcal,
+        defaultGoalFallback: calorieGoal,
+        isAuto: true,
+      );
+    } catch (e) {
+      debugPrint('[CalorieProvider] recomputeIfAuto: $e');
+    } finally {
+      _isRecomputing = false;
+    }
   }
 
   // ── Aksiyonlar ────────────────────────────────────────────────────────────
@@ -122,18 +194,61 @@ class CalorieProvider with ChangeNotifier {
     }
   }
 
-  Future<void> setCalorieGoal(int newGoal) async {
+  /// Kullanıcı manuel bir hedef girdi → isAutoGoal=false olarak yazar.
+  /// Otomatik recompute bu değeri ezmeyi denemez.
+  Future<void> setManualGoal(int newGoal) async {
     final uid = _userId;
     if (uid == null || newGoal <= 0) return;
+    _lastWrittenAutoGoal = null; // auto recompute'u yeniden tetikleyebilsin
     try {
-      await _repo.setTodayGoal(uid, newGoal,
-          defaultGoalFallback: calorieGoal);
+      await _repo.setTodayGoal(
+        uid,
+        newGoal,
+        defaultGoalFallback: calorieGoal,
+        isAuto: false,
+      );
     } catch (e) {
-      debugPrint('[CalorieProvider] setCalorieGoal: $e');
+      debugPrint('[CalorieProvider] setManualGoal: $e');
       _errorMessage = 'Hedef güncellenemedi: $e';
       notifyListeners();
     }
   }
+
+  /// Kullanıcı "otomatik" moda geçti → profil + aktivite seviyesinden anlık
+  /// hesapla, isAutoGoal=true olarak yaz. Profil eksikse hedef değişmez ve
+  /// `false` döner.
+  Future<bool> switchToAutoGoal({
+    required UserProfileModel? profile,
+    required String exerciseLevel,
+  }) async {
+    final uid = _userId;
+    if (uid == null || profile == null) return false;
+    final result = CalorieCalculationEngine.calculateGoal(
+      profile: profile,
+      exerciseLevel: exerciseLevel,
+    );
+    if (!result.isComplete) return false;
+    _lastWrittenAutoGoal = result.totalKcal;
+    try {
+      await _repo.setTodayGoal(
+        uid,
+        result.totalKcal,
+        defaultGoalFallback: calorieGoal,
+        isAuto: true,
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[CalorieProvider] switchToAutoGoal: $e');
+      _errorMessage = 'Hedef güncellenemedi: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Geriye uyumluluk — eski çağrıcılar setCalorieGoal'a manuel olarak girilmiş
+  /// gibi davranır.
+  @Deprecated('Use setManualGoal() or switchToAutoGoal() instead.')
+  Future<void> setCalorieGoal(int newGoal) => setManualGoal(newGoal);
 
   // ── Geçmiş ────────────────────────────────────────────────────────────────
 

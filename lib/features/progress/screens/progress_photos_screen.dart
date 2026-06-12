@@ -89,8 +89,12 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
   Future<void> _pickBefore() async {
     final source = await _showSourceDialog();
     if (source == null || !mounted) return;
-    final picked = await ImagePicker()
-        .pickImage(source: source, imageQuality: 85);
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 1080,
+      maxHeight: 1080,
+    );
     if (picked == null || !mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -110,8 +114,12 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
   Future<void> _addAfterPhoto() async {
     final source = await _showSourceDialog();
     if (source == null || !mounted) return;
-    final picked = await ImagePicker()
-        .pickImage(source: source, imageQuality: 85);
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 1080,
+      maxHeight: 1080,
+    );
     if (picked == null || !mounted) return;
 
     final dateKey = DateTime.now().toIso8601String();

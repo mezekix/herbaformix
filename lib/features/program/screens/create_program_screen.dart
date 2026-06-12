@@ -109,10 +109,12 @@ class _CreateProgramView extends StatelessWidget {
         elevation: 0,
         leading: stepIndex > 0
             ? IconButton(
+                tooltip: 'Önceki adım',
                 icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.nightSky),
                 onPressed: () => provider.previousStep(),
               )
             : IconButton(
+                tooltip: 'Kapat',
                 icon: const Icon(Icons.close, color: AppColors.nightSky),
                 onPressed: () => Navigator.of(context).pop(),
               ),

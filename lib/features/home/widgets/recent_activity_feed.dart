@@ -250,7 +250,7 @@ class _ActivityRow extends StatelessWidget {
       case _ActivityKind.activation:
         return (
           Icons.auto_awesome_outlined,
-          AppColors.mango,
+          AppColors.mangoDeep,
           'uygulamayı aktive etti',
         );
     }

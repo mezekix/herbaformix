@@ -112,6 +112,12 @@ class _CustomerProfileViewState extends State<CustomerProfileView> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final userProfile = authProvider.userProfile;
 
+      // Profil one-shot olarak çekildiği için, distribütörün arka planda
+      // yaptığı değişiklikleri (ör. müşteri silme → assignedDistributorId
+      // temizleme) yansıtmak adına sayfa açıldığında sessizce yenile.
+      // ignore: discarded_futures
+      authProvider.refreshProfile();
+
       if (userProfile != null) {
         _nameController.text = userProfile.name ?? '';
         _emailController.text = userProfile.email;

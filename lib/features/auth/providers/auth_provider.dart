@@ -332,6 +332,93 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  /// Mevcut kullanıcının giriş yöntemini döner: `password`, `google.com`, vs.
+  /// Birden fazla provider varsa ilkini döner (genelde tek olur).
+  /// Kullanıcı yoksa boş string.
+  String get primaryAuthProvider {
+    final user = _firebaseUser;
+    if (user == null || user.providerData.isEmpty) return '';
+    return user.providerData.first.providerId;
+  }
+
+  /// Müşteri hesabını **kalıcı olarak** siler.
+  ///
+  /// Akış:
+  /// 1. Provider'a göre yeniden kimlik doğrulama (Firebase requires-recent-login
+  ///    politikası için zorunlu):
+  ///    - E-posta/şifre kullanıcısı → [currentPassword] ile reauth
+  ///    - Google kullanıcısı → Google sign-in flow tetiklenir, credential ile reauth
+  /// 2. Firestore'daki tüm müşteri verisinin silinmesi
+  ///    ([FirestoreService.deleteCustomerAccountData]).
+  /// 3. Firebase Auth hesabının silinmesi (`User.delete()`).
+  /// 4. `_onAuthStateChanged` otomatik tetiklenir → giriş ekranına yönlenir.
+  ///
+  /// Hata fırlatırsa hesap silinmemiştir; çağıran taraf kullanıcıya anlamlı
+  /// bir mesaj göstermelidir.
+  Future<void> deleteAccount({String? currentPassword}) async {
+    if (_firebaseUser == null) {
+      throw Exception('Kullanıcı oturumu bulunamadı.');
+    }
+
+    final uid = _firebaseUser!.uid;
+    final email = _firebaseUser!.email;
+    if (email == null) {
+      throw Exception('Kullanıcı e-posta adresi bulunamadı.');
+    }
+
+    final providerIds =
+        _firebaseUser!.providerData.map((p) => p.providerId).toSet();
+    final isGoogleUser = providerIds.contains('google.com');
+    final isPasswordUser = providerIds.contains('password');
+
+    try {
+      // 1) Provider'a göre reauth
+      if (isPasswordUser) {
+        if (currentPassword == null || currentPassword.isEmpty) {
+          throw Exception('Şifre gerekli.');
+        }
+        final credential = fb_auth.EmailAuthProvider.credential(
+          email: email,
+          password: currentPassword,
+        );
+        await _firebaseUser!.reauthenticateWithCredential(credential);
+      } else if (isGoogleUser) {
+        final googleCredential = await _authService.getGoogleAuthCredential();
+        if (googleCredential == null) {
+          throw Exception('Google ile yeniden onay iptal edildi.');
+        }
+        await _firebaseUser!.reauthenticateWithCredential(googleCredential);
+      } else {
+        throw Exception(
+            'Bu hesap için yeniden onay yöntemi bulunamadı (provider: '
+            '${providerIds.join(", ")}).');
+      }
+
+      // 2) Firestore verilerini sil
+      await _firestoreService.deleteCustomerAccountData(uid);
+
+      // 3) Auth hesabını sil — başarılı olunca _onAuthStateChanged tetiklenir
+      await _firebaseUser!.delete();
+    } on fb_auth.FirebaseAuthException catch (e) {
+      final message = switch (e.code) {
+        'wrong-password' || 'invalid-credential' =>
+          'Şifreniz hatalı. Hesap silinemedi.',
+        'user-mismatch' =>
+          'Seçtiğiniz Google hesabı mevcut hesabınızla eşleşmiyor.',
+        'requires-recent-login' =>
+          'Güvenlik nedeniyle önce çıkış yapıp tekrar giriş yapmanız gerekiyor.',
+        'network-request-failed' =>
+          'İnternet bağlantınızı kontrol edip tekrar deneyin.',
+        _ => 'Hesap silinemedi: ${e.message ?? e.code}',
+      };
+      throw Exception(message);
+    } catch (e) {
+      // Zaten Exception ise replicate etme — message'ı al
+      final raw = e.toString().replaceFirst('Exception: ', '');
+      throw Exception(raw);
+    }
+  }
+
   /// Profil fotoğrafını cihazın kalıcı dizinine kaydeder ve local path'i döner.
   Future<String?> uploadProfilePhoto(File imageFile) async {
     if (_firebaseUser == null) return null;

@@ -97,6 +97,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                       label: Text('${cart.itemCount}'),
                       isLabelVisible: cart.itemCount > 0,
                       backgroundColor: AppColors.accent,
+                      textColor: AppColors.nightSky,
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -110,6 +111,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                           ],
                         ),
                         child: IconButton(
+                          tooltip: 'Sepete git',
                           icon: const Icon(Icons.shopping_cart, color: AppColors.primary),
                           onPressed: () {
                             context.push('/home/cart');
@@ -252,6 +254,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
+                        tooltip: 'Aramayı temizle',
                         icon: const Icon(Icons.clear, size: 20),
                         onPressed: () => _searchController.clear(),
                       )
@@ -463,6 +466,7 @@ class _ProductCard extends StatelessWidget {
                 ),
               const SizedBox(width: 8),
               IconButton(
+                tooltip: 'Sepete ekle',
                 icon: const Icon(Icons.add_shopping_cart, color: AppColors.primary, size: 20),
                 onPressed: () {
                   context.read<CartProvider>().addItem(product);

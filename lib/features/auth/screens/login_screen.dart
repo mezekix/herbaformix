@@ -254,6 +254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           hintStyle: TextStyle(color: textSecondary),
                           prefixIcon: Icon(Icons.lock_outline, color: textSecondary),
                           suffixIcon: IconButton(
+                            tooltip: _obscurePassword ? 'Şifreyi göster' : 'Şifreyi gizle',
                             icon: Icon(
                               _obscurePassword ? Icons.visibility_off : Icons.visibility,
                               color: textSecondary,

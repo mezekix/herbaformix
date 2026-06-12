@@ -382,7 +382,12 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     try {
-      final XFile? pickedFile = await picker.pickImage(source: source, imageQuality: 85);
+      final XFile? pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 1080,
+        maxHeight: 1080,
+      );
       if (pickedFile == null) return;
 
       final file = File(pickedFile.path);

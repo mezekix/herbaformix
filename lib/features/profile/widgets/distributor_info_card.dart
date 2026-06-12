@@ -323,10 +323,57 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
 }
 
 /// Zaten bir distribütöre bağlı olan müşteri için bilgi kartı.
-class _AssignedDistributorView extends StatelessWidget {
+///
+/// Distribütör profili (örn. distribütör hesabı silinmiş, izin hatası, ya da
+/// distribütör müşteri kaydını silip `assignedDistributorId` temizliği henüz
+/// müşteriye yansımamışsa) yüklenemediğinde **"Bağlantıyı Kaldır ve Yeniden
+/// Bağlan"** kurtarma butonu gösterir. Buton, müşterinin profilindeki
+/// `assignedDistributorId` alanını siler ve profili yeniler — sonuçta üst
+/// widget davet kodu giriş formunu otomatik gösterir.
+class _AssignedDistributorView extends StatefulWidget {
   final String distributorId;
 
   const _AssignedDistributorView({required this.distributorId});
+
+  @override
+  State<_AssignedDistributorView> createState() =>
+      _AssignedDistributorViewState();
+}
+
+class _AssignedDistributorViewState extends State<_AssignedDistributorView> {
+  bool _isDisconnecting = false;
+
+  Future<void> _disconnectAndRefresh() async {
+    final authProvider = context.read<AuthProvider>();
+    final firestoreService = context.read<FirestoreService>();
+    final uid = authProvider.firebaseUser?.uid;
+    if (uid == null) return;
+
+    setState(() => _isDisconnecting = true);
+    try {
+      await firestoreService.disconnectDistributor(uid);
+      await authProvider.refreshProfile();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bağlantı kaldırıldı. Yeni bir davet kodu girebilirsiniz.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Bağlantı kaldırılamadı: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isDisconnecting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -334,7 +381,7 @@ class _AssignedDistributorView extends StatelessWidget {
         Provider.of<FirestoreService>(context, listen: false);
 
     return FutureBuilder<UserProfileModel?>(
-      future: firestoreService.getDistributorProfile(distributorId),
+      future: firestoreService.getDistributorProfile(widget.distributorId),
       builder: (context, snapshot) {
         return Card(
           elevation: 2,
@@ -386,18 +433,13 @@ class _AssignedDistributorView extends StatelessWidget {
       );
     }
 
-    // Hata durumu
-    if (snapshot.hasError) {
-      return const Text('Danışman bilgisi yüklenemedi.');
-    }
-
-    // Distribütör bulunamadı
-    final distributor = snapshot.data;
-    if (distributor == null) {
-      return const Text('Danışman bilgisi yüklenemedi.');
+    // Hata veya bulunamadı → kurtarma yolunu göster
+    if (snapshot.hasError || snapshot.data == null) {
+      return _buildUnavailableState(context);
     }
 
     // Distribütör bilgilerini salt okunur olarak göster
+    final distributor = snapshot.data!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -411,6 +453,72 @@ class _AssignedDistributorView extends StatelessWidget {
           icon: Icons.phone_outlined,
           label: 'Telefon',
           value: distributor.phoneNumber ?? '-',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUnavailableState(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange.shade200),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline,
+                  color: Colors.orange.shade800, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Danışman bilgisine ulaşılamıyor. Bağlantın kaldırılmış '
+                  'olabilir. Yeni bir davet kodu girmek için aşağıdaki '
+                  'butonu kullanabilirsin.',
+                  style: TextStyle(
+                    color: Colors.orange.shade900,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isDisconnecting ? null : _disconnectAndRefresh,
+            icon: _isDisconnecting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.link_off),
+            label: Text(
+              _isDisconnecting
+                  ? 'Kaldırılıyor...'
+                  : 'Bağlantıyı Kaldır ve Yeniden Bağlan',
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.textOnPrimary,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
         ),
       ],
     );

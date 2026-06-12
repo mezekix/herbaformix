@@ -180,8 +180,11 @@ class _ChartCard extends StatelessWidget {
           const SizedBox(height: 8),
           SizedBox(
             height: 180,
-            child: BarChart(
-              BarChartData(
+            child: Semantics(
+              label: _semanticsSummary(ordered, goal),
+              excludeSemantics: true,
+              child: BarChart(
+                BarChartData(
                 maxY: yMax > 0 ? yMax : 100,
                 barGroups: List.generate(ordered.length, (i) {
                   final l = ordered[i];
@@ -270,11 +273,29 @@ class _ChartCard extends StatelessWidget {
                 gridData: const FlGridData(show: false),
                 borderData: FlBorderData(show: false),
               ),
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  /// Ekran okuyucu için bar grafiği özetini Türkçe metne çevirir.
+  String _semanticsSummary(List<CalorieDailyLog> ordered, int goal) {
+    final active = ordered.where((l) => l.totalCalories > 0).toList();
+    if (active.isEmpty) {
+      return 'Kalori geçmişi grafiği — henüz veri yok.';
+    }
+    final avg = (active.map((l) => l.totalCalories).reduce((a, b) => a + b) /
+            active.length)
+        .round();
+    final overCount = ordered
+        .where((l) => l.totalCalories > l.dailyGoal && l.totalCalories > 0)
+        .length;
+    return 'Kalori geçmişi grafiği. ${ordered.length} gün, '
+        '${active.length} günde kayıt var. Ortalama $avg kalori. '
+        'Günlük hedef $goal kalori. $overCount günde hedef aşıldı.';
   }
 }
 

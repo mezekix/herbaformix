@@ -95,6 +95,7 @@ class _ProductImageViewerScreenState extends State<ProductImageViewerScreen> {
               child: Row(
                 children: [
                   IconButton(
+                    tooltip: 'Kapat',
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => Navigator.of(context).pop(),
                   ),

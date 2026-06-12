@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 import '../models/customer_model.dart';
 import '../models/distributor_customer_insights.dart';
@@ -40,7 +41,8 @@ import 'repositories/water_repository.dart';
 /// `@Deprecated` ile işaretlenebilir.
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
-      : _userProfileRepo = UserProfileRepository(firestore: firestore),
+      : _db = firestore ?? FirebaseFirestore.instance,
+        _userProfileRepo = UserProfileRepository(firestore: firestore),
         _productRepo = ProductRepository(firestore: firestore),
         _customerRepo = CustomerRepository(firestore: firestore),
         _orderRepo = OrderRepository(firestore: firestore),
@@ -50,6 +52,7 @@ class FirestoreService {
         _motivationRepo = MotivationRepository(firestore: firestore),
         _insightsService = CustomerInsightsService(firestore: firestore);
 
+  final FirebaseFirestore _db;
   final UserProfileRepository _userProfileRepo;
   final ProductRepository _productRepo;
   final CustomerRepository _customerRepo;
@@ -314,4 +317,112 @@ class FirestoreService {
       _insightsService.getDistributorCustomerInsights(customerUserId);
   Future<int> getAtRiskCustomerCount(String distributorId) =>
       _insightsService.getAtRiskCustomerCount(distributorId);
+
+  // ── Hesap silme (müşteri) ──────────────────────────────────────────────
+
+  /// Müşteri hesabının Firestore tarafındaki **tüm** verisini siler.
+  /// Auth user silme akışı çağıran tarafa (AuthProvider) aittir.
+  ///
+  /// Silinen veriler:
+  /// - `/userProfiles/{uid}`
+  /// - `/users/{uid}/calorieLogs/*`
+  /// - `/users/{uid}/waterLogs/*`
+  /// - `/users/{uid}/waterSummaries/*`
+  /// - `/users/{uid}/progressEntries/*`
+  /// - `/users/{uid}` (ana doc, varsa)
+  /// - `/motivations/{uid}/daily_messages/*` + `/motivations/{uid}` doc
+  /// - `/motivation_scores/*` where `musteri_id == uid`
+  ///
+  /// Distribütör CRM kaydı **silinmez** — sadece güncellenir:
+  /// `linkedUserId` temizlenir, `isActive=false`, `notes`'a
+  /// "Müşteri hesabını sildi (tarih)" eklenir. Distribütörün iş notları korunur.
+  Future<void> deleteCustomerAccountData(String uid) async {
+    // 1) Profil bilgisini önce oku — distribütör CRM kaydına ulaşmak için
+    //    assignedDistributorId lazım. Profil zaten yoksa devam et.
+    final profile = await _userProfileRepo.getUserProfile(uid);
+    final assignedDistributorId = profile?.assignedDistributorId;
+
+    // 2) Distribütör CRM kaydını "hesabını sildi" olarak işaretle (silmeden).
+    if (assignedDistributorId != null && assignedDistributorId.isNotEmpty) {
+      try {
+        final crmRecord = await _customerRepo.getCustomerByLinkedUserId(
+          assignedDistributorId,
+          uid,
+        );
+        if (crmRecord != null) {
+          final timestamp = DateFormat('dd.MM.yyyy').format(DateTime.now());
+          final existingNotes = (crmRecord.notes ?? '').trim();
+          final marker = 'Müşteri hesabını sildi ($timestamp)';
+          final newNotes = existingNotes.isEmpty
+              ? marker
+              : '$existingNotes\n$marker';
+          await _db
+              .collection('users')
+              .doc(assignedDistributorId)
+              .collection('customers')
+              .doc(crmRecord.id)
+              .update({
+            'linkedUserId': FieldValue.delete(),
+            'isActive': false,
+            'notes': newNotes,
+          });
+        }
+      } catch (_) {
+        // CRM güncelleme distribütör tarafının verisi — başarısız olsa bile
+        // kullanıcının kendi verilerinin silinmesi engellenmemeli.
+      }
+    }
+
+    // 3) Müşterinin tüm alt koleksiyonlarını sil.
+    await _deleteSubcollection('users/$uid/calorieLogs');
+    await _deleteSubcollection('users/$uid/waterLogs');
+    await _deleteSubcollection('users/$uid/waterSummaries');
+    await _deleteSubcollection('users/$uid/progressEntries');
+    await _deleteSubcollection('motivations/$uid/daily_messages');
+
+    // 4) Tek dokümanları sil.
+    await _safeDeleteDoc(_db.collection('motivations').doc(uid));
+    await _safeDeleteDoc(_db.collection('users').doc(uid));
+    await _safeDeleteDoc(_db.collection('userProfiles').doc(uid));
+
+    // 5) Sorgu temelli temizlik: motivation_scores koleksiyonu.
+    await _deleteQuery(
+      _db.collection('motivation_scores').where('musteri_id', isEqualTo: uid),
+    );
+  }
+
+  /// Belirtilen alt koleksiyondaki tüm dokümanları 450'lik batch'ler halinde siler.
+  Future<void> _deleteSubcollection(String path) async {
+    final snap = await _db.collection(path).get();
+    await _deleteDocs(snap.docs.map((d) => d.reference).toList());
+  }
+
+  /// Bir sorgunun döndürdüğü tüm dokümanları siler.
+  Future<void> _deleteQuery(Query query) async {
+    final snap = await query.get();
+    await _deleteDocs(snap.docs.map((d) => d.reference).toList());
+  }
+
+  /// Referans listesini Firestore batch limiti (500) altında chunk'lara
+  /// böler ve siler.
+  Future<void> _deleteDocs(List<DocumentReference> refs) async {
+    const chunkSize = 450;
+    for (var i = 0; i < refs.length; i += chunkSize) {
+      final end = (i + chunkSize < refs.length) ? i + chunkSize : refs.length;
+      final batch = _db.batch();
+      for (final ref in refs.sublist(i, end)) {
+        batch.delete(ref);
+      }
+      await batch.commit();
+    }
+  }
+
+  /// Doküman silme; doküman zaten yoksa hata fırlatmaz.
+  Future<void> _safeDeleteDoc(DocumentReference ref) async {
+    try {
+      await ref.delete();
+    } catch (_) {
+      // Doc yoksa veya silinemediyse devam et.
+    }
+  }
 }

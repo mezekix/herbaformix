@@ -120,16 +120,23 @@ class CalorieRepository {
   }
 
   /// Bugünün hedefini değiştirir. Geçmiş günler etkilenmez.
+  ///
+  /// [isAuto] `true` ise hedef otomatik hesaplamadan geldi demektir — provider
+  /// daha sonra (profil ya da aktivite değişince) bunu tekrar ezebilir.
+  /// `false` ise kullanıcı manuel girdi — otomatik recompute saygı duyup
+  /// dokunmaz.
   Future<void> setTodayGoal(
     String userId,
     int newGoal, {
     int defaultGoalFallback = 2000,
+    bool isAuto = false,
   }) async {
     if (newGoal <= 0) return;
     final today =
         await ensureTodayLog(userId, defaultGoal: defaultGoalFallback);
     final updated = today.copyWith(
       dailyGoal: newGoal,
+      isAutoGoal: isAuto,
       updatedAt: DateTime.now(),
     );
     await _ref(userId).doc(updated.date).set(updated.toMap());

@@ -155,6 +155,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             snap: true,
             actions: [
               IconButton(
+                tooltip: _isGridView ? 'Liste görünümü' : 'Izgara görünümü',
                 icon: Icon(_isGridView ? Icons.view_list : Icons.view_module),
                 onPressed: () {
                   setState(() {
@@ -168,7 +169,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     label: Text('${cart.itemCount}'),
                     isLabelVisible: cart.itemCount > 0,
                     backgroundColor: AppColors.accent,
+                    textColor: AppColors.nightSky,
                     child: IconButton(
+                      tooltip: 'Sepete git',
                       icon: const Icon(Icons.shopping_cart),
                       onPressed: () {
                         context.push('/home/cart');
@@ -202,6 +205,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       ),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
+                              tooltip: 'Aramayı temizle',
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 _searchController.clear();
@@ -331,6 +335,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
+              tooltip: 'Sepete ekle',
               icon: const Icon(Icons.add_shopping_cart, color: AppColors.primary),
               onPressed: () {
                 context.read<CartProvider>().addItem(product);
@@ -440,6 +445,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         ),
                       ),
                       IconButton(
+                        tooltip: 'Sepete ekle',
                         icon: const Icon(Icons.add_shopping_cart, size: 20, color: AppColors.primary),
                         onPressed: () {
                           context.read<CartProvider>().addItem(product);

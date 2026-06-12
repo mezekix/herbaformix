@@ -250,6 +250,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
           if (_isEditing &&
               widget.order != null) // Silme butonu sadece düzenleme modunda
             IconButton(
+              tooltip: 'Siparişi iptal et',
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
                 // Silme işlemi (genelde status 'cancelled' yapılır)
@@ -592,6 +593,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                   'Adet: ${item.quantity} x ${item.unitPrice.toStringAsFixed(2)} TL = ${item.totalPrice.toStringAsFixed(2)} TL\nVP: ${item.quantity} x ${item.unitVp.toStringAsFixed(2)} = ${item.totalVp.toStringAsFixed(2)} VP',
                 ),
                 trailing: IconButton(
+                  tooltip: 'Bu ürünü siparişten çıkar',
                   icon: const Icon(
                     Icons.remove_circle_outline,
                     color: Colors.red,
