@@ -322,7 +322,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                         products.isEmpty
                           ? 'Henüz ürün eklenmemiş'
                           : 'Ürün bulunamadı',
-                        style: TextStyle(fontSize: 15, color: Colors.grey.shade400),
+                        style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                       ),
                     ],
                   ),

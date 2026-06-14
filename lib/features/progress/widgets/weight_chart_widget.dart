@@ -470,14 +470,14 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
             'Henüz yeterli veri yok',
             style: TextStyle(
               fontSize: 13,
-              color: Colors.grey.shade400,
+              color: Colors.grey.shade700,
             ),
           ),
           Text(
             'En az 2 ölçüm ekle',
             style: TextStyle(
               fontSize: 11,
-              color: Colors.grey.shade400,
+              color: Colors.grey.shade700,
             ),
           ),
         ],

@@ -427,7 +427,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'İlk ölçümünü ekleyerek başla',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(

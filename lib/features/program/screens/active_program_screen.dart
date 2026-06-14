@@ -785,7 +785,7 @@ class _ProductTile extends StatelessWidget {
                               Text('Nasıl Kullanılır?',
                                   style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey.shade400)),
+                                      color: Colors.grey.shade700)),
                             ],
                           ),
                         ],

@@ -197,7 +197,7 @@ class _DailySuccessRingState extends State<DailySuccessRing>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade400,
+                              color: Colors.grey.shade700,
                               letterSpacing: 1.5,
                             ),
                           ),

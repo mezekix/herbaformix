@@ -698,7 +698,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
             Text(
               'Başlangıç fotoğrafını ekleyerek\ndönüşüm sürecini belgele',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 28),
             ElevatedButton.icon(

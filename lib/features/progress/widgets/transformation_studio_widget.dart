@@ -267,7 +267,7 @@ class _TransformationStudioWidgetState
                 Text(
                   'Önce/Sonra fotoğrafı ekle',
                   style: TextStyle(
-                      fontSize: 13, color: Colors.grey.shade400),
+                      fontSize: 13, color: Colors.grey.shade700),
                 ),
               ],
             ),

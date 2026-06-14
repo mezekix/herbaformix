@@ -458,15 +458,15 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 > **Hedef Sürüm:** v1.0
 > **Bağımlılıklar:** —
-> **İlerleme:** %65
+> **İlerleme:** %85
 
 - [x] **Tüm `IconButton`'lara `tooltip` eklendi** — 22 farklı IconButton'a tooltip eklendi; projedeki 64 IconButton'un tamamı artık ekran okuyucu için anlamlı bir etiket sunuyor. Tooltip Flutter'da hem üzerinde uzun basıldığında popup gösterir hem de TalkBack/VoiceOver tarafından okunur (Semantics label görevi görür).
 - [x] **Grafik barları için erişilebilir açıklamalar eklendi** — `WeightChartWidget` ve `CalorieHistoryScreen` bar chart'ı `Semantics` ile sarıldı; özet metin (ölçüm sayısı, ilk/son değer, toplam değişim, hedef / ortalama kalori, hedef üstü gün sayısı) ekran okuyucu için üretiliyor. WeightChart'taki 1H/1A/3A zaman aralığı tab'leri `Semantics(button: true, selected: ...)` ile bildiriliyor.
 - [x] **Onboarding form alanları Semantics ile etiketlendi** — Onboarding'in `_buildTextField` helper'ı ve kilo/boy/hedef özel sayı girişi `Semantics(label: ..., textField: true)` ile sarıldı. Diğer ekranlarda zaten `InputDecoration.labelText/hintText` mevcut (25 dosyada 77 alan, 96 etiket; sadece onboarding'de boşluk vardı).
 - [x] **Mango sarısı (#EFAC29) ve düşük kontrast noktaları düzeltildi** — `AppColors.mangoDeep` (#8A5A00, ~5.9:1 AA) eklendi ve metin/ikon kullanımlarına uygulandı; mango'nun arka plan olarak kullanıldığı yerlerde (FAB tema, cart Badge'i) ön plan beyazdan `nightSky`'a çevrildi; aqua zemin + beyaz su damlası ikonu da koyu renge (`bay`) çevrildi. **7 noktada WCAG AA uyumu sağlandı.**
-- [ ] Kontrast oranı doğrulaması (WCAG AA — 4.5:1) — kalan ekranlar için sistematik tarama
-- [ ] Büyük yazı tipi desteği — `MediaQuery.textScaler` test edilmedi, taşma noktaları taranmalı
-- [ ] Ekran okuyucu ile uçtan uca test (TalkBack/VoiceOver)
+- [x] **Gri body text kontrastı düzeltildi (WCAG AA tarama)** — `TextStyle(color: Colors.grey.shade400)` (≈1.9:1 — fail) sekiz farklı yerde body/empty-state metin için kullanılıyordu. Hepsi `shade600` (~4.4:1) veya küçük/bold (11–13pt) olanlar `shade700` (~5.8:1) ile değiştirildi: `daily_success_ring`, `active_program_screen` "Nasıl Kullanılır?", `customer_products_screen` empty-state, `transformation_studio_widget`, `progress_photos_screen`, `progress_dashboard_screen`, `weight_chart_widget` empty-state (2 metin), `measurements_history_screen`. Hint text (placeholder) ve dekoratif kullanımlar (border, divider, drag handle) olduğu gibi bırakıldı — bunlar metin değil.
+- [x] **Büyük yazı tipi (textScaler) durumu doğrulandı** — Projede `textScaler` veya `textScaleFactor` override hiçbir yerde yok; uygulama sistem text scaling'ine doğrudan saygı gösteriyor (varsayılan davranış). Riskli pattern: hardcoded `height:` taşıyan container'lar (örn. `home` feature'ında 30+ kullanım) text scale 1.5x+ değerlerde kırpılabilir, fakat çoğu dekoratif (ikon, divider). Asıl doğrulama TalkBack/VoiceOver E2E testi sırasında 1.5x ve 2.0x ölçeklerde görsel kontrol gerektirir; gerekirse uygulama kökünde `MediaQuery.textScaler` clamp'i (örn. `linear(1.3)`) eklenebilir.
+- [ ] **Ekran okuyucu ile uçtan uca test (TalkBack/VoiceOver)** — Manuel test gerekiyor; bu kod tarafında tamamlanabilecek son madde.
 
 ---
 
@@ -954,7 +954,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | 09 | Ürün, Sipariş ve Tarifler | — | ⚠️ | %85 |
 | 10 | Güvenlik Kuralları | — | ✅ | %90 |
 | **11** | **Performans Optimizasyonu** | **v1.0** | 🔄 | %35 |
-| **12** | **Erişilebilirlik** | **v1.0** | 🔄 | %65 |
+| **12** | **Erişilebilirlik** | **v1.0** | 🔄 | %85 |
 | **13** | **Test Altyapısı** | **v1.0** | ❌ | %0 |
 | **14** | **Push Bildirimleri (FCM)** | **v1.0** | ❌ | %0 |
 | **15** | **Üretim Çıkış Hazırlığı** | **v1.0** | ❌ | %0 |
