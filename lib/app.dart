@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'core/app_colors.dart'; // Yeni renk dosyamızı import ediyoruz
+import 'core/locale_provider.dart';
 import 'core/router.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/calorie_tracker/providers/calorie_provider.dart';
 import 'features/customers/providers/customer_provider.dart';
@@ -70,18 +73,22 @@ class _AppState extends State<App> {
 
   @override
   Widget build(BuildContext context) {
+    final localeProvider = context.watch<LocaleProvider>();
+    final activeLocale = localeProvider.locale;
+    // Intl tabanlı (DateFormat / NumberFormat) çıktılar seçilen dile uysun.
+    Intl.defaultLocale = activeLocale?.languageCode ?? 'tr';
+
     return MaterialApp.router(
       title: 'HerbaForm',
       debugShowCheckedModeBanner: false,
+      locale: activeLocale,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('tr', 'TR'),
-        Locale('en', 'US'),
-      ],
+      supportedLocales: LocaleProvider.supportedLocales,
       theme: ThemeData(
         // Ana Renk Paleti AppColors'dan alınıyor
         colorScheme: ColorScheme.fromSeed(

@@ -1,0 +1,38 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "HerbaForm",
+
+  "languageLabel": "Language",
+  "languageSystem": "System Default",
+  "languageTurkish": "Turkish",
+  "languageEnglish": "English",
+  "languageSettingsTitle": "Language",
+  "languageSettingsSubtitle": "Change the app language",
+
+  "drawerHome": "Home",
+  "drawerProfile": "My Profile",
+  "drawerProducts": "Products",
+  "drawerProductCatalog": "Product Catalog",
+  "drawerCustomers": "My Customers",
+  "drawerOrders": "My Orders",
+  "drawerOrderHistory": "Order History",
+  "drawerPersonalDevelopment": "Personal Development",
+  "drawerWaterTracker": "Water Tracker",
+  "drawerCalorieTracker": "Calorie Counter",
+  "drawerSignOut": "Sign Out",
+  "drawerDefaultUserName": "User Name",
+  "drawerDefaultEmail": "Email address",
+
+  "appSettingsTitle": "App",
+  "appSettingsSecurity": "Security",
+  "appSettingsChangePassword": "Change Password",
+  "appSettingsNotifications": "Notifications",
+  "appSettingsNotificationsChecking": "Checking...",
+  "appSettingsNotificationsOn": "On — meal and water reminders are active",
+  "appSettingsNotificationsOff": "Off — you won't receive reminders",
+  "appSettingsNotificationsEnabled": "Notifications enabled. ✓",
+  "appSettingsNotificationsDenied": "Permission denied. You can enable them from Device Settings > Apps > Herbaformix > Notifications.",
+  "appSettingsSendTestNotification": "Send Test Notification",
+  "appSettingsTestNotificationSent": "Test notification triggered."
+}

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
+import '../../../services/fcm_service.dart';
 import '../../program/services/notification_service.dart';
 import '../providers/auth_provider.dart';
 
@@ -131,7 +132,14 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
       // OS dialog'unu tetikle. Sonuç ne olursa olsun akışı kesmiyoruz —
       // izin verilmezse kullanıcı sonradan Profil > Ayarlar > Bildirimler'den
       // tekrar açabilir.
+      // 1) Lokal bildirim (öğün/su hatırlatıcı) izni — mevcut servis.
       await NotificationService().requestPermission();
+      // 2) FCM (push) izni + token kaydı. iOS'ta APNs entitlement'ları için
+      // ayrı bir çağrı gerekiyor; Android 13+'ta ikinci kez sorulmaz.
+      final fcmGranted = await FcmService().requestPermission();
+      if (fcmGranted && mounted) {
+        await context.read<AuthProvider>().syncFcmToken();
+      }
     }
 
     if (!mounted) return;

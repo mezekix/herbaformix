@@ -37,14 +37,14 @@ class WaterTrackerScreen extends StatelessWidget {
             onRefresh: () =>
                 waterProvider.resetDailyProgress(), // Günü sıfırlamak için
             child: ListView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               children: [
                 _buildProgressCircle(context, waterProvider),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 _buildExerciseSelector(context, waterProvider),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 _buildQuickAddButtons(context, waterProvider),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 _buildHistoryList(context, waterProvider),
               ],
             ),
@@ -64,13 +64,13 @@ class WaterTrackerScreen extends StatelessWidget {
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(
-          maxWidth: 280,
-          maxHeight: 280,
+          maxWidth: 180,
+          maxHeight: 180,
         ),
         child: AspectRatio(
           aspectRatio: 1.0,
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: theme.colorScheme.surface,
@@ -87,7 +87,7 @@ class WaterTrackerScreen extends StatelessWidget {
               children: [
                 CircularProgressIndicator(
                   value: progress,
-                  strokeWidth: 12,
+                  strokeWidth: 9,
                   backgroundColor: Colors.grey.shade300,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     Color.lerp(AppColors.aqua, AppColors.mango, progress) ??
@@ -101,12 +101,12 @@ class WaterTrackerScreen extends StatelessWidget {
                       const Icon(
                         Icons.water_drop,
                         color: AppColors.primary,
-                        size: 36,
+                        size: 24,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
                         '${waterProvider.totalConsumed} ml',
-                        style: theme.textTheme.headlineLarge?.copyWith(
+                        style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppColors.primary,
                         ),
@@ -116,16 +116,16 @@ class WaterTrackerScreen extends StatelessWidget {
                         children: [
                           Text(
                             '/ ${waterProvider.dailyGoal} ml',
-                            style: theme.textTheme.titleMedium?.copyWith(
+                            style: theme.textTheme.bodySmall?.copyWith(
                               color: AppColors.textSecondary,
                             ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 4),
                           GestureDetector(
                             onTap: () => _showTargetDetailsBottomSheet(context, waterProvider),
                             child: const Icon(
                               Icons.info_outline,
-                              size: 18,
+                              size: 14,
                               color: AppColors.primary,
                             ),
                           ),
@@ -153,19 +153,30 @@ class WaterTrackerScreen extends StatelessWidget {
       {'key': 'heavy', 'label': 'Yoğun'},
     ];
 
+    final currentLabel = levels
+        .firstWhere((l) => l['key'] == currentLevel, orElse: () => levels.first)['label'] as String;
+
     return Card(
       elevation: 0,
       color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-        child: Column(
+      clipBehavior: Clip.antiAlias,
+      child: Theme(
+        // ExpansionTile'daki üst divider'ı kaldır
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          leading: const Icon(Icons.directions_run, color: AppColors.primary, size: 22),
+          title: Text(
+            'Bugünkü Aktivite Seviyen',
+            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(
+            currentLabel,
+            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600),
+          ),
           children: [
-            Text(
-              'Bugünkü Aktivite Seviyen',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 8.0,

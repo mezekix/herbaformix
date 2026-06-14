@@ -320,7 +320,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
   Widget _buildRecipeSuggestions() {
-    final recipes = context.watch<RecipeProvider>().getRecipesForProduct(_product!.id);
+    final recipes = context.watch<RecipeProvider>().getRecipesForProduct(_product!);
     if (recipes.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -438,7 +438,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             );
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green[700],
+            backgroundColor: AppColors.primary,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(30),
             ),

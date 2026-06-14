@@ -1,0 +1,38 @@
+{
+  "@@locale": "tr",
+
+  "appTitle": "HerbaForm",
+
+  "languageLabel": "Dil",
+  "languageSystem": "Sistem Varsayılanı",
+  "languageTurkish": "Türkçe",
+  "languageEnglish": "İngilizce",
+  "languageSettingsTitle": "Dil",
+  "languageSettingsSubtitle": "Uygulama dilini değiştir",
+
+  "drawerHome": "Ana Sayfa",
+  "drawerProfile": "Profilim",
+  "drawerProducts": "Ürünler",
+  "drawerProductCatalog": "Ürün Kataloğu",
+  "drawerCustomers": "Müşterilerim",
+  "drawerOrders": "Siparişlerim",
+  "drawerOrderHistory": "Sipariş Geçmişim",
+  "drawerPersonalDevelopment": "Kişisel Gelişim",
+  "drawerWaterTracker": "Su Takip",
+  "drawerCalorieTracker": "Kalori Sayacı",
+  "drawerSignOut": "Çıkış Yap",
+  "drawerDefaultUserName": "Kullanıcı Adı",
+  "drawerDefaultEmail": "E-posta adresi",
+
+  "appSettingsTitle": "Uygulama",
+  "appSettingsSecurity": "Güvenlik",
+  "appSettingsChangePassword": "Şifre Değiştir",
+  "appSettingsNotifications": "Bildirimler",
+  "appSettingsNotificationsChecking": "Kontrol ediliyor...",
+  "appSettingsNotificationsOn": "Açık — öğün ve su hatırlatıcıları çalışıyor",
+  "appSettingsNotificationsOff": "Kapalı — hatırlatıcı almıyorsun",
+  "appSettingsNotificationsEnabled": "Bildirimler açıldı. ✓",
+  "appSettingsNotificationsDenied": "İzin verilmedi. Cihaz Ayarları > Uygulamalar > Herbaformix > Bildirimler menüsünden manuel açabilirsin.",
+  "appSettingsSendTestNotification": "Test Bildirimi Gönder",
+  "appSettingsTestNotificationSent": "Test bildirimi tetiklendi."
+}

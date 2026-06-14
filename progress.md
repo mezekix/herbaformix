@@ -1,6 +1,6 @@
 # HERBAFORMIX — Proje İlerleme Takibi (Progress)
 
-> **Son Güncelleme:** 2026-06-13
+> **Son Güncelleme:** 2026-06-14
 > **Mevcut Sürüm:** v1.0.0-beta+1
 > **Genel İlerleme:** ~%78 (Beta aşaması)
 > **Bir sonraki kilometre taşı:** v1.0 Production (Faz 11–14)
@@ -369,7 +369,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ---
 
-## FAZ 9 — ÜRÜN KATALOĞU, SİPARİŞ VE TARİFLER 🔄 (Kısmen Tamamlandı)
+## FAZ 9 — ÜRÜN KATALOĞU, SİPARİŞ VE TARİFLER ✅
 
 > Herbalife ürün yönetimi, sipariş sistemi ve ürün bazlı tarifler.
 
@@ -397,17 +397,20 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 ### 9.3 — Ürün Kullanım İstatistikleri
 - [x] `DistributorProductUsageScreen` — hangi ürün kaç müşteri tarafından kullanılıyor
 
-### 9.4 — Tarifler (Recipes) Modülü 🔄
+### 9.4 — Tarifler (Recipes) Modülü ✅
 - [x] `RecipeModel` — tarif veri modeli (malzemeler, besin değerleri)
 - [x] `RecipeIngredient` ve `RecipeNutrition` alt modelleri
 - [x] `RecipeProvider` — JSON tabanlı (`assets/recipes.json`) tarif yükleme
 - [x] `RecipesListScreen` — tarif listesi
 - [x] `RecipeCard` ve `RecipeDetailSheet` widget'ları
 - [x] Ürün detayında ilgili tariflerin listelenmesi
-- [ ] Tariflerin Firestore'a taşınması (distribütör özel tarif ekleyebilsin)
-- [ ] `productId` bazlı gerçek eşleştirme (şu an tümü `formul1_id` ile mock)
-- [ ] Tarif arama ve filtreleme
-- [ ] Tarif favorileme (müşteri tarafı)
+- [x] Ürün bazlı tarif filtresi — yalnızca Formül 1 ürünlerinin detayında tarif görünüyor (cilt bakım vb. ürünlerde gizli)
+- [x] Tarif arama ve filtreleme (arama kutusu + hedef chip'leri: kilo verme / alma / sağlıklı yaşam)
+
+> **v1.1+ backlog'a taşındı:**
+> - Tariflerin Firestore'a taşınması (distribütör özel tarif ekleyebilsin)
+> - Çoklu ürüne özel tarif eşleştirmesi (şu an tüm tarifler `formul1_id` mock'una bağlı; yeni ürünlere tarif eklenince her bir tarifin gerçek `productId`'si girilmeli)
+> - Tarif favorileme (müşteri tarafı)
 
 ---
 
@@ -494,23 +497,41 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ---
 
-## FAZ 14 — PUSH BİLDİRİMLERİ (FCM) ❌ (Başlanmadı)
+## FAZ 14 — PUSH BİLDİRİMLERİ (FCM) 🔄 (Devam Ediyor)
 
 > **Hedef Sürüm:** v1.0
 > **Bağımlılıklar:** —
-> **İlerleme:** %0
+> **İlerleme:** %40 (Client altyapısı tamam; backend Cloud Functions Blaze planı bekliyor)
 
-- [ ] FCM paketi ekleme ve yapılandırma (`firebase_messaging`)
-- [ ] FCM token alma ve `UserProfileModel.fcmToken`'a kaydetme
-- [ ] Token yenileme mekanizması
-- [ ] Distribütör → Danışan push bildirimi:
-  - [ ] Yeni program hazırlandığında
-  - [ ] Takip hatırlatması oluşturulduğunda
-  - [ ] Motivasyon mesajı gönderildiğinde
-- [ ] Cloud Functions veya backend altyapısı (bildirim gönderimi için)
-- [ ] Bildirim tercihleri (`notificationSettings` alanı modelde hazır)
-- [ ] Foreground / background bildirim handler'ları
-- [ ] Bildirime tıklayınca deep-link ile ilgili ekrana yönlendirme
+### 14.1 — Client Altyapısı ✅
+- [x] `firebase_messaging: ^16.0.2` paketi pubspec'e eklendi
+- [x] `UserProfileModel.fcmToken` + `fcmTokenUpdatedAt` alanları (immutable + copyWith + fromMap/toMap)
+- [x] `UserProfileRepository.setFcmToken(uid, token?)` — null geçilirse `FieldValue.delete()` ile alan silinir
+- [x] `FcmService` (singleton) — init, izin isteme (iOS APNs dahil), `getToken()` (iOS APNs bekleme), `deleteToken()`, foreground/background/opened handler'ları, deep-link callback iskeleti (`onNotificationTap`)
+- [x] Background mesaj handler (`@pragma('vm:entry-point')`) `main.dart`'ta kayıtlı
+- [x] `AuthProvider`:
+  - giriş sonrası `_syncFcmTokenIfPermitted` → token'ı Firestore'a yazar
+  - `FcmService.onTokenRefresh` callback → token yenilenince otomatik yazar
+  - `signOut` → token'ı önce profilden siler, sonra `deleteToken`
+  - Public `syncFcmToken()` — onboarding izin akışı için
+- [x] Onboarding'deki bildirim izni dialog'u FCM iznini de istiyor ve token'ı kaydediyor
+- [x] Android: `POST_NOTIFICATIONS` izni zaten vardı; manifest'e FCM varsayılan kanal (`fcm_default_v1`) + varsayılan ikon meta-data eklendi
+- [x] Foreground gelen mesajlar `flutter_local_notifications` ile gösteriliyor (FCM foreground'da OS bildirimi göstermez)
+
+### 14.2 — Cloud Functions Backend ❌ (Başlanmadı)
+- [ ] **Firebase planını Blaze'e yükselt** (Cloud Functions zorunluluğu)
+- [ ] Cloud Function: `programs/{uid}` create → müşteriye "Yeni programın hazır" push
+- [ ] Cloud Function: `motivations/{uid}/daily_messages/*` create → "Distribütöründen bir mesaj var"
+- [ ] Cloud Function: `users/{uid}/scheduled_follow_ups` due-time → distribütöre hatırlatma
+- [ ] Token alıcısı: `userProfiles.{uid}.fcmToken` (client yazıyor — alan hazır)
+
+### 14.3 — Deep-Link & Tercihler ❌ (Başlanmadı)
+- [ ] `FcmService.onNotificationTap` callback'i router'a bağla (data payload'undan `type` + id okuyup `context.goNamed` tetikle)
+- [ ] Bildirim tercihleri UI (`notificationSettings` alanı modelde hazır)
+
+### iOS Manuel Adım (kullanıcıya)
+- [ ] Xcode'da Push Notifications + Background Modes (Remote notifications) capability ekle
+- [ ] Apple Developer'da APNs Authentication Key oluştur ve Firebase Console > Cloud Messaging > APNs Auth Key olarak yükle
 
 ---
 

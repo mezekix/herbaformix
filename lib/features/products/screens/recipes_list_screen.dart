@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
+import '../../../models/recipe_model.dart';
 import '../providers/recipe_provider.dart';
 import '../widgets/recipe_card.dart';
 
@@ -16,6 +17,7 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedGoal = 'all'; // 'all', 'weight_loss', 'weight_gain', 'healthy_living'
+  List<RecipeModel> _shuffledRecipes = [];
 
   final List<Map<String, String>> _goals = [
     {'key': 'all', 'label': 'Tüm Tarifler'},
@@ -32,9 +34,13 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
         _searchQuery = _searchController.text;
       });
     });
-    // Tariflerin yüklendiğinden emin olmak için
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<RecipeProvider>().loadRecipes();
+    // Tariflerin yüklendiğinden emin olmak ve her açılışta karıştırmak için
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<RecipeProvider>().loadRecipes();
+      if (!mounted) return;
+      setState(() {
+        _shuffledRecipes = List.of(context.read<RecipeProvider>().recipes)..shuffle();
+      });
     });
   }
 
@@ -47,12 +53,16 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
   @override
   Widget build(BuildContext context) {
     final recipeProvider = context.watch<RecipeProvider>();
-    final recipes = recipeProvider.recipes;
     final isLoading = recipeProvider.isLoading;
+
+    // Karıştırılmış liste boşsa (henüz initState'te shuffle olmadıysa) provider'dan al
+    final recipes = _shuffledRecipes.isNotEmpty
+        ? _shuffledRecipes
+        : recipeProvider.recipes;
 
     // Filtreleme mantığı
     var filteredRecipes = recipes;
-    
+
     // Hedef Filtreleme
     if (_selectedGoal != 'all') {
       filteredRecipes = filteredRecipes.where((r) => r.goals.contains(_selectedGoal)).toList();

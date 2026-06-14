@@ -47,6 +47,10 @@ class UserProfileModel {
   final int? waterMaxLimit; // Distribütörün koyduğu max limit (ml)
   final String? distributorRequestStatus; // null / 'pending' / 'approved'
 
+  // Push bildirimleri (Faz 14)
+  final String? fcmToken; // Cihazın güncel FCM token'ı
+  final DateTime? fcmTokenUpdatedAt; // Son token güncelleme zamanı
+
   const UserProfileModel({
     required this.id,
     required this.email,
@@ -78,6 +82,8 @@ class UserProfileModel {
     this.waterMinLimit,
     this.waterMaxLimit,
     this.distributorRequestStatus,
+    this.fcmToken,
+    this.fcmTokenUpdatedAt,
   });
 
   // ── Sentinel ────────────────────────────────────────────────────────────────
@@ -123,6 +129,8 @@ class UserProfileModel {
     Object? waterMinLimit = _unset,
     Object? waterMaxLimit = _unset,
     Object? distributorRequestStatus = _unset,
+    Object? fcmToken = _unset,
+    Object? fcmTokenUpdatedAt = _unset,
   }) {
     return UserProfileModel(
       id: id ?? this.id,
@@ -195,6 +203,12 @@ class UserProfileModel {
       distributorRequestStatus: identical(distributorRequestStatus, _unset)
           ? this.distributorRequestStatus
           : distributorRequestStatus as String?,
+      fcmToken: identical(fcmToken, _unset)
+          ? this.fcmToken
+          : fcmToken as String?,
+      fcmTokenUpdatedAt: identical(fcmTokenUpdatedAt, _unset)
+          ? this.fcmTokenUpdatedAt
+          : fcmTokenUpdatedAt as DateTime?,
     );
   }
 
@@ -247,6 +261,11 @@ class UserProfileModel {
       waterMinLimit: map['waterMinLimit'] as int?,
       waterMaxLimit: map['waterMaxLimit'] as int?,
       distributorRequestStatus: map['distributorRequestStatus'] as String?,
+      fcmToken: map['fcmToken'] as String?,
+      fcmTokenUpdatedAt: map['fcmTokenUpdatedAt'] is int
+          ? DateTime.fromMillisecondsSinceEpoch(
+              map['fcmTokenUpdatedAt'] as int)
+          : null,
     );
   }
 
@@ -295,6 +314,10 @@ class UserProfileModel {
     if (waterMaxLimit != null) map['waterMaxLimit'] = waterMaxLimit;
     if (distributorRequestStatus != null) {
       map['distributorRequestStatus'] = distributorRequestStatus;
+    }
+    if (fcmToken != null) map['fcmToken'] = fcmToken;
+    if (fcmTokenUpdatedAt != null) {
+      map['fcmTokenUpdatedAt'] = fcmTokenUpdatedAt!.millisecondsSinceEpoch;
     }
 
     return map;

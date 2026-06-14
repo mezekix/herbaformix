@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth; // Alias ekledik
@@ -7,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../models/user_profile_model.dart'; // UserProfileModel'i import et
 import '../../../models/user_role.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/fcm_service.dart';
 import '../../../services/firestore_service.dart'; // FirestoreService'i import et
 
 enum AuthStatus {
@@ -60,6 +62,44 @@ class AuthProvider with ChangeNotifier {
       _status = AuthStatus.unauthenticated;
     }
     _authService.authStateChanges.listen(_onAuthStateChanged);
+
+    // FCM token yenilendiğinde aktif kullanıcının profiline yaz.
+    FcmService().onTokenRefresh = (token) {
+      final uid = _firebaseUser?.uid;
+      if (uid == null) return;
+      _firestoreService.userProfile.setFcmToken(uid, token).catchError((e) {
+        debugPrint('FCM token yenileme yazma hatası: $e');
+      });
+    };
+  }
+
+  /// İzin verildikten sonra çağrılır: mevcut uid için FCM token'ını senkronlar.
+  /// uid yoksa no-op.
+  Future<void> syncFcmToken() async {
+    final uid = _firebaseUser?.uid;
+    if (uid == null) return;
+    await _syncFcmTokenIfPermitted(uid);
+    notifyListeners();
+  }
+
+  /// İzin daha önce verilmişse cihazın FCM token'ını profile yazar.
+  /// İzin yoksa sessizce no-op — onboarding adımı kullanıcıyı yönlendirir.
+  Future<void> _syncFcmTokenIfPermitted(String uid) async {
+    try {
+      final token = await FcmService().getToken();
+      if (token == null || token.isEmpty) {
+        debugPrint('FCM token yok (izin verilmemiş olabilir) — skip.');
+        return;
+      }
+      if (_userProfile?.fcmToken == token) return; // değişmediyse yazma
+      await _firestoreService.userProfile.setFcmToken(uid, token);
+      _userProfile = _userProfile?.copyWith(
+        fcmToken: token,
+        fcmTokenUpdatedAt: DateTime.now(),
+      );
+    } catch (e) {
+      debugPrint('FCM token senkron hatası: $e');
+    }
   }
 
   fb_auth.User? get firebaseUser => _firebaseUser;
@@ -98,6 +138,8 @@ class AuthProvider with ChangeNotifier {
         final profile = await _firestoreService.getUserProfile(firebaseUser.uid);
         if (profile != null) {
           _userProfile = profile;
+          // İzin verildiyse FCM token'ı arka planda senkronla.
+          unawaited(_syncFcmTokenIfPermitted(firebaseUser.uid));
         } else if (_userProfile?.id != firebaseUser.uid) {
           _userProfile = null;
           debugPrint("Firestore'da profil bulunamadı: ${firebaseUser.uid}");
@@ -260,6 +302,16 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    // Çıkıştan ÖNCE token'ı profilden sil — sonrasında kurallar yazmayı engeller.
+    final uid = _firebaseUser?.uid;
+    if (uid != null) {
+      try {
+        await _firestoreService.userProfile.setFcmToken(uid, null);
+      } catch (e) {
+        debugPrint('FCM token silme hatası (signOut): $e');
+      }
+    }
+    await FcmService().deleteToken();
     await _authService.signOut();
     // _onAuthStateChanged durumu ve profili temizleyecek
   }

@@ -28,6 +28,7 @@ import '../../products/providers/product_provider.dart';
 import '../../products/providers/recipe_provider.dart';
 import '../../products/widgets/recipe_card.dart';
 import '../../products/screens/add_edit_product_screen.dart';
+import '../../products/screens/product_list_screen.dart';
 
 import '../../profile/screens/profile_screen.dart';
 import '../providers/home_provider.dart';
@@ -37,7 +38,6 @@ import '../../../models/product_model.dart';
 import '../../../services/routine_service.dart';
 import '../../program/screens/active_program_screen.dart';
 import 'customer_progress_screen.dart';
-import 'customer_products_screen.dart';
 import 'customer_support_screen.dart';
 import '../../program/screens/create_program_screen.dart';
 import '../../water_tracker/screens/water_tracker_screen.dart';
@@ -219,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return const CustomerProgressScreen();
       case 3:
-        return const CustomerProductsScreen();
+        return const ProductListScreen();
       case 4:
         return const CustomerSupportScreen();
       default:
@@ -438,12 +438,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: IconButton(
                   onPressed: () {
                     authProvider.toggleCustomerMode();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Distribütör paneline geri dönüldü.'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
                   },
                   icon: const Icon(Icons.admin_panel_settings_outlined, color: Colors.white, size: 22),
                   tooltip: 'Distribütör Paneli',

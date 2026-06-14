@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../core/app_colors.dart';
 import '../core/avatar_color_helper.dart';
 import '../features/auth/providers/auth_provider.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../features/calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../features/customers/screens/customer_list_screen.dart';
 import '../features/home/screens/home_screen.dart';
@@ -55,9 +56,10 @@ class AppDrawer extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.firebaseUser;
     final userProfile = authProvider.userProfile;
+    final l = AppLocalizations.of(context);
 
-    String displayName = userProfile?.name ?? 'Kullanıcı Adı';
-    String displayEmail = user?.email ?? 'E-posta adresi';
+    String displayName = userProfile?.name ?? l.drawerDefaultUserName;
+    String displayEmail = user?.email ?? l.drawerDefaultEmail;
     if ((userProfile?.name == null || userProfile!.name!.isEmpty) &&
         (user?.email != null && user!.email!.isNotEmpty)) {
       displayName = user.email!.split('@')[0];
@@ -166,6 +168,7 @@ class AppDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final userProfile = authProvider.userProfile;
+    final l = AppLocalizations.of(context);
 
     return Drawer(
       child: ListView(
@@ -176,14 +179,14 @@ class AppDrawer extends StatelessWidget {
           _buildListTile(
             context,
             icon: Icons.home_outlined,
-            title: 'Ana Sayfa',
+            title: l.drawerHome,
             routeName: HomeScreen.routeName.substring(1), // 'home'
             pathSegment: 'home',
           ),
           _buildListTile(
             context,
             icon: Icons.person_outline,
-            title: 'Profilim',
+            title: l.drawerProfile,
             routeName: ProfileScreen.routeName, // 'profile'
             pathSegment: 'profile',
           ),
@@ -191,8 +194,8 @@ class AppDrawer extends StatelessWidget {
             context,
             icon: Icons.shopping_bag_outlined,
             title: userProfile?.role == UserRole.customer
-                ? 'Ürün Kataloğu'
-                : 'Ürünler',
+                ? l.drawerProductCatalog
+                : l.drawerProducts,
             routeName: ProductListScreen.routeName.substring(1), // 'products'
             pathSegment: 'products',
           ),
@@ -200,7 +203,7 @@ class AppDrawer extends StatelessWidget {
             _buildListTile(
               context,
               icon: Icons.people_alt_outlined,
-              title: 'Müşterilerim',
+              title: l.drawerCustomers,
               routeName: CustomerListScreen.routeName.substring(1), // 'customers'
               pathSegment: 'customers',
             ),
@@ -208,7 +211,7 @@ class AppDrawer extends StatelessWidget {
             _buildListTile(
               context,
               icon: Icons.receipt_long_outlined,
-              title: 'Siparişlerim',
+              title: l.drawerOrders,
               routeName: OrderListScreen.routeName.substring(1), // 'orders'
               pathSegment: 'orders',
             ),
@@ -218,9 +221,9 @@ class AppDrawer extends StatelessWidget {
                 Icons.swap_horiz_outlined,
                 color: AppColors.primary,
               ),
-              title: const Text(
-                'Kişisel Gelişim',
-                style: TextStyle(
+              title: Text(
+                l.drawerPersonalDevelopment,
+                style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   color: AppColors.nightSky,
                 ),
@@ -229,19 +232,13 @@ class AppDrawer extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).pop();
                 authProvider.toggleCustomerMode();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Kişisel Gelişim ekranı açıldı. İlerlemenizi buradan takip edebilirsiniz.'),
-                    duration: Duration(seconds: 3),
-                  ),
-                );
               },
             ),
           if (userProfile?.role == UserRole.customer)
             _buildListTile(
               context,
               icon: Icons.receipt_long_outlined,
-              title: 'Sipariş Geçmişim',
+              title: l.drawerOrderHistory,
               routeName: OrderListScreen.routeName.substring(1),
               pathSegment: 'orders',
             ),
@@ -249,14 +246,14 @@ class AppDrawer extends StatelessWidget {
           _buildListTile(
             context,
             icon: Icons.water_drop_outlined,
-            title: 'Su Takip',
+            title: l.drawerWaterTracker,
             routeName: WaterTrackerScreen.routeName, // 'water-tracker'
             pathSegment: 'water-tracker',
           ),
           _buildListTile(
             context,
             icon: Icons.local_fire_department_outlined,
-            title: 'Kalori Sayacı',
+            title: l.drawerCalorieTracker,
             routeName: CalorieTrackerScreen.routeName,
             pathSegment: 'calorie-tracker',
           ),
@@ -265,7 +262,7 @@ class AppDrawer extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             leading: Icon(Icons.exit_to_app_outlined, color: AppColors.error),
             title: Text(
-              'Çıkış Yap',
+              l.drawerSignOut,
               style: TextStyle(
                 color: AppColors.error,
                 fontWeight: FontWeight.w600,

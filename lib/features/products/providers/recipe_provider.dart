@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import '../../../models/product_model.dart';
 import '../../../models/recipe_model.dart';
 
 class RecipeProvider extends ChangeNotifier {
@@ -32,11 +33,14 @@ class RecipeProvider extends ChangeNotifier {
     }
   }
 
-  /// Belirli bir ürün için olan tarifleri getirir
-  /// (Tüm tariflerin productId'si 'formul1_id' olarak mocklanmış, ilerde gerçek id eklenebilir)
-  List<RecipeModel> getRecipesForProduct(String productId) {
-    // Şimdilik sadece tüm formül 1 tariflerini döndürüyoruz, ilerde productId check yapılabilir
-    return _recipes; 
+  /// Belirli bir ürün için olan tarifleri getirir.
+  /// Tarifler şimdilik yalnızca Formül 1 ürünleri içindir; başka ürünlerde
+  /// (örn. cilt bakımı, dış beslenme) boş liste döner.
+  List<RecipeModel> getRecipesForProduct(ProductModel product) {
+    final name = product.name.toLowerCase();
+    final isFormula1 = name.contains('formül 1') || name.contains('formul 1');
+    if (!isFormula1) return const [];
+    return _recipes.where((r) => r.productId == 'formul1_id').toList();
   }
 
   /// Hedefe göre tarifleri filtreler

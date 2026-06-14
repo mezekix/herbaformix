@@ -820,7 +820,7 @@ class _ProductTile extends StatelessWidget {
         product.instructionsByGoal?[userGoal] ?? product.usageInfo;
 
     // Eğer tarif varsa instruction boş olsa bile gösterebilmeliyiz.
-    final recipes = context.read<RecipeProvider>().getRecipesForProduct(product.id);
+    final recipes = context.read<RecipeProvider>().getRecipesForProduct(product);
     final hasInstruction = instruction != null && instruction.isNotEmpty;
     
     if (!hasInstruction && recipes.isEmpty) return;

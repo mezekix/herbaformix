@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart'; // Tarih formatlama için lokalizasyon
 import 'package:provider/provider.dart';
 
 import 'app.dart';
+import 'core/locale_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/program/services/notification_service.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
+import 'services/fcm_service.dart';
 import 'services/firestore_service.dart';
 import 'services/routine_service.dart';
 
@@ -25,12 +28,17 @@ void main() async {
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
-  // Tarih formatlaması hızlıdır, paralel çalışabilir
+  // FCM background handler kaydı — Firebase.initializeApp sonrası, runApp öncesi.
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Tarih formatlaması hızlıdır, paralel çalışabilir — tr ve en için yükle
   unawaited(initializeDateFormatting('tr_TR', null));
+  unawaited(initializeDateFormatting('en_US', null));
   // runApp'ı hemen çağır — kullanıcı beyaz ekranda beklemesin
   runApp(const MyAppInitializer());
-  // Bildirim servisi arka planda başlasın (lazy init zaten mevcut)
+  // Bildirim ve FCM servisleri arka planda başlasın (lazy init zaten mevcut)
   unawaited(NotificationService().initialize());
+  unawaited(FcmService().initialize());
 }
 
 class MyAppInitializer extends StatelessWidget {
@@ -51,6 +59,9 @@ class MyAppInitializer extends StatelessWidget {
             context.read<AuthService>(),
             context.read<FirestoreService>(),
           ),
+        ),
+        ChangeNotifierProvider<LocaleProvider>(
+          create: (_) => LocaleProvider()..load(),
         ),
       ],
       child: const App(),

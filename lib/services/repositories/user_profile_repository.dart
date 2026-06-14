@@ -86,4 +86,20 @@ class UserProfileRepository {
   Future<void> setWaterDailyGoal(String userId, int goal) async {
     await ref.doc(userId).update({'waterDailyGoal': goal});
   }
+
+  /// Cihazın güncel FCM token'ını kullanıcı profiline yazar.
+  /// Token boş geçilirse alan siler (kullanıcı çıkış yaptığında).
+  Future<void> setFcmToken(String userId, String? token) async {
+    if (token == null || token.isEmpty) {
+      await ref.doc(userId).update({
+        'fcmToken': FieldValue.delete(),
+        'fcmTokenUpdatedAt': FieldValue.delete(),
+      });
+    } else {
+      await ref.doc(userId).update({
+        'fcmToken': token,
+        'fcmTokenUpdatedAt': DateTime.now().millisecondsSinceEpoch,
+      });
+    }
+  }
 }

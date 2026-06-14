@@ -20,6 +20,7 @@ dependencies:
   cloud_firestore: ^6.5.0
   firebase_auth: ^6.5.2
   firebase_core: ^4.10.0
+  firebase_messaging: ^16.0.2
   flutter:
     sdk: flutter
   flutter_localizations:
@@ -80,6 +81,7 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/
     - assets/logo/
