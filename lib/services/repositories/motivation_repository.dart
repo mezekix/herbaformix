@@ -51,6 +51,8 @@ class MotivationRepository {
           .set({
         'distributor_mesaji': message,
         'distributor_mesaji_tarihi': Timestamp.fromDate(startOfDay),
+        // Get tarafının where('timestamp', ...) sorgusuyla uyumlu alan.
+        'timestamp': Timestamp.fromDate(startOfDay),
         'sistem_soz_index': now.millisecondsSinceEpoch ~/ 86400000 % 100,
       }, SetOptions(merge: true));
     } catch (e) {

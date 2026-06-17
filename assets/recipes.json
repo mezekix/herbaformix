@@ -820,6 +820,40 @@
       },
       "tips": "Damla sakızını az kullanın — fazlası tadı sertleştirir.",
       "isRecommended": false
+    },
+    {
+      "id": "f1_mint_shake",
+      "productId": "formul1_id",
+      "title": "Bol Naneli Shake",
+      "description": "Ferahlatıcı nane, taze kayısı ve baharatların Formül 1 Vanilya ile harika buluşması.",
+      "imageUrl": "https://images.unsplash.com/photo-1553530666-ba11a7da3888?q=80&w=600&auto=format&fit=crop",
+      "videoUrl": "",
+      "prepTimeMin": 3,
+      "calories": 255,
+      "goals": ["weight_loss", "healthy_living"],
+      "tags": ["nane", "ferah", "vanilya"],
+      "ingredients": [
+        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı", "note": "26g" },
+        { "name": "Yarım yağlı süt", "amount": "250 ml" },
+        { "name": "Taze nane", "amount": "4-5 dal" },
+        { "name": "Büyük boy kayısı", "amount": "1 adet" },
+        { "name": "Tarçın", "amount": "Bir tutam" },
+        { "name": "Kakule", "amount": "Bir tutam" },
+        { "name": "Buz parçaları", "amount": "İsteğe göre" }
+      ],
+      "steps": [
+        "Malzemeleri karıştırıcıya (blender) ekleyin.",
+        "İstediğiniz kıvama gelinceye kadar karıştırın.",
+        "Servis bardağına aktarıp buz parçalarını da ilave edin. Hemen servis yapın."
+      ],
+      "nutritionInfo": {
+        "protein": 19,
+        "carbs": 33,
+        "fat": 5,
+        "fiber": 4
+      },
+      "tips": "Nane yapraklarının taze ve diri olması ferahlığı artıracaktır.",
+      "isRecommended": true
     }
   ]
 }

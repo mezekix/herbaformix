@@ -55,6 +55,8 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.14.3
   glados: ^1.1.7
+  mocktail: ^1.0.4
+  fake_cloud_firestore: ^4.0.1
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -88,6 +90,7 @@ flutter:
     - assets/logo/logo.webp
     - assets/recipes.json
     - assets/food_database.json
+    - assets/images/onboarding/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
   # For details regarding adding assets from package dependencies, see

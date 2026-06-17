@@ -19,6 +19,12 @@ class CustomerOnboardingScreen extends StatefulWidget {
 }
 
 class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
+  // BMI eşik sabitleri (Magic Number kontrolü)
+  static const double _underweightBmiLimit = 18.5;
+  static const double _normalBmiLimit = 25.0;
+  static const double _overweightBmiLimit = 30.0;
+  static const double _maxIdealBmi = 24.9;
+
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final int _totalPages = 5;
@@ -39,6 +45,46 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   XFile? _selfieImage;
   final ImagePicker _picker = ImagePicker();
 
+  double _heightValue = 170.0;
+  double _weightValue = 70.0;
+  bool _isMetric = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _heightController.text = _heightValue.toStringAsFixed(0);
+    _weightController.text = _weightValue.toStringAsFixed(1);
+    _calculateTargetWeight();
+  }
+
+  void _toggleUnit(bool toMetric) {
+    if (_isMetric == toMetric) return;
+    setState(() {
+      _isMetric = toMetric;
+      if (toMetric) {
+        // Imperial to Metric
+        _heightValue = (_heightValue * 2.54).roundToDouble();
+        _weightValue = double.parse((_weightValue * 0.453592).toStringAsFixed(1));
+      } else {
+        // Metric to Imperial
+        _heightValue = (_heightValue / 2.54).roundToDouble();
+        _weightValue = double.parse((_weightValue / 0.453592).toStringAsFixed(1));
+      }
+      _syncControllers();
+    });
+  }
+
+  void _syncControllers() {
+    if (_isMetric) {
+      _heightController.text = _heightValue.toStringAsFixed(0);
+      _weightController.text = _weightValue.toStringAsFixed(1);
+    } else {
+      _heightController.text = (_heightValue * 2.54).toStringAsFixed(0);
+      _weightController.text = (_weightValue * 0.453592).toStringAsFixed(1);
+    }
+    _calculateTargetWeight();
+  }
+
   void _nextPage() {
     FocusScope.of(context).unfocus();
     if (_currentPage < _totalPages - 1) {
@@ -58,15 +104,18 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
         ? null
         : '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-    // Profili kaydet. programStartDate burada set EDİLMEZ — program
-    // gerçekten oluşturulduğunda (program_summary_step) set edilir.
+    final rawTarget = double.tryParse(_targetWeightController.text.trim());
+    final targetWeightToSave = rawTarget == null
+        ? null
+        : (_isMetric ? rawTarget : rawTarget * 0.453592);
+
     final updated = userProfile.copyWith(
       name: _nameController.text.trim(),
       age: int.tryParse(_ageController.text.trim()),
       phoneNumber: _phoneController.text.trim(),
       weight: double.tryParse(_weightController.text.trim()),
       height: double.tryParse(_heightController.text.trim()),
-      targetWeight: double.tryParse(_targetWeightController.text.trim()),
+      targetWeight: targetWeightToSave,
       userGoal: _selectedGoal,
       wakeTime: fmt(_wakeTime),
       lunchTime: fmt(_lunchTime),
@@ -275,10 +324,10 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     });
                   },
                   children: [
+                    _buildStep0GenderSelection(),
+                    _buildStep4PhysicalInfo(), // Boy ve Kilo Girişi (Adım 2)
                     _buildStep1Goals(),
-                    _buildStep2LifestyleHours(),
                     _buildStep3PersonalInfo(),
-                    _buildStep4PhysicalInfo(),
                     _buildStep5Selfie(),
                   ],
                 ),
@@ -291,28 +340,56 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   }
 
   Widget _buildProgressBar() {
+    final progress = (_currentPage + 1) / _totalPages;
+    final percent = (progress * 100).toInt();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-      child: Container(
-        height: 6,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade300,
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Row(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-              width: MediaQuery.of(context).size.width * 
-                     ((_currentPage + 1) / _totalPages) * 0.85, // 0.85 margin payı
-              decoration: BoxDecoration(
-                color: AppColors.garden,
-                borderRadius: BorderRadius.circular(3),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Adım ${_currentPage + 1}/$_totalPages',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade500,
+                ),
               ),
+              Text(
+                '$percent%',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Container(
+            height: 8,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(4),
             ),
-          ],
-        ),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOut,
+                  width: MediaQuery.of(context).size.width *
+                         progress * 0.85,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -351,35 +428,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Cinsiyet', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 14)),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedGender,
-                          hint: const Text('Seçiniz'),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: AppColors.white,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey.shade200)),
-                            focusedBorder: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(16)), borderSide: BorderSide(color: AppColors.garden, width: 2)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: 'Kadın', child: Text('Kadın')),
-                            DropdownMenuItem(value: 'Erkek', child: Text('Erkek')),
-                            DropdownMenuItem(value: 'Belirtmek İstemiyorum', child: Text('Belirtmek İstemiyorum')),
-                          ],
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedGender = val;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
+
                     const Spacer(),
                     _buildNextButton(),
                   ],
@@ -427,69 +476,258 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     );
   }
 
-  Widget _buildStep2LifestyleHours() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Günlük Rutinin ⏰',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+  // ── STEP 0 — Cinsiyet Seçimi (Stitch Tasarımı) ──────────────────────
+  Widget _buildStep0GenderSelection() {
+    return Column(
+      children: [
+        // Başlık bölümü
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+          child: Column(
+            children: [
+              Text(
+                'Senin Yolculuğun,\nSenin Seçimin.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                  color: AppColors.nightSky,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Vücut yapınıza en uygun programı hazırlamak için başlayalım.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Programını sana göre ayarlayabilmemiz için temel saatlerini paylaşır mısın?',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
+        const SizedBox(height: 16),
+
+        // İmmersive Kart Seçimleri
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                // ── Erkek Kartı ──
+                Expanded(
+                  child: _buildGenderCard(
+                    label: 'Erkek',
+                    value: 'Erkek',
+                    icon: Icons.male,
+                    imagePath: 'assets/images/onboarding/male_athlete.jpg',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // ── Kadın Kartı ──
+                Expanded(
+                  child: _buildGenderCard(
+                    label: 'Kadın',
+                    value: 'Kadın',
+                    icon: Icons.female,
+                    imagePath: 'assets/images/onboarding/female_athlete.jpg',
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 32),
-          _buildTimePickerRow('Uyanma Saatin', _wakeTime, (time) => setState(() => _wakeTime = time)),
-          const SizedBox(height: 24),
-          _buildTimePickerRow('Öğle Yemeği Saatin', _lunchTime, (time) => setState(() => _lunchTime = time)),
-          const SizedBox(height: 24),
-          _buildTimePickerRow('Uyuma Saatin', _sleepTime, (time) => setState(() => _sleepTime = time)),
-          const Spacer(),
-          _buildNextButton(),
-        ],
-      ),
+        ),
+
+        // Alt Buton
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _selectedGender != null ? _nextPage : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                disabledBackgroundColor: Colors.grey.shade300,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                elevation: 8,
+                shadowColor: AppColors.primary.withValues(alpha: 0.3),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'HEDEFE İLERLE',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(Icons.bolt, size: 22),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildTimePickerRow(String label, TimeOfDay? selectedTime, Function(TimeOfDay) onSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildGenderCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required String imagePath,
+  }) {
+    final bool isSelected = _selectedGender == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedGender = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            width: isSelected ? 4 : 0,
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppColors.nightSky)),
-          TextButton.icon(
-            onPressed: () async {
-              final time = await showTimePicker(
-                context: context,
-                initialTime: selectedTime ?? const TimeOfDay(hour: 8, minute: 0),
-              );
-              if (time != null) {
-                onSelected(time);
-              }
-            },
-            icon: const Icon(Icons.access_time, color: AppColors.garden),
-            label: Text(
-              selectedTime != null ? '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}' : 'Seçiniz',
-              style: const TextStyle(fontSize: 16, color: AppColors.garden, fontWeight: FontWeight.bold),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.25),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Arka plan görseli
+            Image.asset(
+              imagePath,
+              fit: BoxFit.cover,
             ),
-          ),
-        ],
+            // Seçili ise yeşil overlay
+            if (isSelected)
+              Container(
+                color: AppColors.primary.withValues(alpha: 0.15),
+              ),
+            // Alt gradient overlay
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.center,
+                  colors: [
+                    Color(0xCC000000),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+            // Seçili badge (sağ üst)
+            if (isSelected)
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            // Alt bilgi: Kategori etiketi + İsim + İkon
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'KATEGORİ',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white.withValues(alpha: 0.7),
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        label.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          fontStyle: FontStyle.italic,
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.primary
+                          : Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected
+                            ? AppColors.primary
+                            : Colors.white.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Icon(
+                      icon,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -549,7 +787,18 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     );
   }
 
+  // ── STEP 4 — Fiziksel Bilgiler (Boy ve Kilo Girişi - Ruler Style) ────
   Widget _buildStep4PhysicalInfo() {
+    final double minH = _isMetric ? 100 : 40;
+    final double maxH = _isMetric ? 220 : 90;
+    final double stepH = 1.0;
+    final String unitH = _isMetric ? 'cm' : 'in';
+
+    final double minW = _isMetric ? 30.0 : 60.0;
+    final double maxW = _isMetric ? 200.0 : 440.0;
+    final double stepW = _isMetric ? 0.5 : 1.0;
+    final String unitW = _isMetric ? 'kg' : 'lbs';
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -559,42 +808,249 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
             ),
             child: IntrinsicHeight(
               child: Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Headline
                     const Text(
-                      'Mevcut Durum ⚖️',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                      'Vücut Ölçüleri',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.nightSky,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    RichText(
-                      text: const TextSpan(
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                    Text(
+                      'Doğru planı oluşturmak için boy ve kilonuza ihtiyacımız var.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Segmented Unit Selector
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            children: [
+                              GestureDetector(
+                                onTap: () => _toggleUnit(true),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: _isMetric ? Colors.white : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(999),
+                                    boxShadow: _isMetric
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.05),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            )
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Text(
+                                    'Metrik (cm/kg)',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: _isMetric ? FontWeight.bold : FontWeight.normal,
+                                      color: _isMetric ? AppColors.primary : Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => _toggleUnit(false),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: !_isMetric ? Colors.white : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(999),
+                                    boxShadow: !_isMetric
+                                        ? [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.05),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            )
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Text(
+                                    'İmperyal (in/lbs)',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: !_isMetric ? FontWeight.bold : FontWeight.normal,
+                                      color: !_isMetric ? AppColors.primary : Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Height Ruler section
+                    Column(
+                      children: [
+                        Text(
+                          'BOY',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey.shade500,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              _heightValue.toStringAsFixed(0),
+                              style: const TextStyle(
+                                fontSize: 44,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.nightSky,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              unitH,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        RulerPicker(
+                          minValue: minH,
+                          maxValue: maxH,
+                          initialValue: _heightValue,
+                          unit: unitH,
+                          step: stepH,
+                          onChanged: (val) {
+                            setState(() {
+                              _heightValue = val;
+                              _syncControllers();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Divider(color: Colors.grey.shade200, height: 1),
+                    const SizedBox(height: 24),
+
+                    // Weight Ruler section
+                    Column(
+                      children: [
+                        Text(
+                          'KİLO',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey.shade500,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              _weightValue.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 44,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.nightSky,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              unitW,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        RulerPicker(
+                          minValue: minW,
+                          maxValue: maxW,
+                          initialValue: _weightValue,
+                          unit: unitW,
+                          step: stepW,
+                          onChanged: (val) {
+                            setState(() {
+                              _weightValue = val;
+                              _syncControllers();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildBMIIndicator(),
+                    const SizedBox(height: 16),
+                    _buildTargetWeightInput(),
+                    const Spacer(),
+                    const SizedBox(height: 24),
+
+                    // Continue Button
+                    ElevatedButton(
+                      onPressed: _nextPage,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        elevation: 6,
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          TextSpan(text: 'Gelişimini doğru takip edebilmemiz için başlangıç ölçülerini girebilirsin. '),
-                          TextSpan(text: '(Opsiyonel)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                          Text(
+                            'Devam Et',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          Icon(Icons.arrow_forward, size: 20),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 32),
-                    _buildPhysicalInput('Mevcut Kilo', _weightController, 'kg', Icons.monitor_weight, Colors.green.shade100),
-                    const SizedBox(height: 16),
-                    _buildPhysicalInput('Boy', _heightController, 'cm', Icons.height, Colors.blue.shade100),
-                    const SizedBox(height: 16),
-                    _buildBMIIndicator(),
-                    const SizedBox(height: 16),
-                    _buildPhysicalInput('Hedef Kilo', _targetWeightController, 'kg', Icons.flag, Colors.orange.shade100),
-                    if (_isAutoTargetCalculated)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8.0, left: 8.0),
-                        child: Text(
-                          'ℹ️ İdeal kilonuza göre hedef otomatik belirlendi, isterseniz değiştirebilirsiniz.',
-                          style: TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
-                        ),
-                      ),
-                    const Spacer(),
-                    _buildNextButton(),
                   ],
                 ),
               ),
@@ -605,111 +1061,39 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     );
   }
 
-  Widget _buildPhysicalInput(String label, TextEditingController controller, String unit, IconData icon, Color iconBg) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-            child: Icon(icon, color: Colors.black54),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    SizedBox(
-                      width: 80,
-                      child: Semantics(
-                        label: '$label ($unit)',
-                        textField: true,
-                        child: TextField(
-                          controller: controller,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-                          decoration: const InputDecoration(
-                            hintText: '00.0',
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          onChanged: (val) {
-                            setState(() {});
-                            if (label == 'Mevcut Kilo' || label == 'Boy') {
-                              _calculateTargetWeight();
-                            } else if (label == 'Hedef Kilo') {
-                              _userChangedTargetWeight = true;
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4.0),
-                      child: Text(unit, style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _userChangedTargetWeight = false;
-  bool _isAutoTargetCalculated = false;
-
   void _calculateTargetWeight() {
-    if (_userChangedTargetWeight) return; // Kullanıcı kendisi girdiyse bozma
-
-    final h = double.tryParse(_heightController.text.trim());
-    if (h != null && h > 0) {
-      // Standart BMI=22 hedefi
-      final hMeters = h / 100;
-      final target = 22 * hMeters * hMeters;
-      _targetWeightController.text = target.toStringAsFixed(1);
-      _isAutoTargetCalculated = true;
-    } else {
-      _isAutoTargetCalculated = false;
+    final hCm = _isMetric ? _heightValue : _heightValue * 2.54;
+    if (hCm > 0) {
+      final hMeters = hCm / 100;
+      final targetKg = _maxIdealBmi * hMeters * hMeters;
+      
+      if (_isMetric) {
+        _targetWeightController.text = targetKg.toStringAsFixed(1);
+      } else {
+        // Convert kg to lbs
+        final targetLbs = targetKg * 2.20462;
+        _targetWeightController.text = targetLbs.toStringAsFixed(0);
+      }
     }
   }
 
   Widget _buildBMIIndicator() {
-    final w = double.tryParse(_weightController.text.trim());
-    final h = double.tryParse(_heightController.text.trim());
+    final hCm = _isMetric ? _heightValue : _heightValue * 2.54;
+    final wKg = _isMetric ? _weightValue : _weightValue * 0.453592;
     
-    if (w == null || h == null || h <= 0) return const SizedBox.shrink();
+    if (hCm <= 0 || wKg <= 0) return const SizedBox.shrink();
 
-    final bmi = w / ((h / 100) * (h / 100));
+    final bmi = wKg / ((hCm / 100) * (hCm / 100));
     String status = '';
     Color color = Colors.grey;
 
-    if (bmi < 18.5) {
+    if (bmi < _underweightBmiLimit) {
       status = 'Zayıf';
       color = Colors.blue;
-    } else if (bmi < 25) {
+    } else if (bmi < _normalBmiLimit) {
       status = 'Normal';
       color = Colors.green;
-    } else if (bmi < 30) {
+    } else if (bmi < _overweightBmiLimit) {
       status = 'Fazla Kilolu';
       color = Colors.orange;
     } else {
@@ -741,6 +1125,68 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
               Text(status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
             ],
           )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTargetWeightInput() {
+    final String unitW = _isMetric ? 'kg' : 'lbs';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.orange.shade100, shape: BoxShape.circle),
+            child: const Icon(Icons.flag, color: Colors.black54),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'HEDEF KİLO',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    SizedBox(
+                      width: 100,
+                      child: TextField(
+                        controller: _targetWeightController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                        decoration: const InputDecoration(
+                          hintText: '00.0',
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      unitW,
+                      style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -964,6 +1410,208 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
           SizedBox(width: 8),
           Icon(Icons.arrow_forward, color: AppColors.white, size: 20),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RULER PICKER WIDGET
+// ─────────────────────────────────────────────────────────────────────────────
+class RulerPicker extends StatefulWidget {
+  final double minValue;
+  final double maxValue;
+  final double initialValue;
+  final String unit;
+  final double step;
+  final ValueChanged<double> onChanged;
+
+  const RulerPicker({
+    super.key,
+    required this.minValue,
+    required this.maxValue,
+    required this.initialValue,
+    required this.unit,
+    required this.onChanged,
+    this.step = 1.0,
+  });
+
+  @override
+  State<RulerPicker> createState() => _RulerPickerState();
+}
+
+class _RulerPickerState extends State<RulerPicker> {
+  late final ScrollController _scrollController;
+  late double _currentValue;
+  final double _itemWidth = 16.0; // Tick spacing
+
+  @override
+  void initState() {
+    super.initState();
+    _currentValue = widget.initialValue;
+    final initialOffset = ((widget.initialValue - widget.minValue) / widget.step) * _itemWidth;
+    _scrollController = ScrollController(initialScrollOffset: initialOffset);
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final offset = _scrollController.offset;
+    final index = (offset / _itemWidth).round();
+    final itemCount = ((widget.maxValue - widget.minValue) / widget.step).round();
+    final clampedIndex = index.clamp(0, itemCount);
+    final newValue = widget.minValue + (clampedIndex * widget.step);
+    
+    if (newValue != _currentValue) {
+      setState(() {
+        _currentValue = newValue;
+      });
+      widget.onChanged(newValue);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant RulerPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.minValue != widget.minValue ||
+        oldWidget.maxValue != widget.maxValue ||
+        widget.initialValue != _currentValue ||
+        oldWidget.unit != widget.unit) {
+      _currentValue = widget.initialValue;
+      final initialOffset = ((widget.initialValue - widget.minValue) / widget.step) * _itemWidth;
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(initialOffset);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itemCount = ((widget.maxValue - widget.minValue) / widget.step).round() + 1;
+    
+    return SizedBox(
+      height: 64,
+      width: double.infinity,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final centerPadding = constraints.maxWidth / 2;
+          
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              // Ruler Ticks list
+              NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollEndNotification) {
+                    final offset = _scrollController.offset;
+                    final index = (offset / _itemWidth).round();
+                    final targetOffset = index * _itemWidth;
+                    
+                    if ((offset - targetOffset).abs() > 0.1) {
+                      Future.microtask(() {
+                        if (_scrollController.hasClients) {
+                          _scrollController.animateTo(
+                            targetOffset,
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      });
+                    }
+                  }
+                  return false;
+                },
+                child: ListView.builder(
+                  controller: _scrollController,
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.symmetric(horizontal: centerPadding - (_itemWidth / 2)),
+                  itemCount: itemCount,
+                  itemBuilder: (context, index) {
+                    final value = widget.minValue + (index * widget.step);
+                    final isMajor = (value % (widget.unit == 'cm' || widget.unit == 'in' ? 5 : 5.0) == 0);
+                    
+                    return SizedBox(
+                      width: _itemWidth,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: isMajor ? 2.0 : 1.0,
+                            height: isMajor ? 32.0 : 18.0,
+                            decoration: BoxDecoration(
+                              color: isMajor ? Colors.grey.shade400 : Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              // Fade Gradients
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 64,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).scaffoldBackgroundColor,
+                        Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: 64,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0),
+                        Theme.of(context).scaffoldBackgroundColor,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Center Indicator
+              Container(
+                width: 3.0,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

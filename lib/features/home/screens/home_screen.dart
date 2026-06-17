@@ -46,6 +46,7 @@ import '../../calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../../calorie_tracker/providers/calorie_provider.dart';
 import '../../calorie_tracker/widgets/food_search_sheet.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/motivation_widget.dart';
 import '../widgets/daily_success_ring.dart';
 import '../widgets/vp_pulse_card.dart';
@@ -68,6 +69,34 @@ class _HomeScreenState extends State<HomeScreen> {
   Stream<List<DailyRoutineModel>>? _routinesStream;
   Future<int>? _riskCountFuture;
   String? _lastUserId;
+  DateTime? _lastSeenActivations;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastSeenActivations();
+  }
+
+  Future<void> _loadLastSeenActivations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ms = prefs.getInt('last_seen_activations');
+    if (ms != null) {
+      setState(() {
+        _lastSeenActivations = DateTime.fromMillisecondsSinceEpoch(ms);
+      });
+    }
+  }
+
+  Future<void> _markActivationsAsSeen() async {
+    final now = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('last_seen_activations', now.millisecondsSinceEpoch);
+    if (mounted) {
+      setState(() {
+        _lastSeenActivations = now;
+      });
+    }
+  }
 
   /// Özel gün, streak ve saate göre selamlama metni döndürür.
   /// [firstName] boşsa sadece "Merhaba!" döner.
@@ -168,15 +197,84 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: isCustomer
           ? null
           : AppBar(
-              title: const Text('HerbaForm Panel'),
+              toolbarHeight: 66,
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Builder(
+                    builder: (context) {
+                      final rawName = (userProfile.name?.isNotEmpty ?? false) ? userProfile.name! : (authProvider.firebaseUser?.email?.split('@')[0] ?? '');
+                      final firstName = rawName.trim().split(' ').first;
+                      return Text(
+                        'Merhaba, $firstName',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 2),
+                  Builder(
+                    builder: (context) {
+                      final now = DateTime.now();
+                      final totalDays = DateTime(now.year, now.month + 1, 0).day;
+                      final daysLeft = totalDays - now.day;
+                      final dateText = DateFormat('d MMMM', 'tr_TR').format(now);
+                      final tail = daysLeft > 0
+                          ? 'Ay sonuna $daysLeft gün'
+                          : 'Ayın son günü';
+                      return Text(
+                        '$dateText · $tail',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white70,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      );
+                    },
+                  ),
+                ],
+              ),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.person_outline),
-                  tooltip: 'Profilim',
-                  onPressed: () {
-                    context.goNamed(ProfileScreen.routeName);
-                  },
+                Builder(
+                  builder: (context) {
+                    final recentActivations = customerProvider.recentlyActivatedCustomers;
+                    final newActivations = recentActivations.where((c) {
+                      if (_lastSeenActivations == null) return true;
+                      final activated = c.activatedAt?.toDate();
+                      if (activated == null) return false;
+                      return activated.isAfter(_lastSeenActivations!);
+                    }).toList();
+                    final notificationCount = newActivations.length;
+                    return Center(
+                      child: Badge(
+                        isLabelVisible: notificationCount > 0,
+                        backgroundColor: AppColors.error,
+                        label: Text(
+                          notificationCount > 9 ? '9+' : '$notificationCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
+                          onPressed: () {
+                            if (notificationCount > 0) {
+                              _markActivationsAsSeen();
+                            }
+                            _showRecentActivationSheet(context, recentActivations);
+                          },
+                        ),
+                      ),
+                    );
+                  }
                 ),
+                const SizedBox(width: 8),
               ],
             ),
       body: Consumer<HomeProvider>(
@@ -706,7 +804,6 @@ class _HomeScreenState extends State<HomeScreen> {
   ) {
     final monthlyVPTarget = userProfile?.monthlyVPTarget ?? 0;
     final vpEarnedThisMonth = orderProvider.totalVpEarnedThisMonth;
-    final recentActivations = customerProvider.recentlyActivatedCustomers;
 
     return RefreshIndicator(
       onRefresh: () => _refreshConsultantDashboard(userProfile),
@@ -716,14 +813,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _buildStitchHeader(
-            context,
-            userProfile,
-            authProvider,
-            recentActivations.length,
-            recentActivations,
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           VpPulseCard(
             vpEarned: vpEarnedThisMonth,
             vpTarget: monthlyVPTarget,
@@ -1878,106 +1968,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStitchHeader(
-    BuildContext context,
-    UserProfileModel? userProfile,
-    AuthProvider authProvider,
-    int notificationCount,
-    List<CustomerModel> recentActivations,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              // Distributor avatar — gerçek profil fotoğrafı veya baş harf
-              _buildDistributorAvatar(context, userProfile),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Builder(
-                    builder: (context) {
-                      final rawName = userProfile?.name ?? authProvider.firebaseUser?.email?.split('@')[0] ?? '';
-                      final firstName = rawName.trim().split(' ').first;
-                      return Text(
-                        'Merhaba, $firstName',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 2),
-                  Builder(
-                    builder: (context) {
-                      final now = DateTime.now();
-                      final totalDays = DateTime(now.year, now.month + 1, 0).day;
-                      final daysLeft = totalDays - now.day;
-                      final dateText = DateFormat('d MMMM', 'tr_TR').format(now);
-                      final tail = daysLeft > 0
-                          ? 'Ay sonuna $daysLeft gün'
-                          : 'Ayın son günü';
-                      return Text(
-                        '$dateText · $tail',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-          Stack(
-            children: [
-              InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () => _showRecentActivationSheet(context, recentActivations),
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Icon(Icons.notifications_outlined, color: Colors.grey.shade700, size: 22),
-                ),
-              ),
-              if (notificationCount > 0)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      borderRadius: BorderRadius.all(Radius.circular(10)),
-                    ),
-                    child: Text(
-                      notificationCount > 9 ? '9+' : '$notificationCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildActionFilters(BuildContext context) {
     final homeProvider = context.watch<HomeProvider>();
     final active = homeProvider.activeFilter;
@@ -2170,8 +2160,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Follow-up'ı yarına (24 saat ileri) erteler. SnackBar üzerinden
-  /// "Geri al" eylemiyle reversible.
   Future<void> _snoozeFollowUp(
     BuildContext context,
     ScheduledFollowUpModel task,
@@ -2200,6 +2188,37 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erteleme hatası: $e')),
+      );
+    }
+  }
+
+  /// Follow-up'ı tamamlanmış olarak işaretler.
+  Future<void> _completeFollowUp(
+    BuildContext context,
+    ScheduledFollowUpModel task,
+  ) async {
+    final firestore = context.read<FirestoreService>();
+    try {
+      await firestore.markScheduledFollowUpAsCompleted(task.id);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Takip tamamlandı.'),
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Geri al',
+            onPressed: () async {
+              try {
+                await firestore.scheduledFollowUpsRef().doc(task.id).update({'isCompleted': false});
+              } catch (_) {/* sessiz */}
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tamamlama hatası: $e')),
       );
     }
   }
@@ -2338,6 +2357,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.check_circle_outline),
+                      color: AppColors.primary,
+                      tooltip: 'Tamamlandı olarak işaretle',
+                      onPressed: () => _completeFollowUp(context, task),
                     ),
                   ],
                 ),
@@ -2878,32 +2903,54 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         return SafeArea(
-          child: ListView.separated(
-            shrinkWrap: true,
-            itemCount: recentActivations.length,
-            separatorBuilder: (_, separatorIndex) =>
-                const Divider(height: 1),
-            itemBuilder: (sheetContext, index) {
-              final customer = recentActivations[index];
-              final activatedAt = customer.activatedAt?.toDate();
-              return ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-                title: Text('${customer.firstName} ${customer.lastName}'.trim()),
-                subtitle: Text(
-                  activatedAt == null
-                      ? 'Aktive tarihi yok'
-                      : 'Aktive oldu: ${DateFormat('dd.MM.yyyy HH:mm').format(activatedAt)}',
+          child: Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                  child: Text(
+                    'Yeni Aktive Olan Müşteriler (${recentActivations.length})',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.nightSky,
+                    ),
+                  ),
                 ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  context.goNamed(
-                    CustomerDetailScreen.routeName,
-                    extra: customer,
-                  );
-                },
-              );
-            },
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: recentActivations.length,
+                    separatorBuilder: (_, separatorIndex) =>
+                        const Divider(height: 1),
+                    itemBuilder: (sheetContext, index) {
+                      final customer = recentActivations[index];
+                      final activatedAt = customer.activatedAt?.toDate();
+                      return ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                        title: Text('${customer.firstName} ${customer.lastName}'.trim()),
+                        subtitle: Text(
+                          activatedAt == null
+                              ? 'Aktive tarihi yok'
+                              : 'Aktive oldu: ${DateFormat('dd.MM.yyyy HH:mm').format(activatedAt)}',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.of(sheetContext).pop();
+                          context.goNamed(
+                            CustomerDetailScreen.routeName,
+                            extra: customer,
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

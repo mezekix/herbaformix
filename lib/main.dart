@@ -19,24 +19,34 @@ import 'services/routine_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Olabildiğince hızlı ve stabil başlatma: 
+  // Sadece Firebase başlatılmasını bekliyoruz. Deadlock riskine karşı 15 sn timeout.
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(const Duration(seconds: 15));
+  } catch (e) {
+    debugPrint('Firebase başlatma hatası: $e');
+  }
 
-  // Firestore offline persistence — okumalar cache'lenir, ağ kesintisinde de çalışır.
-  // Mobilde varsayılan açık; web'de IndexedDB tabanlı. cacheSize sınırsız.
+  // Firestore offline persistence
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
-  // FCM background handler kaydı — Firebase.initializeApp sonrası, runApp öncesi.
+  // FCM background handler kaydı
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   // Tarih formatlaması hızlıdır, paralel çalışabilir — tr ve en için yükle
   unawaited(initializeDateFormatting('tr_TR', null));
   unawaited(initializeDateFormatting('en_US', null));
-  // runApp'ı hemen çağır — kullanıcı beyaz ekranda beklemesin
+  
+  // runApp'ı hemen çağır — splash ve uygulamanın doğrudan gelmesini sağla
   runApp(const MyAppInitializer());
-  // Bildirim ve FCM servisleri arka planda başlasın (lazy init zaten mevcut)
+  
+  // Bildirim ve FCM servisleri arka planda başlasın
   unawaited(NotificationService().initialize());
   unawaited(FcmService().initialize());
 }
