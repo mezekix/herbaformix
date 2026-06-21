@@ -7,6 +7,7 @@ import '../../../core/app_colors.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/products/providers/product_provider.dart';
 import '../../../models/user_role.dart';
+import '../../../services/firestore_service.dart';
 import '../models/program_editor_args.dart';
 import '../models/program_model.dart';
 import '../providers/program_provider.dart';
@@ -194,12 +195,24 @@ class ProgramSummaryStep extends StatelessWidget {
                     );
 
                     if (success && context.mounted) {
-                      final userProfile = authProvider.userProfile;
-                      if (!isDistributorMode && userProfile != null) {
-                        final updated = userProfile.copyWith(
-                          programStartDate: DateTime.now(),
-                        );
-                        await authProvider.updateUserProfile(updated);
+                      final firestoreService = context.read<FirestoreService>();
+                      try {
+                        final profile = await firestoreService.getUserProfile(userId);
+                        if (profile != null) {
+                          final updated = profile.copyWith(
+                            programStartDate: DateTime.now(),
+                            userGoal: provider.selectedGoal,
+                            weight: provider.currentWeight ?? profile.weight,
+                            targetWeight: provider.targetWeight ?? profile.targetWeight,
+                          );
+                          await firestoreService.setUserProfile(updated);
+                          
+                          if (!isDistributorMode && userId == authProvider.firebaseUser?.uid) {
+                            await authProvider.updateUserProfile(updated);
+                          }
+                        }
+                      } catch (e) {
+                        debugPrint('Kullanıcı profili güncellenirken hata: $e');
                       }
 
                       if (context.mounted) {

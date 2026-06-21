@@ -64,6 +64,16 @@ class AuthService {
     }
   }
 
+  // Anonim (Misafir) olarak giriş
+  Future<UserCredential?> signInAnonymously() async {
+    try {
+      return await _firebaseAuth.signInAnonymously();
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Anonim giriş hatası: ${e.message}');
+      return null;
+    }
+  }
+
   /// Google sign-in akışını tetikler ve sadece [AuthCredential]'ı döner —
   /// signIn yapmaz. Reauth (örn. hesap silme öncesi kimlik doğrulama) için
   /// kullanılır. Kullanıcı seçimi iptal ederse `null` döner.
@@ -111,6 +121,15 @@ class AuthService {
       await _googleSignIn.signOut();
     } catch (e) {
       debugPrint('Google Sign-Out hatası: $e');
+    }
+  }
+
+  /// Sadece Google oturumunu kapatır (Firebase oturumuna dokunmaz).
+  Future<void> signOutGoogleOnly() async {
+    try {
+      await _googleSignIn.signOut();
+    } catch (e) {
+      debugPrint('Google Sign-Out hatası (signOutGoogleOnly): $e');
     }
   }
 

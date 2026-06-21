@@ -21,7 +21,12 @@ class UserProfileRepository {
       );
 
   Future<void> setUserProfile(UserProfileModel userProfile) async {
-    await ref.doc(userProfile.id).set(userProfile, SetOptions(merge: true));
+    await ref.doc(userProfile.id).set(userProfile, SetOptions(merge: true)).timeout(
+      const Duration(seconds: 2),
+      onTimeout: () {
+        debugPrint('[UserProfileRepository] setUserProfile timeout - offline buffered');
+      },
+    );
   }
 
   Future<UserProfileModel?> getUserProfile(String userId) async {
@@ -74,7 +79,12 @@ class UserProfileRepository {
   }
 
   Future<void> saveEarnedBadges(String userId, List<String> badgeIds) async {
-    await ref.doc(userId).update({'earnedBadges': badgeIds});
+    await ref.doc(userId).update({'earnedBadges': badgeIds}).timeout(
+      const Duration(seconds: 2),
+      onTimeout: () {
+        debugPrint('[UserProfileRepository] saveEarnedBadges timeout - offline buffered');
+      },
+    );
   }
 
   Future<int?> getWaterDailyGoal(String userId) async {

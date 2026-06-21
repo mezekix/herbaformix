@@ -19,6 +19,8 @@ import '../../water_tracker/providers/water_provider.dart';
 import '../../water_tracker/screens/water_tracker_screen.dart';
 import '../widgets/motivation_widget.dart';
 import '../widgets/daily_success_ring.dart';
+import '../../program/services/notification_service.dart';
+import '../../../services/fcm_service.dart';
 
 class DistributorProductUsageScreen extends StatefulWidget {
   static const String routeName = 'distributor-usage';
@@ -30,6 +32,21 @@ class DistributorProductUsageScreen extends StatefulWidget {
 
 class _DistributorProductUsageScreenState extends State<DistributorProductUsageScreen> {
   Stream<List<DailyRoutineModel>>? _routinesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _requestNotificationPermissions();
+  }
+
+  Future<void> _requestNotificationPermissions() async {
+    try {
+      await NotificationService().requestPermission();
+      await FcmService().requestPermission();
+    } catch (e) {
+      debugPrint('[DistributorUsage] Notification permission error: $e');
+    }
+  }
 
   @override
   void didChangeDependencies() {

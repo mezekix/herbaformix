@@ -34,7 +34,7 @@ class UserProfileModel {
 
   // Müşteri Profil Ayarları
   final DateTime? birthDate;
-  final String? gender; // "Kadın" | "Erkek" | "Belirtmek İstemiyorum"
+  final String? gender; // "Kadın" | "Erkek"
   final String? healthNotes; // max 1000 karakter
   final String? allergies; // max 1000 karakter
   final String? medications; // max 1000 karakter

@@ -9,12 +9,13 @@ Bu döküman, **Herbaformix** sağlıklı yaşam ve beslenme takip platformunun 
 | Alan | Değer |
 |---|---|
 | **Proje Adı** | Herbaformix |
-| **Sürüm** | v1.1.0 |
+| **Sürüm** | v1.2.0 |
 | **Hedef Kitle** | Bağımsız Distribütörler (Yaşam Koçları) ve Onların Kayıtlı Müşterileri (Danışanlar) |
 | **Geliştirme Platformu** | Flutter (Android, iOS ve Web) |
 | **Veri Tabanı ve Altyapı** | Firebase (Auth, Firestore, Cloud Storage, Hosting) |
-| **Lokalizasyon Dili** | Türkçe (`tr_TR`) |
-| **Durum Yönetimi** | Provider + ChangeNotifier |
+| **Medya Yönetimi** | Cloudinary (f_auto, q_auto, videoPoster) |
+| **Lokalizasyon Dili** | Çoklu Dil Desteği (Türkçe `tr_TR` varsayılan, `l10n` altyapısı) |
+| **Durum Yönetimi** | Provider + ChangeNotifier (Immutable State + copyWith) |
 | **Navigasyon** | GoRouter (declarative routing) |
 
 ---
@@ -24,7 +25,7 @@ Bu döküman, **Herbaformix** sağlıklı yaşam ve beslenme takip platformunun 
 Herbaformix, sağlıklı beslenme ve aktif yaşam tarzını benimseyen bireyler ile onlara rehberlik eden yaşam koçlarını (Distribütörleri) bir araya getiren mobil öncelikli bir ekosistemdir.
 
 Uygulama iki temel sorunu çözer:
-1. **Danışanlar (Müşteriler):** Günlük su tüketimlerini, öğünlerini, Herbalife ürün kullanımlarını ve kilo değişimlerini disiplinli bir şekilde takip etmekte zorlanırlar.
+1. **Danışanlar (Müşteriler):** Günlük su tüketimlerini, öğünlerini, Herbalife ürün kullanımlarını, egzersizlerini ve kilo değişimlerini disiplinli bir şekilde takip etmekte zorlanırlar.
 2. **Yaşam Koçları (Distribütörler):** Danışanlarının günlük rutinlerini, beslenme planlarını ve fiziksel gelişimlerini (ölçüler, fotoğraflar) tek tek WhatsApp veya Excel üzerinden takip etmekte zorlanırlar.
 
 **Vizyon:** Danışanların kendi kişisel hedeflerine ulaşırken eğlenceli ve oyunlaştırılmış bir arayüzle rutinlerini takip edebildiği; yaşam koçlarının ise tüm müşteri portföyünü, siparişleri, ölçümleri ve programları tek bir CRM panelinden profesyonelce yönetebildiği hepsi bir arada (All-in-One) bir platform oluşturmaktır.
@@ -51,8 +52,8 @@ graph TD
     B2 --> D5[Danışan Gelişim Takibi: Grafik + Ölçüm + Fotoğraf]
     
     C --> C1[Guided Onboarding / Oryantasyon]
-    C --> C2[Günlük Su & Kalori Takibi]
-    C --> C3[Aktif Program & Akıllı Hatırlatıcılar]
+    C --> C2[Günlük Su, Egzersiz & Kalori Takibi]
+    C --> C3[Aktif Program, Tarifler & Akıllı Hatırlatıcılar]
     C --> C4[Rozet & Oyunlaştırma Sistemi]
     C --> C5[Gelişim Takibi: Ölçüm Girişi + Fotoğraf + Grafik + Hedef]
 ```
@@ -67,7 +68,7 @@ graph TD
 
 **Distribütör Yetkileri:**
 - **Müşteri Davet Sistemi:** Benzersiz davet kodları oluşturarak yeni müşterilerin kendi hesaplarına otomatik bağlanmasını sağlar.
-- **CRM & Müşteri Listesi:** Aktif danışanlarının listesini görür, arama ve filtreler uygulayabilir. Her müşterinin detay ekranında gelişim grafiği, ölçüm geçmişi, su/kalori takibi ve risk analizi görünür.
+- **CRM & Müşteri Listesi:** Aktif danışanlarının listesini görür, arama ve filtreler uygulayabilir. Her müşterinin detay ekranında gelişim grafiği, ölçüm geçmişi, su/kalori/egzersiz takibi ve risk analizi görünür.
 - **Akıllı Program Hazırlama:** Her bir müşterinin hedefine özel program sihirbazını kullanarak öğün planı tanımlar.
 - **Gelişim İzleme:** Müşterilerin girdiği kilo, bel, kalça, göğüs, kol, bacak, yağ oranı ve kas kütlesi ölçümlerini grafiksel olarak inceler.
 - **Sipariş Yönetimi:** Müşteriler adına sipariş oluşturur veya müşterilerin ürün isteklerini takip eder.
@@ -75,11 +76,12 @@ graph TD
 
 ### 2.2. Müşteri (Danışan)
 
-- **Kişiselleştirilmiş Oryantasyon:** İlk girdiğinde yaş, boy, kilo, hedef kilo, cinsiyet, sağlık hedefleri, uyku/uyanma/öğle yemeği saatleri ve sağlık notlarını belirten sihirbazı tamamlar.
+- **Kişiselleştirilmiş Oryantasyon:** İlk girdiğinde yaş, boy, kilo, hedef kilo, cinsiyet, sağlık hedefleri (Kilo Verme, Sağlıklı Yaşam, Kilo Alma, Cilt Bakımı), uyku/uyanma/öğle yemeği saatleri ve sağlık notlarını belirten sihirbazı tamamlar.
 - **Rutin Takipçisi:** Koçu tarafından kendisine atanan beslenme ve ürün programını saat bazlı görür. Her adımı "tamamlandı" olarak işaretler.
-- **Su & Kalori Takibi:** Günlük su tüketim hedefine ulaşmak için hızlı ekleme butonlarını kullanır; yediği besinlerin kalorilerini kaydeder. Su hedefi hava durumu ve egzersiz seviyesine göre dinamik olarak hesaplanır.
+- **Su, Kalori & Egzersiz Takibi:** Günlük su tüketim hedefine ulaşmak için hızlı ekleme butonlarını kullanır; yediği besinlerin kalorilerini kaydeder ve günlük egzersiz görevini tamamlar. Su hedefi hava durumu, egzersiz seviyesi ve Herbalife ürün kullanımına göre dinamik olarak hesaplanır.
 - **Oyunlaştırma:** Belirli hedeflere ulaştıkça (ilk ölçüm, 7/30 gün seri, kilo kayıpları, hedefe ulaşma vb.) dijital rozetler kazanır ve anlık snackbar bildirimi alır.
-- **Gelişim Takibi:** Kilo ve vücut ölçümlerini girer (bel, kalça, göğüs, kol, bacak, yağ oranı, kas kütlesi), gelişim fotoğraflarını yükler, önce/sonra karşılaştırması yapar, hedef ilerleme çubuğunu izler, verilerini CSV olarak dışa aktarır.
+- **Gelişim Takibi:** Kilo ve vücut ölçümlerini girer (bel, kalça, göğüs, kol, bacak, yağ oranı, kas kütlesi), gelişim fotoğraflarını yükler, dikey slider ile önce/sonra karşılaştırması yapar, hedef ilerleme çubuğunu izler, verilerini CSV olarak dışa aktarır.
+- **Sağlıklı Yemek Tarifleri:** Herbalife ürünleriyle zenginleştirilmiş sağlıklı yemek tariflerini inceler, yapılış videolarını izler ve besin değerlerini kontrol eder.
 
 ---
 
@@ -99,17 +101,19 @@ graph TD
 İlk kez giriş yapan danışanlar için zorunlu 5 adımlı sihirbaz:
 1. **Adım 1 — Hoş Geldin:** Karşılama mesajı ve ilerleme göstergesi.
 2. **Adım 2 — Kişisel Bilgiler:** İsim, yaş, telefon numarası.
-3. **Adım 3 — Sağlık Hedefi:** Kilo Verme (`weight_loss`), Sağlıklı Yaşam (`healthy_living`), Kilo Alma (`weight_gain`) seçimi.
-4. **Adım 4 — Mevcut Durum:** Mevcut kilo (kg), boy (cm) ve **hedef kilo (kg)** girişi.
+3. **Adım 3 — Sağlık Hedefi:** Kilo Verme (`weight_loss`), Sağlıklı Yaşam (`healthy_living`), Kilo Alma (`weight_gain`), Cilt Bakımı (`skin_care`) seçimi.
+4. **Adım 4 — Mevcut Durum:** Mevcut kilo, boy ve **hedef kilo** girişi.
 5. **Adım 5 — Günlük Yaşam:** Uyanma saati, öğle yemeği saati, uyku saati.
 
-- Bu bilgiler doldurulmadan ana sayfaya geçiş engellenir (`GoRouter` redirect mantığı).
-- `userGoal` alanı (`weight_loss` / `healthy_living` / `weight_gain`) renk mantığını ve hedef bazlı gösterimleri etkiler.
+- **Birim Seçimi:** Kullanıcı metric (kg, cm) veya imperial (lbs, inç) birim sistemi arasında geçiş yapabilir; sistem değerleri otomatik dönüştürür.
+- **Bildirim İzni Sorgulama:** Sihirbaz sonunda kullanıcıya hatırlatıcıların önemi hakkında bir Rationale Dialog (Açıklama İletişim Kutusu) gösterilir. Onay verilirse yerel bildirim ve FCM push izinleri istenir.
+- **Seçmeli Program Oluşturma:** Onboarding sonunda otomatik olarak "saçma" bir program oluşturmak yerine kullanıcıya "Şimdi program hazırlamak ister misin?" seçeneği sunulur.
+- Onboarding tamamlanmadan ana sayfaya geçiş engellenir (`GoRouter` redirect).
 
 ### 3.3. Akıllı Program Sihirbazı (Program Wizard)
 Distribütörlerin müşterilerine özel günlük beslenme programı hazırlamasını sağlayan 4 adımlı sihirbaz:
 
-1. **Adım 1: Hedef Belirleme:** Kilo verme, kilo alma veya sağlıklı yaşam hedefi seçilir.
+1. **Adım 1: Hedef Belirleme:** Kilo verme, kilo alma, cilt bakımı veya sağlıklı yaşam hedefi seçilir.
 2. **Adım 2: Kilo Parametreleri:** Başlangıç kilosu ve hedef kilo tanımlanır. Sistem, hedefe göre önerilen minimum program süresini (ay bazında) otomatik hesaplar.
 3. **Adım 3: Öğün ve Ürün Planlama:**
    - Günlük ana ve ara öğün slotları (`MealSlot`) saatleriyle birlikte listelenir.
@@ -124,35 +128,69 @@ Distribütörlerin müşterilerine özel günlük beslenme programı hazırlamas
 - `MealProduct`: `productId`, `productName`, `quantity`.
 
 ### 3.4. Akıllı Bildirim ve Su Hatırlatıcı Servisi
-Program kaydedildiğinde veya güncellendiğinde arka planda yerel bildirimler (`flutter_local_notifications`) otomatik olarak zamanlanır. Ayrıca Firebase Cloud Messaging (FCM) altyapısı entegre edilecektir:
+Program kaydedildiğinde veya güncellendiğinde arka planda yerel bildirimler (`flutter_local_notifications`) otomatik olarak zamanlanır. Ayrıca Firebase Cloud Messaging (FCM) altyapısı entegre edilmiştir:
 - **Öğün Alarmları:** Her öğünün saati geldiğinde özelleştirilmiş yerel bildirim gönderilir.
 - **30 Dakika Öncesi Su Alarmları:** Her ana normal öğünden tam 30 dakika önce su içme bildirimi zamanlanır.
 - **Push Bildirimleri (FCM):** Distribütörün yeni bir program hazırlaması, takip hatırlatması girmesi veya motivasyon mesajı göndermesi durumunda danışana anlık bildirim gider.
-- **Token Senkronizasyonu:** Uygulama açılışında bildirim izni sorgulanır. İzin onaylandığında, cihazın güncel FCM token'ı `UserProfileModel.fcmToken` alanına yazılır.
+- **Token Senkronizasyonu:** Uygulama açılışında veya onboarding sonrasında bildirim izni sorgulanır. İzin onaylandığında, cihazın güncel FCM token'ı `UserProfileModel.fcmToken` alanına yazılır.
 
 ### 3.5. Günlük Takip Modülleri
 
 #### 3.5.1. Su Takipçisi (`WaterTrackerScreen`)
 - Gerçek zamanlı Firestore senkronizasyonu ile çalışır.
 - Günlük su hedefi dinamik olarak hesaplanır (`WaterCalculationEngine`):
-  - Baz su miktarı vücut ağırlığına göre belirlenir.
-  - Egzersiz seviyesi (sedentary, light, moderate, intense) eklenir.
-  - Hava durumu verisi (sıcaklık, nem) OpenWeatherMap API'den çekilerek hesaba katılır.
+  - Baz su miktarı vücut ağırlığına göre belirlenir (Kilo * 33 ml).
+  - Cinsiyete göre düzeltilir (Kadın çarpanı: 0.9). Gebelik/Emzirme durumlarında ekleme yapılır (+ pregnancyAdditionMl / + breastfeedingAdditionMl).
+  - Yaş çarpanı eklenir (≤30, 31-55, >55 yaş çarpanları).
+  - Egzersiz seviyesine göre ekleme yapılır (Sedentary, Light, Moderate, Heavy).
+  - Hava durumu (sıcaklık) ve nem oranı OpenWeatherMap API'den çekilerek hesaba katılır.
+  - Herbalife Ürün Kullanımı: Programdaki Shake (+ productEffectShake), Aloe (+ productEffectAloe), Çay (+ productEffectTea) ve Fiber (+ productEffectFiber) kullanımları su hedefini artırır. Yoğun takviye programlarında ekstra ekleme yapılır.
+  - Diyabet hastaları için su hedefi otomatik artırılır (+ healthEffectDiabetesMl).
 - **Hata Toleransı ve Fallback (Graceful Degradation):**
-  - OpenWeatherMap API çağrı limiti aşıldığında, ağ bağlantısı olmadığında (offline mod) veya API anahtarı hatası alındığında sistem çökmeyecektir.
-  - Fallback durumunda hava sıcaklığı varsayılan olarak 22°C (oda sıcaklığı) ve nem oranı %50 kabul edilerek sadece vücut ağırlığı ve egzersiz bazlı "Standart Su Hedefi" hesaplanır.
+  - OpenWeatherMap API çağrı limiti aşıldığında, ağ bağlantısı olmadığında veya API anahtarı hatası alındığında fallback olarak hava sıcaklığı 22°C ve nem oranı %50 kabul edilerek standart formülle "Standart Su Hedefi" hesaplanır.
 - Kullanıcı tek tıkla su ekleyebilir (+250ml, +500ml) veya özel miktar girebilir.
 - Su günlüğü `/users/{userId}/water_logs/{YYYY-MM-DD}` koleksiyonunda tutulur.
 - Su özet verisi `/users/{userId}/waterSummaries/{YYYY-MM-DD}` koleksiyonunda tutulur.
 
 #### 3.5.2. Kalori Takipçisi (`CalorieTrackerScreen`)
-- Tüketilen yiyeceklerin adı ve kalori değeri girilir (`MealModel`).
-- Günlük toplam alınan kalori hedef limitine göre renk değiştirerek görselleştirilir.
-- **Bilinen Kısıtlama:** `CalorieProvider` şu an yerel state'te çalışmaktadır; Firestore'a kalıcı kayıt yapılmamaktadır.
+- Günlük alınan yiyeceklerin adı, porsiyonu ve kalori değeri girilir.
+- **Otomatik Hedef Hesaplama Motoru (`CalorieCalculationEngine`):**
+  - **Mifflin-St Jeor Formülü** ile Bazal Metabolizma Hızı (BMR) hesaplanır:
+    - Erkek: `10 × weight (kg) + 6.25 × height (cm) - 5 × age (years) + 5`
+    - Kadın: `10 × weight (kg) + 6.25 × height (cm) - 5 × age (years) - 161`
+  - **TDEE Çarpanları** aktivite seviyesine göre uygulanır (Sedentary: 1.2, Light: 1.375, Moderate: 1.55, Heavy: 1.725).
+  - **Kilo Hedefi Offset'i** uygulanır (Kilo Verme: -500 kcal, Kilo Alma: +500 kcal, Koruma/Cilt Bakımı: 0 kcal).
+  - **Güvenlik Sınırları (WHO/USDA Standardı):** Kadın için minimum 1200 kcal, erkek için 1500 kcal altına düşmeyecek şekilde otomatik sınırlandırılır (maksimum limit 4000 kcal).
+- Kalori hedefine göre tüketilen enerjinin oranı dinamik renk kodlarıyla gösterilir.
+- Kalori logları `/users/{userId}/calorieLogs/{YYYY-MM-DD}` koleksiyonunda kalıcı olarak saklanır.
 
-### 3.6. Gelişim Takibi ve Fotoğraf Günlüğü
+#### 3.5.3. Egzersiz Takipçisi
+- Günlük egzersiz tamamlanma durumunu kontrol eden hafif takip modülü.
+- Kullanıcı günlük egzersiz görevini tek bir anahtarla (toggle) "Tamamlandı" olarak işaretleyebilir.
+- Veriler `/users/{userId}/daily_exercise/{YYYY-MM-DD}` dokümanında `isCompleted` (bool) ve `updatedAt` (Timestamp) olarak saklanır.
+- Egzersiz tamamlanma durumu, genel günlük başarı halkalarını (DailySuccessRing) ve rozet ilerleme serilerini dinamik olarak etkiler.
 
-#### 3.6.1. Ölçüm Girişi ve Geçmişi
+#### 3.5.4. AI Destekli Yemek & Kalori Tahmin Asistanı (Gemini Entegrasyonu)
+- Yemek veritabanında bulunmayan el yapımı veya yöresel yemekler için "AI ile Tahmin Et" akışı mevcuttur.
+- **Gemini Flash (`gemini-2.5-flash`):** Google Generative AI kütüphanesi ile hızlı, güvenli ve düşük maliyetli kalori tahminleri gerçekleştirilir.
+- **JSON Schema Kısıtlaması:** Gemini modelinin cevabı `responseMimeType: 'application/json'` ve sıkı JSON şeması ile zorunlu kılınarak uygulamanın parse hatası alması kesinlikle önlenir. Şema; temiz yemek adı (`name`), porsiyon tanımı (`servingDesc`), tahmini kalori (`calories`) ve güven skorunu (`confidence`) içerir.
+- **Güvenlik:** API anahtarı derleme zamanında `--dart-define=GEMINI_API_KEY=...` ile enjekte edilir, kaynak koda açık anahtar yazılmaz.
+- **Sistem Yönergesi (System Instructions):** Model bir Türk mutfağı beslenme uzmanı gibi davranarak sapma payını ±%25 bandında tutar. Tanınmayan veya yiyecek dışı girdiler için `calories = 0` ve `name = "bilinmiyor"` döndürerek graceful handling sağlar.
+
+### 3.6. Sağlıklı Yemek Tarifleri (Recipes)
+- Kullanıcıların Herbalife ürünlerini günlük diyetlerine sağlıklı bir şekilde entegre etmelerini sağlayan yemek tarifleri modülüdür.
+- **Video Oynatıcı Entegrasyonu:** Tariflerin yapılış videoları, video player bileşeniyle uygulama içinden izlenebilir.
+- **Cloudinary Optimizasyonu (`CloudinaryHelper`):** Medya yükünü azaltmak amacıyla Cloudinary altyapısı entegre edilmiştir. Resimler cihaz ekran genişliğine göre `w_width`, format kalitesi için `f_auto` ve `q_auto` ile optimize edilir. Videolardan otomatik poster görseli (`videoPoster`) üretilir.
+- **Stitch Tasarım Standartları:**
+  - **SliverAppBar:** Parallax efektli hero görsel ve yukarı kaydırıldığında daralıp başlığa dönüşen şık animasyon yapısı.
+  - **Malzemeler Tablosu:** Adı solda, miktarı sağda ve notu miktarının altında yer alacak şekilde özel hizalanmış yeşil noktalı (bullet) malzeme listesi.
+  - **Hazırlanış Adımları:** Yeşil dairesel numaralarla listelenen akıcı adımlar.
+  - **İpucu Kutusu:** Turuncu tonlarında arka plan ve kenarlıkla vurgulanan ipucu alanı.
+  - **Besin Değerleri Kartları:** Protein, Karbonhidrat, Yağ ve Lif değerlerini gösteren 4'lü matris kart yapısı.
+
+### 3.7. Gelişim Takibi ve Fotoğraf Günlüğü
+
+#### 3.7.1. Ölçüm Girişi ve Geçmişi
 Danışanlar düzenli aralıklarla şu ölçümleri girer:
 
 | Ölçüm | Birim | Zorunlu mu? |
@@ -170,7 +208,7 @@ Danışanlar düzenli aralıklarla şu ölçümleri girer:
 - **Ölçüm Formu (`AddMeasurementSheet`):** Kilo zorunlu, diğer ölçümler opsiyonel (açılır/kapanır bölüm). Virgül ve nokta girişi desteklenir. Geçmiş tarihli ölçüm girilebilir (DatePicker). Aynı gün zaten kayıt varsa uyarı dialogu gösterilir.
 - **Ölçüm Geçmişi Tablosu (`MeasurementsHistoryScreen`):** Tüm kayıtlar tablo görünümünde listelenir, düzenleme ve silme desteklenir. Route: `/measurements-history`.
 
-#### 3.6.2. Gelişim Grafikleri
+#### 3.7.2. Gelişim Grafikleri
 - **Genelleştirilmiş Grafik Widget'ı (`WeightChartWidget`):** `MeasurementType` enum parametresiyle her ölçüm türü için grafik çizilir:
   - `weight` (Kilo), `waist` (Bel), `hip` (Kalça), `chest` (Göğüs), `arm` (Kol), `thigh` (Bacak), `bodyFat` (Yağ Oranı), `muscleMass` (Kas Kütlesi)
 - Zaman aralığı filtreleri: 1 Hafta, 1 Ay, 3 Ay.
@@ -178,39 +216,39 @@ Danışanlar düzenli aralıklarla şu ölçümleri girer:
 - **Hedef Bazlı Renk Mantığı:** `userGoal == 'weight_loss'` → azalış yeşil / artış kırmızı; `userGoal == 'weight_gain'` → artış yeşil / azalış kırmızı.
 - Gizlilik modunda BMI gösterilir, kilo ve ölçüler `***` ile maskelenir.
 
-#### 3.6.3. Hedef İlerleme Çubuğu
+#### 3.7.3. Hedef İlerleme Çubuğu
 - Dairesel `CircularProgressIndicator` ile mevcut kilonun hedef kiloya oranını gösterir.
 - Başlangıç / Mevcut / Hedef / Kalan bilgileri listelenir.
 - İlerleme yüzdesi hesaplaması hedef tipine göre yapılır (kilo verme vs. kilo alma).
 - `%100` ulaşıldığında "Ulaşıldı!" yeşil etiketi gösterilir.
 
-#### 3.6.4. İstatistik Özet Kartı
+#### 3.7.4. İstatistik Özet Kartı
 - **Haftalık Ortalama Değişim:** kg/hafta cinsinden ortalama kilo değişim hızı.
 - **Toplam Kayıt Sayısı:** Girilen ölçüm kaydı sayısı.
 - **En İyi Hafta:** En çok ilerleme kaydedilen hafta ve miktarı.
 - Renkler hedef bazlı (azalış/artış yeşil/kırmızı).
 
-#### 3.6.5. Gelişim Fotoğrafları (`ProgressPhotosScreen`)
+#### 3.7.5. Gelişim Fotoğrafları (`ProgressPhotosScreen`)
 - "Önce" (gri tonlamalı) ve "Sonra" (renkli) fotoğraf yükleme (kamera/galeri).
 - Carousel (PageView) + dot indicator ile gezinme.
 - Tam ekran görüntüleyici (InteractiveViewer ile zoom/pan).
-- **Önce/Sonra Karşılaştırma Aracı:** Slider ile sürükle-bırak yan yana karşılaştırma. Gri tonlamalı "önce" fotoğrafı ile renkli "sonra" fotoğrafı üst üste bindirilir. Dikey çizgi + tutamak ile bölge ayarlanır. Birden fazla "sonra" fotoğrafı arasından seçim yapılabilir.
+- **Önce/Sonra Karşılaştırma Aracı:** Slider ile dikey sürükle-bırak yan yana karşılaştırma. Gri tonlamalı "önce" fotoğrafı ile renkli "sonra" fotoğrafı üst üste bindirilir. Dikey çizgi + tutamak ile bölge ayarlanır. Birden fazla "sonra" fotoğrafı arasından seçim yapılabilir.
 - **Bilinen Kısıtlama:** Fotoğraflar şu an yerel dosya sisteminde (SharedPreferences ile path saklama) tutulmaktadır. Firebase Storage entegrasyonu henüz yapılmamıştır. Cihaz değiştirildiğinde veya uygulama silindiğinde fotoğraflar kaybolur.
 
-#### 3.6.6. Dijital Mezura
+#### 3.7.6. Dijital Mezura
 Müşteri ana gelişim ekranında bel, kalça ve göğüs son ölçümleri ile değişim miktarları gösterilir. Değişim renkleri hedef bazlıdır.
 
-#### 3.6.7. CSV Dışa Aktarma
+#### 3.7.7. CSV Dışa Aktarma
 Dashboard ekranında download ikonu ile tüm ölçüm verileri CSV formatında dışa aktarılır. `share_plus` paketi ile paylaşım sağlanır. CSV başlıkları: Tarih, Kilo, BMI, Bel, Kalça, Göğüs, Kol, Bacak, Yağ Oranı, Kas Kütlesi.
 
-#### 3.6.8. Distribütör Tarafı Gelişim Görünümü
+#### 3.7.8. Distribütör Tarafı Gelişim Görünümü
 Distribütör, müşteri detay ekranında (`CustomerDetailScreen`) şu gelişim verilerini görebilir:
 - Kilo değişim grafiği (WeightChartWidget)
 - Bel, kalça, göğüs değişim chip'leri
 - Son 5 ölçüm kaydının listesi (tarih + tüm ölçümler)
 - Veriler `DistributorCustomerInsights.progressEntries` üzerinden son 90 günlük kayıtları içerir.
 
-### 3.7. Rozet ve Oyunlaştırma Sistemi
+### 3.8. Rozet ve Oyunlaştırma Sistemi
 
 8 adet rozet tanımı (`AppBadges` statik listesi):
 
@@ -230,19 +268,19 @@ Distribütör, müşteri detay ekranında (`CustomerDetailScreen`) şu gelişim 
 - **Hedef Bazlı Rozet Mantığı:** `goal_reached` rozeti `userGoal`'a göre hesaplanır: `weight_loss` → mevcut kilo hedefe eşit/altı, `weight_gain` → mevcut kilo hedefe eşit/üstü.
 - **Genişletilmiş Seri Hesabı:** `updateActivityDates()` metodu ile su dolumu ve routine tamamlama tarihleri de seri hesabına dahil edilebilir.
 
-### 3.8. Ürün Kataloğu ve Sipariş Takibi
+### 3.9. Ürün Kataloğu ve Sipariş Takibi
 - **Ürün Kataloğu (`ProductListScreen`):** Herbalife ürünlerinin listelendiği, arama ve filtreleme yapılabilen katalog. Ürün detay ekranı ve resim görüntüleyici mevcuttur.
 - **Sipariş Ekranı:** Distribütörler, danışanları için sipariş oluşturur. Sipariş durumu: `pending` → `processing` → `shipped` → `delivered` / `cancelled` (`OrderStatus` enum).
 - **Sepet Sistemi:** `CartProvider` ile ürün ekleme/çıkarma ve toplam hesaplama.
 - **Ürün Kullanım İstatistikleri (`DistributorProductUsageScreen`):** Hangi ürünlerin kaç müşteri tarafından aktif programlarda kullanıldığını listeler.
 
-### 3.9. Müşteri Takip Sistemi (Follow-Up)
+### 3.10. Müşteri Takip Sistemi (Follow-Up)
 - Distribütörler müşterileri için takip kayıtları oluşturabilir.
 - **Takip Tipleri:** Telefon, WhatsApp, E-posta, Yüz Yüze (`FollowUpType` enum).
 - **Takip Durumları:** Tamamlandı, Eylem Gerekiyor (`FollowUpStatus` enum).
 - **Zamanlanmış Takipler:** İleriki tarihler için hatırlatma ayarlanabilir (`ScheduledFollowUpModel`).
 
-### 3.10. Profil Yönetimi
+### 3.11. Profil Yönetimi
 - **Kişisel Bilgiler:** İsim, yaş, telefon, boy, kilo, hedef kilo, cinsiyet, doğum tarihi.
 - **Sağlık Hedefleri:** Hedef tipi, uyku/uyanma/öğle saatleri, su hedefi.
 - **Sağlık Notları:** Alerjiler, ilaçlar, sağlık notları (max 1000 karakter).
@@ -251,7 +289,7 @@ Distribütör, müşteri detay ekranında (`CustomerDetailScreen`) şu gelişim 
 - **Profil Fotoğrafı:** Yükleme ve güncelleme desteği.
 - **Şifre Değiştirme:** Dialog ile şifre güncelleme.
 
-### 3.11. Müşteri Destek Ekranı
+### 3.12. Müşteri Destek Ekranı
 - Müşterilerin distribütörleriyle iletişim kurmasını sağlayan destek ekranı.
 
 ---
@@ -278,7 +316,7 @@ Veriler Firestore üzerinde döküman-koleksiyon yapısında tutulur.
 | `height` | double? | Boy (cm) |
 | `targetWeight` | double? | Hedef kilo (kg) — sayısal alan |
 | `programStartDate` | DateTime? | Program başlangıç tarihi |
-| `userGoal` | String | `weight_loss` / `healthy_living` / `weight_gain` |
+| `userGoal` | String | `weight_loss` / `healthy_living` / `weight_gain` / `skin_care` |
 | `wakeTime` | String? | Uyanma saati (Örn: "07:30") |
 | `lunchTime` | String? | Öğle yemeği saati |
 | `sleepTime` | String? | Uyku saati |
@@ -288,17 +326,17 @@ Veriler Firestore üzerinde döküman-koleksiyon yapısında tutulur.
 | `allergies` | String? | Alerjiler (max 1000) |
 | `medications` | String? | İlaçlar (max 1000) |
 | `assignedDistributorId` | String? | Bağlı distribütör UID |
-| `profilePhotoUrl` | String? | Profil fotoğrafı URL (Yerel profil resmi desteği için yedek) |
+| `profilePhotoUrl` | String? | Profil fotoğrafı URL (Cloudinary / yerel) |
 | `profilePhotoUpdatedAt` | DateTime? | Fotoğraf güncelleme tarihi |
 | `earnedBadges` | List\<String\> | Kazanılan rozet ID'leri |
 | `waterDailyGoal` | int? | Günlük su hedefi (ml) |
-| `waterMinLimit` | int? | Distribütör min su limiti (ml) |
-| `waterMaxLimit` | int? | Distribütör max su limiti (ml) |
+| `waterMinLimit` | int? | Distribütörün koyduğu min limit (ml) |
+| `waterMaxLimit` | int? | Distribütörün koyduğu max limit (ml) |
 | `distributorRequestStatus` | String? | `null` / `pending` / `approved` |
 | `fcmToken` | String? | Push bildirimleri ve zamanlanmış hatırlatıcılar için cihaz token'ı |
-| `notificationSettings` | Map\<String, bool\>? | Kullanıcı bildirim tercihleri (Örn: `{"meals": true, "water": true, "followUp": true}`) |
+| `fcmTokenUpdatedAt` | DateTime? | Token güncelleme tarihi |
 
-**Not:** Eski `goal` alanı P1.9 ile kaldırıldı. Yeni kayıtlarda yalnızca sayısal `targetWeight` kullanılır. Tüm db alanları camelCase standardına getirilmiştir; `user_goal`, `wake_time`, `lunch_time`, `sleep_time` snake_case alanları P1.6 ile camelCase'e taşınacaktır.
+**Not:** Eski `goal` alanı kaldırılmıştır. Yeni kayıtlarda yalnızca sayısal `targetWeight` ve `userGoal` kullanılır. Tüm veritabanı alanları camelCase standardına tam olarak taşınmıştır. Model **immutable** (final) yapıda olup, güncellemeler Sentinel (`_unset`) destekli `copyWith` metoduyla gerçekleştirilir.
 
 ### 4.2. Gelişim Ölçüm Kaydı (`ProgressEntryModel`)
 **Koleksiyon:** `/users/{userId}/progressEntries/{entryId}`
@@ -437,10 +475,61 @@ Veriler Firestore üzerinde döküman-koleksiyon yapısında tutulur.
 | `imageUrl` | String? | Ürün resmi URL |
 | `isActive` | bool | Aktif mi? |
 
-### 4.10. Müşteri Modeli (`CustomerModel`)
+### 4.10. Yemek Tarifi (`RecipeModel`)
+**Koleksiyon:** `/recipes/{recipeId}`
+
+| Alan | Tür | Açıklama |
+|---|---|---|
+| `id` | String | Benzersiz tarif ID |
+| `productId` | String | İlişkili Herbalife Ürün ID'si |
+| `title` | String | Tarif Başlığı (Örn: "Fıstıklı Peynirli Shake") |
+| `description` | String | Kısa açıklama |
+| `imageUrl` | String? | Görsel URL |
+| `videoUrl` | String? | Yapılış videosu URL |
+| `prepTimeMin` | int | Hazırlama süresi (dakika) |
+| `calories` | int | Toplam kalori değeri (kcal) |
+| `goals` | List\<String\> | İlişkili sağlık hedefleri (örn: `['weight_loss']`) |
+| `tags` | List\<String\> | Etiketler (örn: `['pratik', 'protein']`) |
+| `ingredients` | List\<Map\> | `RecipeIngredient` dizisi (`name`, `amount`, `note`) |
+| `steps` | List\<String\> | Hazırlanış adımları listesi |
+| `nutritionInfo` | Map | `RecipeNutrition` yapısı (protein, carbs, fat, fiber) |
+| `tips` | String? | Sağlıklı yaşam/hazırlama ipuçları |
+| `isRecommended` | bool | Günün öneri tarifi mi? |
+
+### 4.11. Egzersiz Takip Günlüğü
+**Koleksiyon:** `/users/{userId}/daily_exercise/{YYYY-MM-DD}`
+
+| Alan | Tür | Açıklama |
+|---|---|---|
+| `isCompleted` | bool | Egzersiz tamamlandı mı? |
+| `updatedAt` | Timestamp | Sunucu güncelleme zamanı |
+
+### 4.12. Kalori Günlüğü (`CalorieDailyLog`)
+**Koleksiyon:** `/users/{userId}/calorieLogs/{YYYY-MM-DD}`
+
+| Alan | Tür | Açıklama |
+|---|---|---|
+| `id` | String | Tarih formatında döküman ID (YYYY-MM-DD) |
+| `date` | String | Tarih string'i |
+| `dailyGoal` | int | Günlük kalori hedefi (kcal) |
+| `totalCalories` | int | Tüketilen toplam kalori (kcal) |
+| `isAutoGoal` | bool | Hedef otomatik mi hesaplandı? |
+| `meals` | List\<Map\> | Gün içindeki öğünler (`MealModel`) dizisi |
+| `updatedAt` | Timestamp | Güncelleme tarihi |
+
+**MealModel Yapısı (Öğün):**
+| Alan | Tür | Açıklama |
+|---|---|---|
+| `id` | String | Benzersiz öğün ID |
+| `name` | String | Yemek adı (Örn: "Tavuklu Salatası") |
+| `calories` | int | Kalori değeri (kcal) |
+| `servingDesc` | String | Porsiyon açıklaması |
+| `timestamp` | int | Ekleme milisaniyesi |
+
+### 4.13. Müşteri Modeli (`CustomerModel`)
 CRM amaçlı distribütör tarafında kullanılan müşteri temsil modeli.
 
-### 4.11. Takip Kaydı (`FollowUpModel`)
+### 4.14. Takip Kaydı (`FollowUpModel`)
 | Alan | Tür | Açıklama |
 |---|---|---|
 | `id` | String | Belge ID |
@@ -448,10 +537,10 @@ CRM amaçlı distribütör tarafında kullanılan müşteri temsil modeli.
 | `status` | String | `completed` / `requiresAction` |
 | `note` | String? | Not |
 
-### 4.12. Zamanlanmış Takip (`ScheduledFollowUpModel`)
+### 4.15. Zamanlanmış Takip (`ScheduledFollowUpModel`)
 İleriki tarihler için hatırlatma ayarlanmasını sağlar.
 
-### 4.13. Distribütör Müşteri İçgörüleri (`DistributorCustomerInsights`)
+### 4.16. Distribütör Müşteri İçgörüleri (`DistributorCustomerInsights`)
 Distribütör tarafında müşteri özet verisi. Doğrudan Firestore koleksiyonu değil, hizmet modeli:
 
 | Alan | Tür | Açıklama |
@@ -467,13 +556,10 @@ Distribütör tarafında müşteri özet verisi. Doğrudan Firestore koleksiyonu
 | `isAtRisk` | bool | 3+ gün inaktif veya tamamlama < %50 |
 | `totalWeightChange` | double | Toplam kilo değişimi |
 
-### 4.14. Rozet Tanımı (`BadgeDefinition`)
+### 4.17. Rozet Tanımı (`BadgeDefinition`)
 Statik liste, Firestore'da saklanmaz. Yalnızca kazanılan rozet ID'leri (`earnedBadges`) kullanıcı profiline yazılır.
 
-### 4.15. Öğün Modeli (`MealModel`)
-Kalori takibi için yerel model. Firestore'a kalıcı kayıt yapılmaz.
-
-### 4.16. Yerel Fotoğraf Modeli (`LocalProgressPhotoModel`)
+### 4.18. Yerel Fotoğraf Modeli (`LocalProgressPhotoModel`)
 *Firestore'da saklanmaz. Cihazın yerel veritabanında (SQLite, Hive veya SharedPreferences) depolanır.*
 
 | Alan | Tür | Açıklama |
@@ -533,8 +619,24 @@ Kalori takibi için yerel model. Firestore'a kalıcı kayıt yapılmaz.
 ## 6. TEKNİK MİMARİ VE TEKNOLOJİK ALTYAPI
 
 ### 6.1. Mimari Katmanlar
-Uygulama **Feature-First (Özellik Öncelikli)** klasör yapısını benimser:
+Uygulama **Feature-First (Özellik Öncelikli)** klasör yapısını ve veri erişiminde **Repository Pattern** yapısını benimser.
 
+#### 6.1.1. Veri Erişim Katmanı (Repository Pattern)
+Doğrudan `FirestoreService` üzerinden yapılan Firestore çağrıları yerine, her etki alanı (domain) kendi repository sınıfı tarafından yönetilir:
+- **`UserProfileRepository`:** Kullanıcı profilleri, rozetler ve su hedeflerinin yönetimi.
+- **`ProductRepository`:** Ürün kataloğu CRUD işlemleri.
+- **`CustomerRepository`:** Müşteri CRM kayıtları, takip günlükleri (FollowUp) ve zamanlanmış takipler.
+- **`OrderRepository`:** Siparişlerin oluşturulması ve güncellenmesi.
+- **`InviteCodeRepository`:** Davet kodlarının oluşturulması ve durum güncellemeleri.
+- **`ProgressRepository`:** Ölçüm kayıtları (ProgressEntry) ve hedefler.
+- **`WaterRepository`:** Günlük su tüketim logları ve hava durumu/egzersiz özetleri.
+- **`CalorieRepository`:** Günlük öğünlerin ve kalori loglarının kalıcı depolanması.
+- **`MotivationRepository`:** Günlük motivasyon mesajlarının yönetimi.
+- **`CustomerInsightsService`:** Distribütör CRM ekranı için farklı domain verilerini birleştiren kompozisyon servisi.
+
+*Not: `FirestoreService` sınıfı, mevcut ekranların geriye dönük uyumluluğunu korumak amacıyla bu repository sınıflarını sarmalayan bir **Facade** yapısına dönüştürülmüştür.*
+
+#### 6.1.2. Klasör Ağacı
 ```
 lib/
 ├── app.dart                    # MaterialApp + Provider ağacı
@@ -544,14 +646,16 @@ lib/
 │   ├── avatar_color_helper.dart# Avatar renk yardımcısı
 │   ├── router.dart             # GoRouter route tanımları
 │   └── utils/
-│       ├── water_calculation_engine.dart  # Dinamik su hesaplama
+│       ├── calorie_calculation_engine.dart # Mifflin-St Jeor kalori motoru
+│       ├── water_calculation_engine.dart   # Dinamik su hesaplama motoru
+│       ├── cloudinary_helper.dart          # Medya optimizasyon aracı
 │       └── whatsapp_helper.dart           # WhatsApp paylaşım yardımcısı
 ├── features/
 │   ├── auth/                   # Giriş, kayıt, onboarding
 │   │   ├── providers/          # AuthProvider
 │   │   └── screens/            # Login, Splash, Onboarding
 │   ├── calorie_tracker/        # Kalori takibi
-│   │   ├── models/             # MealModel
+│   │   ├── models/             # MealModel, CalorieDailyLog
 │   │   ├── providers/          # CalorieProvider
 │   │   └── screens/            # CalorieTrackerScreen
 │   ├── customers/              # CRM, müşteri listesi/detay
@@ -564,9 +668,10 @@ lib/
 │   ├── orders/                 # Sipariş yönetimi
 │   │   ├── providers/          # CartProvider, OrderProvider
 │   │   └── screens/            # OrderList, Cart, AddEditOrder
-│   ├── products/               # Ürün kataloğu
+│   ├── products/               # Ürün kataloğu & Tarifler
 │   │   ├── providers/          # ProductProvider
-│   │   └── screens/            # ProductList, Detail, AddEdit
+│   │   ├── screens/            # ProductList, Detail, AddEdit
+│   │   └── widgets/            # RecipeCard, RecipeDetailPage
 │   ├── profile/                # Profil yönetimi
 │   │   ├── screens/            # Profile, PersonalInfo, HealthGoals, vb.
 │   │   ├── utils/              # ProfileValidators
@@ -585,16 +690,19 @@ lib/
 │       ├── providers/          # WaterProvider
 │       ├── screens/            # WaterTrackerScreen
 │       └── utils/              # WaterCalculationConstants
-├── models/                     # Veri modelleri (tüm uygulama genelinde)
-├── services/                   # Firestore, Auth, Exercise, Weather, Routine servisleri
+├── models/                     # Paylaşılan veri modelleri
+├── services/                   # Firestore, Auth, FCM, Egzersiz, Hava Durumu servisleri
+│   ├── ai/                     # AI tahmin servisi (Gemini Flash)
+│   │   └── food_estimation_service.dart
+│   └── repositories/           # Domain-focused repository sınıfları
 ├── utils/                      # Genel yardımcı fonksiyonlar
 └── widgets/                    # Paylaşılan widget'lar (AppDrawer, CachedProductImage)
 ```
 
 ### 6.2. Durum Yönetimi (State Management)
 - **Provider + ChangeNotifier** mimarisi kullanılır.
-- Asenkron işlemler (Firestore veri akışları) `Stream` dinleyicileriyle koordine edilir.
-- Veri tabanında güncellendiği anda arayüz anında yenilenir.
+- State nesneleri ve veri modelleri **immutable** tutulur. State güncellemeleri `copyWith` metodu ve Sentinel (`_unset`) yapısıyla kontrol edilerek veri tutarlılığı sağlanır.
+- Asenkron işlemler (Firestore veri akışları) `Stream` dinleyicileriyle koordine edilir ve arayüz otomatik yenilenir.
 
 ### 6.3. Bağımlılıklar (pubspec.yaml — temel paketler)
 
@@ -610,29 +718,35 @@ lib/
 | `provider` | Durum yönetimi |
 | `fl_chart` | Grafik çizimi |
 | `flutter_local_notifications` | Yerel bildirimler |
+| `firebase_messaging` | FCM push bildirimleri |
+| `google_generative_ai` | Gemini AI ile kalori tahmin servisi |
 | `image_picker` | Kamera/galeri erişimi |
 | `shared_preferences` | Yerel ayar depolama |
 | `share_plus` | Dosya/paylaşım |
 | `path_provider` | Geçici dizin erişimi |
 | `intl` | Tarih/sayı formatlama (tr_TR) |
+| `flutter_localizations` | Çoklu dil desteği altyapısı |
 
 ### 6.4. Güvenlik ve Firestore Kuralları
 - Distribütörler yalnızca kendi davet kodlarını, kendi müşterilerinin verilerini okuyup yazabilir.
 - Müşteriler yalnızca kendi profillerini, günlüklerini ve gelişim verilerini görebilir.
+- **GDPR & Hesap Silme Politikası:** Kullanıcı hesabını sildiğinde `/users/{uid}/waterLogs`, `/users/{uid}/waterSummaries`, `/users/{uid}/progressEntries`, `/users/{uid}/dailyRoutines`, `/users/{uid}/daily_exercise`, `/users/{uid}/program` ve `/users/{uid}/calorieLogs` alt koleksiyonları ile `/inviteCodes` içindeki ilişkili kayıtları otomatik ve güvenli bir şekilde silinir.
 
 ### 6.5. Yerel Fotoğraf Depolama Politikası ve Sınırlamaları
-- Firebase Storage maliyetlerinden kaçınmak amacıyla gelişim fotoğrafları tamamen cihazın yerel dosya sisteminde (`path_provider` yardımıyla `ApplicationDocumentsDirectory/progress_photos/` altında) saklanır.
-- Dosya yolları ve tarih eşleşmeleri yerel SQLite veya Hive veritabanında `LocalProgressPhotoModel` şemasına göre indekslenir.
-- **Kritik Risk Bildirimi:** Uygulama silindiğinde, önbellek temizlendiğinde veya cihaz değiştirildiğinde yerel fotoğraflar tamamen kaybolur. Müşteri ekranında bu risk hakkında kalıcı bir bilgilendirme metni yer alacaktır.
-- **Web Platformu Kısıtlaması:** Web platformunda yerel dosya sistemi (File API) doğrudan disk erişimine izin vermediği için web tarayıcısında `IndexedDB` kullanılacak veya web kullanıcılarına bu özelliğin sadece mobil platformlarda tam desteklendiği uyarısı gösterilecektir.
+- Gelişim fotoğrafları yerel dosya sisteminde (`path_provider` yardımıyla `ApplicationDocumentsDirectory/progress_photos/` altında) saklanır.
+- Dosya yolları ve tarih eşleşmeleri yerel veritabanında `LocalProgressPhotoModel` şemasına göre indekslenir.
+- **Kritik Risk Bildirimi:** Uygulama silindiğinde veya cihaz değiştirildiğinde yerel fotoğraflar tamamen kaybolur. Müşteri ekranında bu risk hakkında kalıcı bir bilgilendirme metni yer almaktadır.
 
 ### 6.6. Offline Persistence (Çevrimdışı Çalışma Politikası)
-- Firestore'un çevrimdışı veri saklama özelliği (`FirebaseFirestore.instance.settings = const Settings(persistenceEnabled: true)`) aktif edilecektir.
-- Kullanıcı interneti olmadığında da günlük su ekleyebilir, rutinlerini tamamlayabilir veya ölçüm girebilir. Cihaz internete bağlandığı anda Firestore arka planda kuyruğa alınan tüm yazma işlemlerini sunucuyla senkronize eder.
+- Firestore'un çevrimdışı veri saklama özelliği aktiftir.
+- Çevrimdışı modda girilen su, egzersiz veya kalori logları cihaz internete bağlandığı anda sunucuyla senkronize edilir.
 
-### 6.7. Resim Sıkıştırma ve Optimizasyon
-- Kullanıcının yerel diskini doldurmamak adına, kameradan çekilen veya galeriden seçilen gelişim fotoğrafları doğrudan kaydedilmez.
-- `flutter_image_compress` paketi kullanılarak fotoğraflar maksimum 1080px genişliğe/yükseğe sınırlandırılır, JPEG formatında %80 kalite oranıyla sıkıştırılarak diske yazılır.
+### 6.7. Medya Yönetimi ve Cloudinary Optimizasyonu
+- Yemek tarifleri ve ürün görselleri için **Cloudinary** CDN altyapısı kullanılır.
+- Cihaz genişliğine göre `w_width` kırpması yapılır.
+- `f_auto` ile WebP/AVIF format seçimi ve `q_auto` ile görsel kalitesi optimize edilerek veri tasarrufu sağlanır.
+- Videolardan ilk kareyi alan poster resimleri (`videoPoster`) dinamik olarak Cloudinary transforms ile üretilir.
+- Yerel disk doluluk oranını korumak için gelişim fotoğrafları diske yazılmadan önce `flutter_image_compress` ile JPEG %80 kalitede sıkıştırılır.
 
 ---
 
@@ -675,21 +789,22 @@ lib/
 ### Tamamlanmış Özellikler
 - [x] Firebase Auth (E-posta/Şifre + Google Sign-In)
 - [x] Distribütör-Müşteri bağlantı sistemi (davet kodu)
-- [x] Müşteri onboarding sihirbazı (5 adım + hedef kilo)
+- [x] Müşteri onboarding sihirbazı (5 adım + birim dönüşümü + bildirim izni rationale + seçmeli program)
 - [x] Akıllı program sihirbazı (4 adım + öğün/ürün planlama)
 - [x] Yerel bildirim zamanlama (öğün + su hatırlatıcı)
-- [x] Su takibi (dinamik hedef, hava durumu, egzersiz seviyesi)
-- [x] Kalori takibi (yerel state)
+- [x] Firebase Cloud Messaging (FCM) altyapısı ve push bildirimleri
+- [x] Su takibi (dinamik hedef, hava durumu, egzersiz seviyesi, diyabet ve ürün düzeltmeli motor)
+- [x] Kalori takibi (Mifflin-St Jeor & TDEE otomatik kalori motoru, Firestore kalıcı kaydı)
+- [x] Egzersiz takibi (günlük durum ve Firestore kaydı)
+- [x] AI Destekli Yemek & Kalori Tahmin Asistanı (Gemini Flash entegrasyonu ve JSON şeması)
+- [x] Sağlıklı Yemek Tarifleri (Video player, Stitch listeler, Cloudinary optimizasyonları)
 - [x] Gelişim ölçüm girişi (9 alan: kilo, BMI, bel, kalça, göğüs, kol, bacak, yağ oranı, kas kütlesi)
-- [x] Ölçüm grafikleri (genelleştirilmiş MeasurementType, 8 ölçüm türü)
-- [x] Hedef kilo çizgisi (dashed horizontal line)
-- [x] Hedef ilerleme çubuğu (dairesel progress)
-- [x] Hedef bazlı renk mantığı (weight_loss / weight_gain)
-- [x] Gelişim fotoğrafları (önce/sonra, karşılaştırma slider)
+- [x] Ölçüm grafikleri (genelleştirilmiş MeasurementType, 8 ölçüm türü, hedef kilo çizgisi)
+- [x] Hedef ilerleme çubuğu ve hedef bazlı renk mantığı (weight_loss / weight_gain)
+- [x] Gelişim fotoğrafları (önce/sonra, dikey karşılaştırma slider)
 - [x] İstatistik özet kartı (haftalık ortalama, en iyi hafta, toplam kayıt)
 - [x] CSV dışa aktarma (share_plus)
-- [x] Geçmiş tarihli ölçüm girişi (DatePicker)
-- [x] Aynı gün tekrar uyarısı (dialog)
+- [x] Geçmiş tarihli ölçüm girişi (DatePicker) ve aynı gün tekrar uyarısı (dialog)
 - [x] Rozet sistemi (8 rozet + anlık snackbar bildirimi)
 - [x] Genişletilmiş seri hesabı (su/routine aktiviteleri dahil)
 - [x] Gizlilik modu (BMI gösterimi, kilo maskeleme)
@@ -704,11 +819,9 @@ lib/
 - [x] Profil yönetimi (kişisel, sağlık, ayarlar, davet kodu)
 
 ### Bilinen Kısıtlamalar
-- **Kalori Takibi:** `CalorieProvider` yerel state'te çalışır; Firestore'a kalıcı kayıt yapılmaz. Sayfa yenilendiğinde veriler sıfırlanır.
-- **Gelişim Fotoğrafları (Maliyet Odaklı Tercih):** Fotoğraflar yerel dosya sisteminde (`LocalProgressPhotoModel`) tutulmaktadır. Cihaz değiştirildiğinde veya uygulama silindiğinde fotoğraflar kaybolur. Distribütör, danışanın fotoğraflarını göremez. Web platformunda tarayıcı disk kısıtlamaları mevcuttur.
-- **Google Sign-In:** Firebase Auth altyapısı hazır; uçtan uca test edilmesi gerekmektedir.
-- **Test Altyapısı:** Unit test ve integration test bulunmamaktadır.
-- **Erişilebilirlik:** Çalışmalar başlatılmış olup, semantic label'lar ve ekran okuyucu desteği v1.1.0 revizyonu ile zorunlu kılınmıştır.
+- **Gelişim Fotoğrafları (Maliyet Odaklı Tercih):** Fotoğraflar yerel dosya sisteminde (`LocalProgressPhotoModel`) tutulmaktadır. Cihaz değiştirildiğinde veya uygulama silindiğinde fotoğraflar kaybolur. Distribütör, danışanın fotoğraflarını göremez.
+- **Offline Modda Resim Yükleme:** Çevrimdışı persistence yazılı veriler için çalışmaktadır; ancak internet bağlantısı olmadan gelişim fotoğrafı ekleme/kırpma yapılamaz.
+- **Erişilebilirlik:** Semantik etiketleme çalışmaları başlatılmıştır; ekran okuyucu uyumluluğunun tüm formlarda test edilmesi gerekmektedir.
 
 ---
 
@@ -716,11 +829,10 @@ lib/
 
 Gelecek sürümlerde (v2.0.0+) eklenmesi planlanan vizyoner özellikler:
 
-1. **Opsiyonel Firebase Storage Fotoğraf Bulut Yedekleme (Ücretli/Premium Model):** İsteyen kullanıcılar veya distribütörler için ücretli bulut depolama aboneliği getirilerek gelişim fotoğraflarının güvenli bir şekilde yedeklenmesi ve distribütörle paylaşılması.
-2. **Kalori Takibi Firestore Entegrasyonu:** `CalorieProvider`'ın Firestore ile kalıcı senkronizasyonu.
-3. **İç İletişim Sohbet Modülü (In-App Chat):** Distribütör ve danışan arasında fotoğraf, ses kaydı ve mesaj paylaşımı sağlayan gerçek zamanlı sohbet aracı.
-4. **Yapay Zeka Destekli Diyet Asistanı (Gemini Integration):** Danışanın hedefine, alerjilerine ve evdeki malzemelerine göre günlük alternatif sağlıklı tarifler üreten yapay zeka modülü.
-5. **Detaylı Distribütör Analiz Paneli:** Koçlar için aylık VP gelişimi, en çok sipariş edilen ürünler ve danışan başarı oranlarını gösteren gelişmiş BI raporları.
-6. **Grup Meydan Okumaları (Challenges):** Birden fazla danışanın katılabileceği, su veya adım hedeflerinde birbirleriyle yarışarak motive oldukları sosyal topluluk modülü.
-7. **Test Altyapısı:** Unit test, widget test ve integration test katmanlarının oluşturulması.
-8. **Erişilebilirlik:** Semantic label'lar, ekran okuyucu desteği, yüksek kontrast modu.
+1. **Opsiyonel Firebase Storage Fotoğraf Bulut Yedekleme (Premium Model):** İsteyen kullanıcılar veya distribütörler için bulut depolama yedeklemesi getirilerek gelişim fotoğraflarının güvenli bir şekilde yedeklenmesi ve distribütörle paylaşılması.
+2. **İç İletişim Sohbet Modülü (In-App Chat):** Distribütör ve danışan arasında fotoğraf, ses kaydı ve mesaj paylaşımı sağlayan gerçek zamanlı sohbet aracı.
+3. **AI Diyet ve Tarif Asistanı Geliştirmesi:** Danışanın hedefine, alerjilerine ve evdeki malzemelerine göre günlük alternatif sağlıklı tarifler üreten yapay zeka modülü.
+4. **Detaylı Distribütör Analiz Paneli:** Koçlar için aylık VP gelişimi, en çok sipariş edilen ürünler ve danışan başarı oranlarını gösteren gelişmiş BI raporları.
+5. **Grup Meydan Okumaları (Challenges):** Birden fazla danışanın katılabileceği, su veya adım hedeflerinde birbirleriyle yarışarak motive oldukları sosyal topluluk modülü.
+6. **Test Altyapısı:** Unit test, widget test ve integration test katmanlarının oluşturulması.
+7. **Erişilebilirlik:** Semantik etiketler, ekran okuyucu desteği, yüksek kontrast modu.

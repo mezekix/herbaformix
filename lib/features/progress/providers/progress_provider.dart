@@ -218,8 +218,16 @@ class ProgressProvider with ChangeNotifier {
       }
       final finalEntry = entry.copyWith(bmi: bmi);
 
-      await _firestoreService.addProgressEntry(userId, finalEntry);
+      await _firestoreService.addProgressEntry(userId, finalEntry).timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          debugPrint('[ProgressProvider] addProgressEntry timeout - offline modda olabilir.');
+          throw TimeoutException('Offline write buffered');
+        },
+      );
       await _checkAndAwardBadges(userId, userProfile);
+    } on TimeoutException catch (_) {
+      debugPrint('[ProgressProvider] addEntry timeout yutuldu - offline modda devam ediliyor.');
     } catch (e) {
       _errorMessage = 'Kayıt eklenemedi: $e';
       debugPrint('ProgressProvider addEntry hatası: $e');
@@ -243,7 +251,15 @@ class ProgressProvider with ChangeNotifier {
       }
       final finalEntry = entry.copyWith(bmi: bmi);
 
-      await _firestoreService.updateProgressEntry(userId, finalEntry);
+      await _firestoreService.updateProgressEntry(userId, finalEntry).timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          debugPrint('[ProgressProvider] updateProgressEntry timeout - offline modda olabilir.');
+          throw TimeoutException('Offline write buffered');
+        },
+      );
+    } on TimeoutException catch (_) {
+      debugPrint('[ProgressProvider] updateEntry timeout yutuldu - offline modda devam ediliyor.');
     } catch (e) {
       _errorMessage = 'Kayıt güncellenemedi: $e';
       debugPrint('ProgressProvider updateEntry hatası: $e');
@@ -311,7 +327,7 @@ class ProgressProvider with ChangeNotifier {
 
     // Ölçüm ekleme rozeti
     final hasMeasurement = _entries.any(
-      (e) => e.waist != null || e.hip != null || e.chest != null ||
+      (e) => e.waist != null || e.belly != null || e.hip != null || e.chest != null ||
              e.arm != null || e.thigh != null ||
              e.bodyFat != null || e.muscleMass != null,
     );
@@ -319,7 +335,12 @@ class ProgressProvider with ChangeNotifier {
 
     if (newlyEarned.isNotEmpty) {
       try {
-        await _firestoreService.saveEarnedBadges(userId, _earnedBadgeIds);
+        await _firestoreService.saveEarnedBadges(userId, _earnedBadgeIds).timeout(
+          const Duration(seconds: 2),
+          onTimeout: () {
+            debugPrint('[ProgressProvider] saveEarnedBadges timeout - offline modda olabilir.');
+          },
+        );
         // Rozet kazanıldığında callback'i tetikle
         for (final badgeId in newlyEarned) {
           onBadgeEarned?.call(badgeId);

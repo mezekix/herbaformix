@@ -11,15 +11,16 @@
 
 | Alan | Değer |
 |---|---|
-| **Sürüm** | `v1.0.0-beta+1` |
+| **Sürüm** | `v1.2.0` |
 | **Platform** | Flutter (Android, iOS, Web, Windows) |
 | **Dart SDK** | `^3.8.0` |
-| **Dil** | Türkçe (`tr_TR`) |
+| **Dil** | Çoklu Dil Desteği (`tr_TR` varsayılan, `l10n` yapısı) |
+| **Medya Yönetimi** | Cloudinary CDN (`daal4ljca`) |
 | **Firebase Proje ID** | `herbaformix` |
 
 ### Temel Özellikler
-- **Distribütör (Koç):** Davet kodu üretme, müşteri CRM, beslenme programı sihirbazı, sipariş yönetimi, danışan gelişim takibi
-- **Müşteri (Danışan):** Oryantasyon, günlük su/kalori takibi, aktif program görüntüleme, gelişim ölçümleri, fotoğraf günlüğü, rozet/oyunlaştırma sistemi
+- **Distribütör (Koç):** Davet kodu üretme, müşteri CRM, beslenme programı sihirbazı, sipariş yönetimi, danışan gelişim takibi, program şablonları
+- **Müşteri (Danışan):** Oryantasyon (birim seçimi), günlük su, egzersiz & kalori takibi, yemek tarifleri (video/Stitch), AI kalori tahmini, gelişim ölçümleri, dikey önce/sonra slider, rozet/oyunlaştırma sistemi
 
 ---
 
@@ -60,7 +61,9 @@ lib/
 │   ├── avatar_color_helper.dart # Avatar renk yardımcısı
 │   ├── router.dart              # ⭐ GoRouter route tanımları + redirect mantığı
 │   └── utils/
-│       ├── water_calculation_engine.dart  # Dinamik su hedefi hesaplama
+│       ├── calorie_calculation_engine.dart # Mifflin-St Jeor kalori motoru
+│       ├── water_calculation_engine.dart   # Dinamik su hesaplama motoru
+│       ├── cloudinary_helper.dart          # Medya optimizasyon aracı
 │       └── whatsapp_helper.dart           # WhatsApp paylaşım yardımcısı
 │
 ├── features/
@@ -68,10 +71,10 @@ lib/
 │   │   ├── providers/auth_provider.dart
 │   │   └── screens/ (login, splash, customer_onboarding)
 │   │
-│   ├── calorie_tracker/         # Kalori takibi (⚠️ yerel state, Firestore yok)
-│   │   ├── models/meal_model.dart
+│   ├── calorie_tracker/         # Kalori takibi (Firestore entegrasyonu tamamlandı)
+│   │   ├── models/ (meal_model, calorie_daily_log)
 │   │   ├── providers/calorie_provider.dart
-│   │   └── screens/calorie_tracker_screen.dart
+│   │   └── screens/ (calorie_tracker_screen, calorie_history_screen)
 │   │
 │   ├── customers/               # CRM: Müşteri listesi/detay/ekleme
 │   │   ├── providers/ (customer_provider, follow_up_provider)
@@ -86,9 +89,10 @@ lib/
 │   │   ├── providers/ (cart_provider, order_provider)
 │   │   └── screens/ (order_list, cart, add_edit_order)
 │   │
-│   ├── products/                # Ürün kataloğu
+│   ├── products/                # Ürün kataloğu & Tarifler
 │   │   ├── providers/product_provider.dart
-│   │   └── screens/ (product_list, detail, add_edit, image_viewer)
+│   │   ├── screens/ (product_list, detail, add_edit, image_viewer)
+│   │   └── widgets/ (recipe_card, recipe_detail_sheet)
 │   │
 │   ├── profile/                 # Profil yönetimi
 │   │   ├── screens/ (profile, personal_info, health_goals, app_settings, support)
@@ -112,8 +116,8 @@ lib/
 │       ├── screens/water_tracker_screen.dart
 │       └── utils/water_calculation_constants.dart
 │
-├── models/                      # ⭐ Paylaşılan veri modelleri (16 dosya)
-│   ├── user_profile_model.dart  # Ana kullanıcı profili
+├── models/                      # ⭐ Paylaşılan veri modelleri (17 dosya)
+│   ├── user_profile_model.dart  # Ana kullanıcı profili (immutable)
 │   ├── user_role.dart           # UserRole enum (supervisor, distributor, successCreator, customer)
 │   ├── progress_entry_model.dart
 │   ├── invite_code_model.dart / invite_status.dart
@@ -124,14 +128,19 @@ lib/
 │   ├── follow_up_model.dart / scheduled_follow_up_model.dart
 │   ├── badge_model.dart
 │   ├── water_log_model.dart / water_summary_model.dart
+│   ├── recipe_model.dart        # Yemek tarifi veri modeli
 │   └── distributor_customer_insights.dart
 │
-├── services/                    # ⭐ Servis katmanı (Firestore erişimi)
-│   ├── firestore_service.dart   # Ana Firestore CRUD servisi (~37 KB — büyük dosya)
+├── services/                    # ⭐ Servis katmanı (Firestore Facade & Repositories)
+│   ├── firestore_service.dart   # Firestore Facade (geriye dönük uyumluluk için sarmalayıcı)
 │   ├── auth_service.dart        # Firebase Auth wrapper
-│   ├── exercise_service.dart    # Egzersiz seviyesi yönetimi
+│   ├── fcm_service.dart         # FCM push bildirim servisi
+│   ├── exercise_service.dart    # Egzersiz durumu yönetimi
 │   ├── routine_service.dart     # Günlük rutin servisi
-│   └── weather_service.dart     # OpenWeatherMap API (fallback destekli)
+│   ├── weather_service.dart     # OpenWeatherMap API
+│   ├── ai/                      # AI tahmin modülü (Gemini Flash)
+│   │   └── food_estimation_service.dart
+│   └── repositories/            # Domain-focused repository katmanı (12 repository)
 │
 ├── utils/
 │   └── image_utils.dart         # Resim yardımcı fonksiyonları
@@ -139,6 +148,7 @@ lib/
 └── widgets/                     # Paylaşılan widget'lar
     ├── app_drawer.dart          # Yan menü
     └── cached_product_image.dart # Önbelleğe alınmış ürün resmi
+
 ```
 
 ---
@@ -207,7 +217,7 @@ lib/
 
 ---
 
-## 6. FİRESTORE KOLEKSIYON YAPISI
+## 6. FİRESTORE KOLEKSİYON YAPISI
 
 ```
 /users/{userId}                      → UserProfileModel (ana profil)
@@ -217,6 +227,7 @@ lib/
 /users/{userId}/dailyRoutines/       → DailyRoutineModel
 /users/{userId}/program/             → ProgramModel
 /users/{userId}/daily_exercise/      → Egzersiz verileri
+/users/{userId}/calorieLogs/         → CalorieDailyLog (günlük kalori)
 /users/{userId}/customers/           → CustomerModel (distribütör CRM)
 /users/{userId}/customers/{id}/follow_ups/ → FollowUpModel
 /users/{userId}/orders/              → OrderModel
@@ -225,6 +236,7 @@ lib/
 /inviteCodes/{codeId}                → InviteCodeModel (davet kodları)
 /invite_codes/{inviteCodeId}         → (Alternatif koleksiyon adı)
 /products/{productId}                → ProductModel
+/recipes/{recipeId}                  → RecipeModel (yemek tarifleri)
 /scheduled_follow_ups/{followUpId}   → ScheduledFollowUpModel
 /programs/{programId}                → Ek program koleksiyonu
 /careerRoadmap/{levelId}             → Kariyer haritası
@@ -334,12 +346,10 @@ lib/features/<feature_name>/
 
 | Kısıtlama | Detay |
 |---|---|
-| **Kalori Takibi** | `CalorieProvider` yerel state'te çalışır, Firestore entegrasyonu yok |
 | **Gelişim Fotoğrafları** | Yerel dosya sisteminde, Firebase Storage entegrasyonu yok. Cihaz değişince kaybolur. |
-| **Google Sign-In** | Altyapı hazır, uçtan uca test eksik |
 | **Test Altyapısı** | Unit/widget/integration test bulunmuyor |
-| **Erişilebilirlik** | Semantic label çalışmaları devam ediyor |
-| **firestore_service.dart** | ~37 KB büyük dosya, refactoring ihtiyacı var |
+| **Erişilebilirlik** | Metin, kontrast ve semantik etiketleme (WCAG AA) bitti. TalkBack/VoiceOver ile uçtan uca manuel testler yapılmalı. |
+| **FCM Backend** | Client tarafı hazır, push bildirimleri tetikleyecek Firebase Cloud Functions (Blaze planı) yazılmalı. |
 
 ---
 

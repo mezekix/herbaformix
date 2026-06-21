@@ -92,7 +92,7 @@ class _MealPlanStepState extends State<MealPlanStep> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Her ürün öğününden 30 dk önce 250ml su hatırlatması eklenir.',
+                    'Her öğünden 30 dk önce 500ml su hatırlatması eklenir.',
                     style: TextStyle(
                         fontSize: 12,
                         color: Colors.cyan.withValues(alpha: 0.8)),

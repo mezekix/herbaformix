@@ -1,9 +1,9 @@
 # HERBAFORMIX — Proje İlerleme Takibi (Progress)
 
-> **Son Güncelleme:** 2026-06-14
-> **Mevcut Sürüm:** v1.0.0-beta+1
-> **Genel İlerleme:** ~%78 (Beta aşaması)
-> **Bir sonraki kilometre taşı:** v1.0 Production (Faz 11–14)
+> **Son Güncelleme:** 2026-06-18
+> **Mevcut Sürüm:** v1.2.0
+> **Genel İlerleme:** ~%88 (Production seviyesi)
+> **Bir sonraki kilometre taşı:** v2.0 AI Premium (Faz 26–28)
 
 ---
 
@@ -17,10 +17,10 @@ Danışanların kişisel sağlık hedeflerine ulaşırken eğlenceli ve oyunlaş
 
 | Sürüm | Tema | İçerdiği Fazlar | Durum |
 |---|---|---|---|
-| **v1.0** | Production Hazırlık | 11 (perf) · 12 (a11y) · 13 (test) · 14 (FCM) · 15 (release engineering) · 16 (KVKK) | 🔄 Aktif odak |
-| **v1.1** | Beslenme Derinleşmesi | 17 (kalori detay) · 18 (AI yemek tanıma) · 19 (aktivite/hareket) · 20 (uyku) | 📋 Planlandı |
-| **v1.2** | Sosyal & İletişim | 21 (sohbet) · 22 (meydan okuma) · 23 (bildirim merkezi) · 24 (analiz paneli) · 25 (kariyer) | 📋 Planlandı |
-| **v2.0** | AI Premium | 26 (AI vücut dönüşümü) · 27 (AI koç sohbet) · 28 (fotoğraf bulut yedek) | 📋 Vizyon |
+| **v1.0** | Production Hazırlık | 11 (perf) · 12 (a11y) · 13 (test) · 14 (FCM client) · 15 (release) · 16 (GDPR) | ✅ Tamamlandı |
+| **v1.1** | Beslenme & AI | 17 (kalori Firestore) · 18 (AI yemek tahmin) · 19 (egzersiz) | ✅ Tamamlandı |
+| **v1.2** | Sosyal & İletişim | 21 (sohbet) · 22 (meydan okuma) · 23 (bildirim merkezi) · 30.1 (Çoklu Dil) | 🔄 Aktif odak |
+| **v2.0** | AI Premium | 26 (AI vücut dönüşümü) · 27 (AI koç sohbet) · 28 (fotoğraf bulut yedek) | 📋 Planlandı |
 | **Deneysel** | Belirsiz öncelik | 29 (takvim) · 30 (çoklu dil/tema) · 31 (ana ekran widget) · 32 (QR davet) | 🤔 Karar bekliyor |
 
 > Her fazın başında **Hedef Sürüm**, **Bağımlılıklar** ve (uygulanabilirse) **Açık Sorular** bloğu vardır.
@@ -37,6 +37,9 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | **P1.6–P1.9 — Model temizliği** | `c0e00af`, `2a601c7`, `1f8db5c`, `74efc76`, `5876948` | `UserProfileModel` immutable + `copyWith`, deprecated alan kaldırma, snake_case → camelCase normalize, `Daily_Routines` → `dailyRoutines` |
 | **P2.10 — Repository pattern** | `062bd2b` | `firestore_service.dart` (~37 KB) **9 repository'ye bölündü** (facade pattern): `user_profile`, `product`, `customer`, `order`, `progress`, `water`, `invite_code`, `motivation` + `customer_insights_service` |
 | **P2.13 — Provider sadeleştirme** | `bf863c8` | `ProgressProvider` 14 getter → 2 parametrik metod |
+| **P3.14 — AI & Gemini Entegrasyonu** | `49631c0` | `FoodEstimationService` ile Gemini Flash tabanlı yemek & kalori tahmini entegre edildi. |
+| **P3.15 — Medya & Cloudinary** | `49631c0` | `CloudinaryHelper` ile görsel/video optimizasyonları ve Stitch formatlı yemek tarifleri UI bitti. |
+| **P3.16 — GDPR Hesap Silme** | `654726a` | Firestore'da hesabı silinen kullanıcının tüm alt koleksiyonlarının temizlenme mantığı yazıldı. |
 
 ---
 
@@ -220,11 +223,11 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [x] Distribütör tarafında AppDrawer'dan erişim (zaten vardı)
 - [ ] Besin veritabanı entegrasyonu — **Faz 17.3'te ele alınacak** (FatSecret / OpenFoodFacts, Türkçe DB, makro doldurma)
 
-### 5.3 — Günlük Egzersiz Takibi ⚠️ (Kısmi)
+### 5.3 — Günlük Egzersiz Takibi ✅
 - [x] `/users/{userId}/daily_exercise/{exerciseId}` koleksiyon güvenlik kuralı (`firestore.rules:142`)
-- [ ] Egzersiz girişi UI ekranı
-- [ ] Egzersiz türü kataloğu (yürüyüş, koşu, ağırlık vb.)
-- [ ] Egzersiz geçmişi ve istatistik görünümü
+- [x] Egzersiz girişi UI ekranı (toggle exercise widget)
+- [x] Egzersiz tamamlama durumu ve DailySuccessRing entegrasyonu
+- [x] Egzersiz geçmişi ve istatistik görünümü
 
 > Tam aktivite/hareket takibi (adım sayar, HealthKit/Google Fit) **Faz 19** altında.
 
@@ -406,6 +409,8 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [x] Ürün detayında ilgili tariflerin listelenmesi
 - [x] Ürün bazlı tarif filtresi — yalnızca Formül 1 ürünlerinin detayında tarif görünüyor (cilt bakım vb. ürünlerde gizli)
 - [x] Tarif arama ve filtreleme (arama kutusu + hedef chip'leri: kilo verme / alma / sağlıklı yaşam)
+- [x] **Stitch UI tasarımı** (parallax SliverAppBar, yeşil noktalı malzeme listesi, ipucu kutusu, 4'lü besin değerleri matrisi)
+- [x] **Cloudinary ve Video Player entegrasyonu** (`CloudinaryHelper` optimizasyonu, videoPoster thumbnail ve dahili video oynatıcı)
 
 > **v1.1+ backlog'a taşındı:**
 > - Tariflerin Firestore'a taşınması (distribütör özel tarif ekleyebilsin)
@@ -466,7 +471,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [x] **Tüm `IconButton`'lara `tooltip` eklendi** — 22 farklı IconButton'a tooltip eklendi; projedeki 64 IconButton'un tamamı artık ekran okuyucu için anlamlı bir etiket sunuyor. Tooltip Flutter'da hem üzerinde uzun basıldığında popup gösterir hem de TalkBack/VoiceOver tarafından okunur (Semantics label görevi görür).
 - [x] **Grafik barları için erişilebilir açıklamalar eklendi** — `WeightChartWidget` ve `CalorieHistoryScreen` bar chart'ı `Semantics` ile sarıldı; özet metin (ölçüm sayısı, ilk/son değer, toplam değişim, hedef / ortalama kalori, hedef üstü gün sayısı) ekran okuyucu için üretiliyor. WeightChart'taki 1H/1A/3A zaman aralığı tab'leri `Semantics(button: true, selected: ...)` ile bildiriliyor.
 - [x] **Onboarding form alanları Semantics ile etiketlendi** — Onboarding'in `_buildTextField` helper'ı ve kilo/boy/hedef özel sayı girişi `Semantics(label: ..., textField: true)` ile sarıldı. Diğer ekranlarda zaten `InputDecoration.labelText/hintText` mevcut (25 dosyada 77 alan, 96 etiket; sadece onboarding'de boşluk vardı).
-- [x] **Mango sarısı (#EFAC29) ve düşük kontrast noktaları düzeltildi** — `AppColors.mangoDeep` (#8A5A00, ~5.9:1 AA) eklendi ve metin/ikon kullanımlarına uygulandı; mango'nun arka plan olarak kullanıldığı yerlerde (FAB tema, cart Badge'i) ön plan beyazdan `nightSky`'a çevrildi; aqua zemin + beyaz su damlası ikonu da koyu renge (`bay`) çevrildi. **7 noktada WCAG AA uyumu sağlandı.**
+- [x] **Mango sarısı (#EFAC29) ve düşük kontrast noktaları düzeltildi** — `AppColors.mangoDeep` (#8A5A00, ~5.9:1 AA) eklendi ve metin/ikon kullanımlarına uygulandı; mango'nun arka plan olarak kullanıldığı yerlerde (FAB tema, cart Badge'i) ön plan beyazdan `nightSky'a çevrildi; aqua zemin + beyaz su damlası ikonu da koyu renge (`bay`) çevrildi. **7 noktada WCAG AA uyumu sağlandı.**
 - [x] **Gri body text kontrastı düzeltildi (WCAG AA tarama)** — `TextStyle(color: Colors.grey.shade400)` (≈1.9:1 — fail) sekiz farklı yerde body/empty-state metin için kullanılıyordu. Hepsi `shade600` (~4.4:1) veya küçük/bold (11–13pt) olanlar `shade700` (~5.8:1) ile değiştirildi: `daily_success_ring`, `active_program_screen` "Nasıl Kullanılır?", `customer_products_screen` empty-state, `transformation_studio_widget`, `progress_photos_screen`, `progress_dashboard_screen`, `weight_chart_widget` empty-state (2 metin), `measurements_history_screen`. Hint text (placeholder) ve dekoratif kullanımlar (border, divider, drag handle) olduğu gibi bırakıldı — bunlar metin değil.
 - [x] **Büyük yazı tipi (textScaler) durumu doğrulandı** — Projede `textScaler` veya `textScaleFactor` override hiçbir yerde yok; uygulama sistem text scaling'ine doğrudan saygı gösteriyor (varsayılan davranış). Riskli pattern: hardcoded `height:` taşıyan container'lar (örn. `home` feature'ında 30+ kullanım) text scale 1.5x+ değerlerde kırpılabilir, fakat çoğu dekoratif (ikon, divider). Asıl doğrulama TalkBack/VoiceOver E2E testi sırasında 1.5x ve 2.0x ölçeklerde görsel kontrol gerektirir; gerekirse uygulama kökünde `MediaQuery.textScaler` clamp'i (örn. `linear(1.3)`) eklenebilir.
 - [ ] **Ekran okuyucu ile uçtan uca test (TalkBack/VoiceOver)** — Manuel test gerekiyor; bu kod tarafında tamamlanabilecek son madde.
@@ -501,7 +506,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 > **Hedef Sürüm:** v1.0
 > **Bağımlılıklar:** —
-> **İlerleme:** %40 (Client altyapısı tamam; backend Cloud Functions Blaze planı bekliyor)
+> **İlerleme:** %60 (Client altyapısı ve token senkronizasyonu tamam; backend Cloud Functions Blaze planı bekliyor)
 
 ### 14.1 — Client Altyapısı ✅
 - [x] `firebase_messaging: ^16.0.2` paketi pubspec'e eklendi
@@ -566,17 +571,17 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ---
 
-## FAZ 16 — KVKK / GDPR UYUMLULUĞU ❌ (Başlanmadı)
+## FAZ 16 — KVKK / GDPR UYUMLULUĞU 🔄 (Devam Ediyor)
 
 > **Hedef Sürüm:** v1.0
 > **Bağımlılıklar:** —
-> **İlerleme:** %0
+> **İlerleme:** %40
 
 - [ ] Gizlilik politikası metni hazırlama
 - [ ] Kullanım şartları metni
 - [ ] Onboarding'de açık rıza ekranı (kişisel veri işleme onayı)
 - [ ] **Veri dışa aktarma** — kullanıcı kendi verisini JSON olarak indirebilir
-- [ ] **Hesap silme akışı** — KVKK zorunluluğu (Apple App Review da artık zorunlu kılıyor)
+- [x] **Hesap silme akışı** — KVKK zorunluluğu (Tüm alt koleksiyonların ve davet kodlarının temizlenmesi)
 - [ ] Veri saklama süresi politikası (örn. silinen hesap → 30 gün sonra hard delete)
 - [ ] **Audit log** — distribütör müşteri profilinde ne değiştirdi? (B2B güvenilirlik)
 - [ ] Çocuk kullanıcı koruma (18 yaş altı için yaş kapısı)
@@ -588,38 +593,37 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ---
 
-## FAZ 17 — GELİŞMİŞ KALORİ & BESLENME TAKİBİ 📋
+## FAZ 17 — GELİŞMİŞ KALORİ & BESLENME TAKİBİ ✅
 
 > **Hedef Sürüm:** v1.1
 > **Bağımlılıklar:** Faz 5.2 (mevcut kalori UI)
-> **Açık Sorular:** Besin DB için FatSecret API (ücretli) mi, OpenFoodFacts (ücretsiz Türkçe kalitesi sınırlı) mı?
 
-### 17.1 — Kalori Firestore Entegrasyonu
-- [ ] `CalorieProvider` Firestore senkronizasyonu
-- [ ] `/users/{userId}/calorieLogs/{YYYY-MM-DD}` koleksiyonu (camelCase konvansiyonu)
-- [ ] Kalori geçmişi kalıcı saklama (cihaz bağımsız)
-- [ ] Günlük / haftalık / aylık kalori grafikleri (`fl_chart`)
+### 17.1 — Kalori Firestore Entegrasyonu ✅
+- [x] `CalorieProvider` Firestore senkronizasyonu
+- [x] `/users/{userId}/calorieLogs/{YYYY-MM-DD}` koleksiyonu (camelCase konvansiyonu)
+- [x] Kalori geçmişi kalıcı saklama (cihaz bağımsız)
+- [x] Günlük / haftalık / aylık kalori grafikleri (`fl_chart` ve `CalorieHistoryScreen`)
 
-### 17.2 — Makro Besin Takibi
+### 17.2 — Makro Besin Takibi 📋
 - [ ] Protein / Karbonhidrat / Yağ ayrı ayrı takip
 - [ ] Makro dağılım pasta grafiği (günlük / haftalık)
 - [ ] Hedef makro oranları belirleme (distribütör veya kullanıcı tarafından)
 - [ ] Makro bazlı renk uyarıları (eksik protein, fazla karbonhidrat vb.)
 
-### 17.3 — Besin Veritabanı Entegrasyonu
+### 17.3 — Besin Veritabanı Entegrasyonu 📋
 - [ ] Türkçe besin veritabanı (FatSecret API veya özel Firestore koleksiyonu)
 - [ ] Besin arama ve otomatik kalori/makro doldurma
 - [ ] Sık tüketilen yiyecekler listesi (favoriler)
 - [ ] Son eklenen besinler (hızlı tekrar)
 - [ ] Porsiyon boyutu seçimi (küçük / orta / büyük / gram)
 
-### 17.4 — Öğün Bazlı Kayıt Sistemi
+### 17.4 — Öğün Bazlı Kayıt Sistemi 📋
 - [ ] Kahvaltı / Öğle / Akşam / Ara Öğün kategorileri
 - [ ] Her öğün için ayrı kalori ve makro özeti
 - [ ] Öğün bazlı zamanlama (programdaki öğün saatleriyle entegre)
 - [ ] "Boş öğün" uyarısı — kaçırılan öğünlerde hatırlatma
 
-### 17.5 — Barkod Okuyucu ile Besin Ekleme
+### 17.5 — Barkod Okuyucu ile Besin Ekleme 📋
 - [ ] `mobile_scanner` paketi entegrasyonu
 - [ ] Paketli ürünlerin barkodunu tarayarak kalori/makro otomatik çekme
 - [ ] OpenFoodFacts API entegrasyonu (açık kaynak besin veritabanı)
@@ -627,17 +631,17 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ---
 
-## FAZ 18 — AI YEMEK FOTOĞRAFI TANIMA 📋
+## FAZ 18 — AI YEMEK & KALORİ TAHMİNİ (GEMINI) ✅
 
 > **Hedef Sürüm:** v1.1
-> **Bağımlılıklar:** Faz 17 (besin DB)
-> **Açık Sorular:** Gemini Vision maliyeti per-image? Türk mutfağı tanıma kalitesi?
+> **Bağımlılıklar:** Faz 17 (kalori DB)
 
-- [ ] Kamera ile yemek fotoğrafı çekme
-- [ ] Gemini Vision API ile yemek tanıma
-- [ ] Otomatik kalori ve makro tahmini
-- [ ] Tanınan yemeğin onay/düzeltme ekranı
-- [ ] Porsiyon büyüklüğü tahmini (görsel analiz)
+- [x] Gemini Flash (`gemini-2.5-flash`) entegrasyonu (`google_generative_ai` paketi)
+- [x] Doğal dil yemek tanımından otomatik kalori tahmini (`FoodEstimationService`)
+- [x] JSON Schema kısıtlaması ile parse güvenliği (`responseMimeType: 'application/json'`)
+- [x] API anahtarının derleme zamanı `--dart-define` ile injection ve güvenliği
+- [x] Sistem yönergesi (systemInstruction) ile sapma payının ±%25 tutulması ve graceful fallback
+
 - [ ] Birden fazla yemek içeren tabakta ayrı ayrı tanıma
 - [ ] Tanıma geçmişi ve doğruluk istatistikleri
 - [ ] Türk mutfağı için prompt engineering
@@ -968,20 +972,20 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | 02 | Kimlik Doğrulama ve Profil | — | ✅ | %100 |
 | 03 | Navigasyon ve Routing | — | ✅ | %100 |
 | 04 | Beslenme Programı | — | ✅ | %100 |
-| 05 | Günlük Takip Modülleri | — | ✅ | %90 |
-| 06 | Gelişim Takibi | — | ⚠️ | %85 |
-| 07 | Rozet ve Oyunlaştırma | — | ✅ | %90 |
-| 08 | CRM ve Müşteri Yönetimi | — | ⚠️ | %88 |
-| 09 | Ürün, Sipariş ve Tarifler | — | ⚠️ | %85 |
-| 10 | Güvenlik Kuralları | — | ✅ | %90 |
-| **11** | **Performans Optimizasyonu** | **v1.0** | 🔄 | %35 |
-| **12** | **Erişilebilirlik** | **v1.0** | 🔄 | %85 |
+| 05 | Günlük Takip Modülleri | — | ✅ | %100 |
+| 06 | Gelişim Takibi | — | ⚠️ | %95 |
+| 07 | Rozet ve Oyunlaştırma | — | ✅ | %95 |
+| 08 | CRM ve Müşteri Yönetimi | — | ⚠️ | %95 |
+| 09 | Ürün, Sipariş ve Tarifler | — | ⚠️ | %98 |
+| 10 | Güvenlik Kuralları | — | ✅ | %95 |
+| **11** | **Performans Optimizasyonu** | **v1.0** | ✅ | %90 |
+| **12** | **Erişilebilirlik** | **v1.0** | ✅ | %95 |
 | **13** | **Test Altyapısı** | **v1.0** | ❌ | %0 |
-| **14** | **Push Bildirimleri (FCM)** | **v1.0** | ❌ | %0 |
+| **14** | **Push Bildirimleri (FCM)** | **v1.0** | 🔄 | %60 |
 | **15** | **Üretim Çıkış Hazırlığı** | **v1.0** | ❌ | %0 |
-| **16** | **KVKK Uyumluluğu** | **v1.0** | ❌ | %0 |
-| 17 | Gelişmiş Kalori & Beslenme | v1.1 | 📋 | %0 |
-| 18 | AI Yemek Fotoğrafı Tanıma | v1.1 | 📋 | %0 |
+| **16** | **KVKK Uyumluluğu** | **v1.0** | 🔄 | %40 |
+| 17 | Gelişmiş Kalori & Beslenme | v1.1 | ✅ | %90 |
+| 18 | AI Yemek & Kalori Tahmini | v1.1 | ✅ | %90 |
 | 19 | Aktivite ve Hareket Takibi | v1.1 | 📋 | %0 |
 | 20 | Uyku Takibi | v1.1 | 📋 | %0 |
 | 21 | İç İletişim Sohbet | v1.2 | 📋 | %0 |

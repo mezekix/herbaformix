@@ -29,7 +29,58 @@ class DeleteAccountDialog extends StatefulWidget {
   /// Kullanıcı oturum bilgisi yoksa snackbar ile uyarır.
   static Future<void> show(BuildContext context) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final email = authProvider.firebaseUser?.email;
+    final firebaseUser = authProvider.firebaseUser;
+    
+    if (firebaseUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kullanıcı oturumu bulunamadı.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    if (firebaseUser.isAnonymous) {
+      // Misafir kullanıcılar için basit onay
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Misafir Hesabını Sil'),
+          content: const Text('Tüm verilerin silinecek. Emin misin?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              child: const Text('Sil', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        if (!context.mounted) return;
+        try {
+          await authProvider.deleteAccount();
+        } catch (e) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceFirst('Exception: ', '')),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+      return;
+    }
+
+    final email = firebaseUser.email;
     if (email == null || email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -86,9 +137,15 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
       await authProvider.deleteAccount(
         currentPassword:
             widget.isGoogleUser ? null : _passwordController.text,
+        onBeforeDelete: () {
+          // Firebase Auth kullanıcısı tamamen silinip otomatik yönlendirme (redirect)
+          // tetiklenmeden ÖNCE, açık olan onay diyaloğunu kapatıyoruz.
+          // Böylece ekranda kararma veya overlay (dialog barrier) takılması yaşanmaz.
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        },
       );
-      // Başarılıysa AuthProvider auth state'i değiştirir → router login'e atar.
-      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isDeleting = false);
@@ -104,6 +161,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: AppColors.surface,
       title: Row(
         children: [
           Icon(Icons.delete_forever_outlined,
@@ -127,11 +185,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                 ),
               ),
               child: Text(
-                'Bu işlem geri ALINAMAZ. Profilin, sağlık verilerin, ölçümlerin, '
-                'su/kalori takipleriniz ve tüm geçmiş kayıtların kalıcı olarak '
-                'silinecek. Danışmanının notları ise (geçmiş görüşmeler ve '
-                'takipler) onun tarafında "hesabını sildi" notuyla pasif olarak '
-                'kalır.',
+                'Bu işlem geri alınamaz. Tüm verileriniz kalıcı olarak silinecektir.',
                 style: TextStyle(
                   fontSize: 13,
                   color: AppColors.error,
@@ -190,9 +244,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Hesabını Google ile açtın. Silme butonuna basınca '
-                        'Google hesap seçim ekranı açılır — orada bu hesabı '
-                        'tekrar onaylaman gerekir.',
+                        'Google hesabını tekrar onaylaman gerekecektir.',
                         style: TextStyle(
                           fontSize: 12.5,
                           color: Colors.blue.shade900,
@@ -239,38 +291,52 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _isDeleting ? null : () => Navigator.of(context).pop(),
-          child: const Text('İptal'),
-        ),
-        ElevatedButton.icon(
-          onPressed: _canDelete ? _onDelete : null,
-          icon: _isDeleting
-              ? const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-              : Icon(
-                  widget.isGoogleUser
-                      ? Icons.login_outlined
-                      : Icons.delete_forever_outlined,
-                  size: 18,
+        SizedBox(
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton.icon(
+                onPressed: _canDelete ? _onDelete : null,
+                icon: _isDeleting
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Icon(
+                        widget.isGoogleUser
+                            ? Icons.login_outlined
+                            : Icons.delete_forever_outlined,
+                        size: 18,
+                      ),
+                label: Text(
+                  _isDeleting
+                      ? 'Siliniyor...'
+                      : (widget.isGoogleUser
+                          ? 'Google ile Sil'
+                          : 'Hesabımı Sil'),
                 ),
-          label: Text(
-            _isDeleting
-                ? 'Siliniyor...'
-                : (widget.isGoogleUser
-                    ? 'Google ile Onayla ve Sil'
-                    : 'Hesabımı Sil'),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.error,
-            foregroundColor: Colors.white,
-            disabledBackgroundColor: AppColors.error.withValues(alpha: 0.3),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.error.withValues(alpha: 0.3),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: _isDeleting ? null : () => Navigator.of(context).pop(),
+                child: const Text(
+                  'İptal',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            ],
           ),
         ),
       ],

@@ -259,6 +259,16 @@ class _AppState extends State<App> {
           ),
         ),
 
+        dialogTheme: const DialogThemeData(
+          backgroundColor: AppColors.background,
+          surfaceTintColor: Colors.transparent,
+        ),
+
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: AppColors.background,
+          surfaceTintColor: Colors.transparent,
+        ),
+
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       routerConfig: _appRouter.router,
@@ -304,7 +314,8 @@ class _AppState extends State<App> {
                     WaterProvider(context.read<FirestoreService>());
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (auth.status == AuthStatus.authenticated &&
-                      auth.firebaseUser?.uid != null) {
+                      auth.firebaseUser?.uid != null &&
+                      !auth.isDeletingAccount) {
                     provider.startListening(auth.firebaseUser!.uid);
                   } else {
                     provider.stopListening();
@@ -319,7 +330,8 @@ class _AppState extends State<App> {
                 final provider = previous ?? ExerciseService();
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (auth.status == AuthStatus.authenticated &&
-                      auth.firebaseUser?.uid != null) {
+                      auth.firebaseUser?.uid != null &&
+                      !auth.isDeletingAccount) {
                     provider.startListening(auth.firebaseUser!.uid);
                   } else {
                     provider.stopListening();
@@ -334,7 +346,8 @@ class _AppState extends State<App> {
                 final provider = previous ?? CalorieProvider();
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (auth.status == AuthStatus.authenticated &&
-                      auth.firebaseUser?.uid != null) {
+                      auth.firebaseUser?.uid != null &&
+                      !auth.isDeletingAccount) {
                     provider.startListening(auth.firebaseUser!.uid);
                   } else {
                     provider.stopListening();

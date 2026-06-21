@@ -8,7 +8,7 @@ import '../../../models/daily_routine_model.dart';
 import '../../../services/routine_service.dart';
 
 /// Su içme adımı için timeline kartı.
-/// Tamamlandığında WaterProvider'a 250ml kaydeder.
+/// Tamamlandığında WaterProvider'a 500ml kaydeder.
 class WaterStepTile extends StatelessWidget {
   final DailyRoutineModel routine;
   final String userId;

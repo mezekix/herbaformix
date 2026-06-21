@@ -36,7 +36,9 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _targetWeightController = TextEditingController();
+  final TextEditingController _birthDateController = TextEditingController();
 
+  DateTime? _selectedBirthDate;
   String _selectedGoal = ''; // weight_loss, healthy_living, weight_gain, skin_care
   String? _selectedGender;
   TimeOfDay? _wakeTime;
@@ -47,7 +49,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
 
   double _heightValue = 170.0;
   double _weightValue = 70.0;
-  bool _isMetric = true;
+  final bool _isMetric = true;
 
   @override
   void initState() {
@@ -55,23 +57,6 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     _heightController.text = _heightValue.toStringAsFixed(0);
     _weightController.text = _weightValue.toStringAsFixed(1);
     _calculateTargetWeight();
-  }
-
-  void _toggleUnit(bool toMetric) {
-    if (_isMetric == toMetric) return;
-    setState(() {
-      _isMetric = toMetric;
-      if (toMetric) {
-        // Imperial to Metric
-        _heightValue = (_heightValue * 2.54).roundToDouble();
-        _weightValue = double.parse((_weightValue * 0.453592).toStringAsFixed(1));
-      } else {
-        // Metric to Imperial
-        _heightValue = (_heightValue / 2.54).roundToDouble();
-        _weightValue = double.parse((_weightValue / 0.453592).toStringAsFixed(1));
-      }
-      _syncControllers();
-    });
   }
 
   void _syncControllers() {
@@ -109,9 +94,19 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
         ? null
         : (_isMetric ? rawTarget : rawTarget * 0.453592);
 
+    int? calculatedAge;
+    if (_selectedBirthDate != null) {
+      final now = DateTime.now();
+      calculatedAge = now.year - _selectedBirthDate!.year;
+      if (now.month < _selectedBirthDate!.month || (now.month == _selectedBirthDate!.month && now.day < _selectedBirthDate!.day)) {
+        calculatedAge--;
+      }
+    }
+
     final updated = userProfile.copyWith(
       name: _nameController.text.trim(),
-      age: int.tryParse(_ageController.text.trim()),
+      age: calculatedAge,
+      birthDate: _selectedBirthDate,
       phoneNumber: _phoneController.text.trim(),
       weight: double.tryParse(_weightController.text.trim()),
       height: double.tryParse(_heightController.text.trim()),
@@ -121,7 +116,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
       lunchTime: fmt(_lunchTime),
       sleepTime: fmt(_sleepTime),
       gender: _selectedGender,
-      isOnboarded: true,
+      isOnboarded: false, // İlk kayıtta yönlendirmeyi önlemek için false tutulur
     );
 
     await authProvider.updateUserProfile(updated);
@@ -137,8 +132,8 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.notifications_active, color: AppColors.primary, size: 28),
             SizedBox(width: 10),
             Expanded(
@@ -222,7 +217,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.garden,
+              backgroundColor: AppColors.primary, // Primary color
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -234,6 +229,13 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
         ],
       ),
     );
+
+    if (!mounted) return;
+
+    // Tüm işlemler tamamlandıktan sonra kullanıcının onboarding'i bitirdiği kaydedilir.
+    // Bu sayede router yönlendirmesi dialoglar kapandıktan sonra tetiklenir.
+    final finalProfile = updated.copyWith(isOnboarded: true);
+    await authProvider.updateUserProfile(finalProfile);
 
     if (!mounted) return;
 
@@ -265,6 +267,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     _weightController.dispose();
     _heightController.dispose();
     _targetWeightController.dispose();
+    _birthDateController.dispose();
     super.dispose();
   }
 
@@ -332,6 +335,8 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                   ],
                 ),
               ),
+              // Bottom Button (Tüm cihazlarda aynı, sabit konumda ve boyutta)
+              _buildSharedBottomButton(),
             ],
           ),
         ),
@@ -394,6 +399,80 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     );
   }
 
+  Future<void> _selectBirthDate(BuildContext context) async {
+    final DateTime now = DateTime.now();
+    final DateTime firstDate = DateTime(now.year - 100);
+    final DateTime lastDate = DateTime(now.year - 12);
+    final DateTime initialDate = _selectedBirthDate ?? DateTime(now.year - 25);
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              onSurface: AppColors.nightSky,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _selectedBirthDate) {
+      setState(() {
+        _selectedBirthDate = picked;
+        _birthDateController.text = "${picked.day.toString().padLeft(2, '0')}.${picked.month.toString().padLeft(2, '0')}.${picked.year}";
+      });
+    }
+  }
+
+  Widget _buildDatePickerField(String label, TextEditingController controller, String hint) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 14)),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: () => _selectBirthDate(context),
+          child: AbsorbPointer(
+            child: Semantics(
+              label: label,
+              textField: true,
+              child: TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: hint,
+                  suffixIcon: const Icon(Icons.calendar_today, color: AppColors.primary),
+                  filled: true,
+                  fillColor: AppColors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: AppColors.garden, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildStep3PersonalInfo() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -410,7 +489,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                   children: [
                     const Text(
                       'Tanışalım 👋',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -420,17 +499,15 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     const SizedBox(height: 32),
                     _buildTextField('Adın Soyadın', _nameController, TextInputType.name, 'Örn: Elif Yılmaz'),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(child: _buildTextField('Yaşın', _ageController, TextInputType.number, '28')),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildTextField('Telefon', _phoneController, TextInputType.phone, '05XX...')),
-                      ],
-                    ),
+                    _buildTextField('Telefon', _phoneController, TextInputType.phone, '05XX...'),
                     const SizedBox(height: 16),
+                    _buildDatePickerField('Doğum Tarihin', _birthDateController, 'Gün.Ay.Yıl Seçin'),
+                    const SizedBox(height: 8),
+                    Text(
+                      '* Doğum tarihiniz, BMI (Vücut Kitle Endeksi) hesaplamasında ve yaşa özel ideal kilo aralığınızı belirlemek için kullanılacaktır.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                    ),
 
-                    const Spacer(),
-                    _buildNextButton(),
                   ],
                 ),
               ),
@@ -442,141 +519,192 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   }
 
   Widget _buildStep1Goals() {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Hedefin Ne? 🎯',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Sana özel yol haritanı çizmek için odaklanmak istediğin alanı seç.',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          Expanded(
-            child: ListView(
-              children: [
-                _buildGoalCard('Kilo Vermek', '🥗', Colors.green.shade100, 'weight_loss'),
-                const SizedBox(height: 16),
-                _buildGoalCard('Sağlıklı ve Dengeli Yaşamak', '🥑', Colors.blue.shade100, 'healthy_living'),
-                const SizedBox(height: 16),
-                _buildGoalCard('Kilo Almak ve Güçlenmek', '💪', Colors.orange.shade100, 'weight_gain'),
-                const SizedBox(height: 16),
-                _buildGoalCard('Cilt & Kişisel Bakım', '✨', Colors.pink.shade100, 'skin_care'),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Ekran yüksekliğine göre kart yüksekliği dinamik ölçeklenir
+        final double cardHeight = ((constraints.maxHeight - 200) / 2).clamp(130.0, 180.0);
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+            ),
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Hedefin Ne? 🎯',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sana özel yol haritanı çizmek için odaklanmak istediğin alanı seç.',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Grid using Rows and Columns instead of GridView to support IntrinsicHeight
+                    Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: cardHeight,
+                                child: _buildGoalCard(
+                                  'Kilo Vermek', '🍜',
+                                  const Color(0xFFE8F5E9), const Color(0xFFB9E4C9),
+                                  'weight_loss',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: SizedBox(
+                                height: cardHeight,
+                                child: _buildGoalCard(
+                                  'Sağlıklı ve Dengeli\nYaşamak', '💧',
+                                  const Color(0xFFE0F7FA), const Color(0xFFB2EBF2),
+                                  'healthy_living',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: cardHeight,
+                                child: _buildGoalCard(
+                                  'Kilo Almak ve\nGüçlenmek', '🏋️',
+                                  const Color(0xFFFFF3E0), const Color(0xFFFFE0B2),
+                                  'weight_gain',
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: SizedBox(
+                                height: cardHeight,
+                                child: _buildGoalCard(
+                                  'Cilt & Kişisel\nBakım', '✨',
+                                  const Color(0xFFFCE4EC), const Color(0xFFF8BBD0),
+                                  'skin_care',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          _buildNextButton(),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // ── STEP 0 — Cinsiyet Seçimi (Stitch Tasarımı) ──────────────────────
   Widget _buildStep0GenderSelection() {
-    return Column(
-      children: [
-        // Başlık bölümü
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-          child: Column(
-            children: [
-              Text(
-                'Senin Yolculuğun,\nSenin Seçimin.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  height: 1.2,
-                  color: AppColors.nightSky,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Vücut yapınıza en uygun programı hazırlamak için başlayalım.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // İmmersive Kart Seçimleri
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                // ── Erkek Kartı ──
-                Expanded(
-                  child: _buildGenderCard(
-                    label: 'Erkek',
-                    value: 'Erkek',
-                    icon: Icons.male,
-                    imagePath: 'assets/images/onboarding/male_athlete.jpg',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // ── Kadın Kartı ──
-                Expanded(
-                  child: _buildGenderCard(
-                    label: 'Kadın',
-                    value: 'Kadın',
-                    icon: Icons.female,
-                    imagePath: 'assets/images/onboarding/female_athlete.jpg',
-                  ),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Kart yüksekliği toplam alanın %42'si olacak şekilde dinamik olarak ölçeklenir.
+        // Bu sayede küçük ve orta ekranlarda taşma yaşanmaz.
+        final double cardHeight = (constraints.maxHeight * 0.42).clamp(200.0, 340.0);
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
             ),
-          ),
-        ),
-
-        // Alt Buton
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _selectedGender != null ? _nextPage : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                disabledBackgroundColor: Colors.grey.shade300,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                elevation: 8,
-                shadowColor: AppColors.primary.withValues(alpha: 0.3),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+            child: IntrinsicHeight(
+              child: Column(
                 children: [
-                  Text(
-                    'HEDEFE İLERLE',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
+                  // Başlık bölümü
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Senin Yolculuğun,\nSenin Seçimin.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Vücut yapınıza en uygun programı hazırlamak için başlayalım.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(width: 8),
-                  Icon(Icons.bolt, size: 22),
+                  const SizedBox(height: 24),
+
+                  // İmmersive Kart Seçimleri (Yatay yan yana yerleşim)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        // ── Erkek Kartı ──
+                        Expanded(
+                          child: SizedBox(
+                            height: cardHeight,
+                            child: _buildGenderCard(
+                              label: 'Erkek',
+                              value: 'Erkek',
+                              icon: Icons.male,
+                              imagePath: 'assets/images/onboarding/male_athlete.jpg',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        // ── Kadın Kartı ──
+                        Expanded(
+                          child: SizedBox(
+                            height: cardHeight,
+                            child: _buildGenderCard(
+                              label: 'Kadın',
+                              value: 'Kadın',
+                              icon: Icons.female,
+                              imagePath: 'assets/images/onboarding/female_athlete.jpg',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+
                 ],
               ),
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -595,10 +723,6 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            width: isSelected ? 4 : 0,
-          ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
@@ -641,70 +765,38 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                 ),
               ),
             ),
-            // Seçili badge (sağ üst)
-            if (isSelected)
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-            // Alt bilgi: Kategori etiketi + İsim + İkon
+            // Alt bilgi: Kategori etiketi + İsim + İkon (Yatay tasarım için optimize edilmiş boyutlar)
             Positioned(
-              left: 20,
-              right: 20,
-              bottom: 20,
+              left: 14,
+              right: 14,
+              bottom: 14,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'KATEGORİ',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white.withValues(alpha: 0.7),
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        label.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          fontStyle: FontStyle.italic,
-                          height: 1.1,
-                        ),
-                      ),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSelected)
+                          Text(
+                            label.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              fontStyle: FontStyle.italic,
+                              height: 1.1,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.primary
@@ -720,10 +812,25 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     child: Icon(
                       icon,
                       color: Colors.white,
-                      size: 28,
+                      size: 22,
                     ),
                   ),
                 ],
+              ),
+            ),
+            
+            // Yeşil çerçeve overlay'i (köşelerde ve kenarlarda tam görünmesi için en üstte)
+            IgnorePointer(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : Colors.transparent,
+                    width: isSelected ? 4 : 0,
+                  ),
+                ),
               ),
             ),
           ],
@@ -732,7 +839,13 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     );
   }
 
-  Widget _buildGoalCard(String title, String emoji, Color bgColor, String goalValue) {
+  Widget _buildGoalCard(
+    String title,
+    String emoji,
+    Color gradientStart,
+    Color gradientEnd,
+    String goalValue,
+  ) {
     final bool isSelected = _selectedGoal == goalValue;
     return GestureDetector(
       onTap: () {
@@ -741,47 +854,84 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
         });
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.garden.withValues(alpha: 0.1) : AppColors.white,
-          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [gradientStart, gradientEnd],
+          ),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
-            color: isSelected ? AppColors.garden : Colors.transparent,
-            width: 2,
+            color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.6),
+            width: isSelected ? 2.5 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.06),
+              blurRadius: isSelected ? 16 : 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: bgColor,
-                shape: BoxShape.circle,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Büyük emoji
+              Expanded(
+                child: Center(
+                  child: Text(
+                    emoji,
+                    style: const TextStyle(fontSize: 48),
+                  ),
+                ),
               ),
-              alignment: Alignment.center,
-              child: Text(emoji, style: const TextStyle(fontSize: 32)),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.nightSky),
-            ),
-            if (isSelected)
-              const Padding(
-                padding: EdgeInsets.only(top: 8.0),
-                child: Icon(Icons.check_circle, color: AppColors.garden, size: 20),
+              const SizedBox(height: 6),
+              // Başlık
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.nightSky.withValues(alpha: 0.85),
+                  height: 1.2,
+                ),
               ),
-          ],
+              // Seçili işareti — başlık altında
+              if (isSelected) ...[
+                const SizedBox(height: 4),
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                ),
+              ] else
+                const SizedBox(height: 26),
+            ],
+          ),
         ),
       ),
     );
@@ -808,7 +958,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
             ),
             child: IntrinsicHeight(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -817,95 +967,22 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                       'Vücut Ölçüleri',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.nightSky,
+                        color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 2),
                     Text(
                       'Doğru planı oluşturmak için boy ve kilonuza ihtiyacımız var.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: Colors.grey.shade500,
                       ),
                     ),
-                    const SizedBox(height: 24),
-
-                    // Segmented Unit Selector
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () => _toggleUnit(true),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: _isMetric ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(999),
-                                    boxShadow: _isMetric
-                                        ? [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.05),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            )
-                                          ]
-                                        : null,
-                                  ),
-                                  child: Text(
-                                    'Metrik (cm/kg)',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: _isMetric ? FontWeight.bold : FontWeight.normal,
-                                      color: _isMetric ? AppColors.primary : Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _toggleUnit(false),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: !_isMetric ? Colors.white : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(999),
-                                    boxShadow: !_isMetric
-                                        ? [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.05),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            )
-                                          ]
-                                        : null,
-                                  ),
-                                  child: Text(
-                                    'İmperyal (in/lbs)',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: !_isMetric ? FontWeight.bold : FontWeight.normal,
-                                      color: !_isMetric ? AppColors.primary : Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 10),
 
                     // Height Ruler section
                     Column(
@@ -919,7 +996,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                             letterSpacing: 2,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 2),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -928,7 +1005,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                             Text(
                               _heightValue.toStringAsFixed(0),
                               style: const TextStyle(
-                                fontSize: 44,
+                                fontSize: 32,
                                 fontWeight: FontWeight.w900,
                                 color: AppColors.nightSky,
                               ),
@@ -937,14 +1014,14 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                             Text(
                               unitH,
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey.shade500,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 4),
                         RulerPicker(
                           minValue: minH,
                           maxValue: maxH,
@@ -960,9 +1037,9 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 6),
                     Divider(color: Colors.grey.shade200, height: 1),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 6),
 
                     // Weight Ruler section
                     Column(
@@ -976,7 +1053,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                             letterSpacing: 2,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 2),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -985,7 +1062,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                             Text(
                               _weightValue.toStringAsFixed(1),
                               style: const TextStyle(
-                                fontSize: 44,
+                                fontSize: 32,
                                 fontWeight: FontWeight.w900,
                                 color: AppColors.nightSky,
                               ),
@@ -994,14 +1071,14 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                             Text(
                               unitW,
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey.shade500,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 4),
                         RulerPicker(
                           minValue: minW,
                           maxValue: maxW,
@@ -1017,40 +1094,11 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 8),
                     _buildBMIIndicator(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
                     _buildTargetWeightInput(),
-                    const Spacer(),
-                    const SizedBox(height: 24),
 
-                    // Continue Button
-                    ElevatedButton(
-                      onPressed: _nextPage,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        elevation: 6,
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Devam Et',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(width: 8),
-                          Icon(Icons.arrow_forward, size: 20),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -1102,7 +1150,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
@@ -1113,16 +1161,16 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.monitor_heart, color: color),
+              Icon(Icons.monitor_heart, color: color, size: 20),
               const SizedBox(width: 8),
-              const Text('Vücut Kitle İndeksi (BMI):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const Text('Vücut Kitle İndeksi (BMI):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             ],
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(bmi.toStringAsFixed(1), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-              Text(status, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+              Text(bmi.toStringAsFixed(1), style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+              Text(status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
             ],
           )
         ],
@@ -1133,7 +1181,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
   Widget _buildTargetWeightInput() {
     final String unitW = _isMetric ? 'kg' : 'lbs';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(20),
@@ -1148,18 +1196,18 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(color: Colors.orange.shade100, shape: BoxShape.circle),
-            child: const Icon(Icons.flag, color: Colors.black54),
+            child: const Icon(Icons.flag, color: Colors.black54, size: 18),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'HEDEF KİLO',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
                 ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -1169,7 +1217,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                       child: TextField(
                         controller: _targetWeightController,
                         keyboardType: TextInputType.number,
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.nightSky),
                         decoration: const InputDecoration(
                           hintText: '00.0',
                           border: InputBorder.none,
@@ -1180,7 +1228,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     ),
                     Text(
                       unitW,
-                      style: const TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -1208,14 +1256,14 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                   children: [
                     const Text(
                       'Başlangıç Fotoğrafı 📸',
-                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.primary),
                     ),
                     const SizedBox(height: 8),
                     RichText(
                       text: const TextSpan(
                         style: TextStyle(fontSize: 16, color: Colors.grey),
                         children: [
-                          TextSpan(text: '30 gün sonra farkı görmek ister misin? Motivasyon için ilk gün fotoğrafını çek. '),
+                          TextSpan(text: 'Zaman içindeki değişimi ve gelişimi görmek ister misin? Motivasyon için ilk gün fotoğrafını çek. '),
                           TextSpan(text: '(Zorunlu değil)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                         ],
                       ),
@@ -1323,8 +1371,8 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                                 style: TextStyle(color: Colors.green.shade800, fontSize: 13),
                                 children: const [
                                   TextSpan(text: 'Butona tıkladığında '),
-                                  TextSpan(text: '30 Günlük', style: TextStyle(fontWeight: FontWeight.bold)),
-                                  TextSpan(text: ' geri sayımın başlayacak. Hazır mısın?'),
+                                  TextSpan(text: 'sana özel hazırlanan programın', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  TextSpan(text: ' başlayacak. Hazır mısın?'),
                                 ],
                               ),
                             ),
@@ -1332,23 +1380,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                         ],
                       ),
                     ),
-                    const Spacer(),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _finishOnboarding,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.nightSky,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 8,
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Yolculuğum Başlıyor 🚀', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.white)),
-                        ],
-                      ),
-                    ),
+
                   ],
                 ),
               ),
@@ -1395,21 +1427,68 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     );
   }
 
-  Widget _buildNextButton() {
-    return ElevatedButton(
-      onPressed: _nextPage,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.garden,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('Devam Et', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.white)),
-          SizedBox(width: 8),
-          Icon(Icons.arrow_forward, color: AppColors.white, size: 20),
-        ],
+  Widget _buildSharedBottomButton() {
+    String buttonText = 'Devam Et';
+    IconData? buttonIcon = Icons.arrow_forward;
+    VoidCallback? onPressed;
+
+    if (_currentPage == 0) {
+      buttonText = 'HEDEFE İLERLE';
+      buttonIcon = Icons.bolt;
+      onPressed = _selectedGender != null ? _nextPage : null;
+    } else if (_currentPage == 1) {
+      buttonText = 'Devam Et';
+      buttonIcon = Icons.arrow_forward;
+      onPressed = _nextPage;
+    } else if (_currentPage == 2) {
+      buttonText = 'Devam Et';
+      buttonIcon = Icons.arrow_forward;
+      onPressed = _selectedGoal.isNotEmpty ? _nextPage : null;
+    } else if (_currentPage == 3) {
+      buttonText = 'Devam Et';
+      buttonIcon = Icons.arrow_forward;
+      onPressed = _nextPage;
+    } else if (_currentPage == 4) {
+      buttonText = 'Yolculuğum Başlıyor 🚀';
+      buttonIcon = null;
+      onPressed = _finishOnboarding;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+      child: SizedBox(
+        width: double.infinity,
+        height: 56,
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            disabledBackgroundColor: Colors.grey.shade300,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: Colors.grey.shade500,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: onPressed != null ? 4 : 0,
+            shadowColor: AppColors.primary.withValues(alpha: 0.25),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                buttonText,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (buttonIcon != null) ...[
+                const SizedBox(width: 8),
+                Icon(buttonIcon, size: 20),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

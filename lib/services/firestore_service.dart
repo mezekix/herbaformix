@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/customer_model.dart';
 import '../models/distributor_customer_insights.dart';
@@ -329,9 +329,14 @@ class FirestoreService {
   /// - `/users/{uid}/waterLogs/*`
   /// - `/users/{uid}/waterSummaries/*`
   /// - `/users/{uid}/progressEntries/*`
+  /// - `/users/{uid}/dailyRoutines/*`
+  /// - `/users/{uid}/daily_exercise/*`
+  /// - `/users/{uid}/program/active`
   /// - `/users/{uid}` (ana doc, varsa)
+  /// - `/userProfiles/{uid}`
   /// - `/motivations/{uid}/daily_messages/*` + `/motivations/{uid}` doc
   /// - `/motivation_scores/*` where `musteri_id == uid`
+  /// - `/inviteCodes/*` where `usedByUserId == uid`
   ///
   /// Distribütör CRM kaydı **silinmez** — sadece güncellenir:
   /// `linkedUserId` temizlenir, `isActive=false`, `notes`'a
@@ -342,7 +347,7 @@ class FirestoreService {
     final profile = await _userProfileRepo.getUserProfile(uid);
     final assignedDistributorId = profile?.assignedDistributorId;
 
-    // 2) Distribütör CRM kaydını "hesabını sildi" olarak işaretle (silmeden).
+    // 2) Distribütör CRM kaydını tamamen sil (kişisel verilerin -email vb.- kalmaması için).
     if (assignedDistributorId != null && assignedDistributorId.isNotEmpty) {
       try {
         final crmRecord = await _customerRepo.getCustomerByLinkedUserId(
@@ -350,57 +355,84 @@ class FirestoreService {
           uid,
         );
         if (crmRecord != null) {
-          final timestamp = DateFormat('dd.MM.yyyy').format(DateTime.now());
-          final existingNotes = (crmRecord.notes ?? '').trim();
-          final marker = 'Müşteri hesabını sildi ($timestamp)';
-          final newNotes = existingNotes.isEmpty
-              ? marker
-              : '$existingNotes\n$marker';
-          await _db
+          // Önce müşterinin altındaki follow_ups koleksiyonunu sil
+          await _deleteSubcollection('users/$assignedDistributorId/customers/${crmRecord.id}/follow_ups');
+          // Sonra CRM müşteri kaydını sil
+          await _safeDeleteDoc(_db
               .collection('users')
               .doc(assignedDistributorId)
               .collection('customers')
-              .doc(crmRecord.id)
-              .update({
-            'linkedUserId': FieldValue.delete(),
-            'isActive': false,
-            'notes': newNotes,
-          });
+              .doc(crmRecord.id));
         }
-      } catch (_) {
-        // CRM güncelleme distribütör tarafının verisi — başarısız olsa bile
-        // kullanıcının kendi verilerinin silinmesi engellenmemeli.
+      } catch (e) {
+        debugPrint('Distribütör CRM kaydı silme hatası: $e');
       }
     }
 
-    // 3) Müşterinin tüm alt koleksiyonlarını sil.
+    // 3) Tüm olası alt koleksiyonları sil (müşteri veya distribütör fark etmeksizin).
+    try {
+      final customersSnap = await _db.collection('users/$uid/customers').get();
+      for (final customerDoc in customersSnap.docs) {
+        await _deleteSubcollection('users/$uid/customers/${customerDoc.id}/follow_ups');
+      }
+    } catch (e) {
+      debugPrint('Müşteriler follow_ups silme hatası: $e');
+    }
+
+    await _deleteSubcollection('users/$uid/customers');
+    await _deleteSubcollection('users/$uid/orders');
     await _deleteSubcollection('users/$uid/calorieLogs');
     await _deleteSubcollection('users/$uid/waterLogs');
     await _deleteSubcollection('users/$uid/waterSummaries');
     await _deleteSubcollection('users/$uid/progressEntries');
+    await _deleteSubcollection('users/$uid/dailyRoutines');
+    await _deleteSubcollection('users/$uid/daily_exercise');
+    await _deleteSubcollection('users/$uid/program');
     await _deleteSubcollection('motivations/$uid/daily_messages');
+
+    // Davet kodlarını temizle (eğer distribütör ise)
+    await _deleteQuery(
+      _db.collection('inviteCodes').where('distributorId', isEqualTo: uid),
+    );
 
     // 4) Tek dokümanları sil.
     await _safeDeleteDoc(_db.collection('motivations').doc(uid));
     await _safeDeleteDoc(_db.collection('users').doc(uid));
     await _safeDeleteDoc(_db.collection('userProfiles').doc(uid));
 
-    // 5) Sorgu temelli temizlik: motivation_scores koleksiyonu.
+    // 5) Sorgu temelli temizlik.
+    // motivation_scores koleksiyonu
     await _deleteQuery(
       _db.collection('motivation_scores').where('musteri_id', isEqualTo: uid),
+    );
+    // Müşterinin kullandığı davet kodlarını temizle (usedByUserId alanı)
+    await _deleteQuery(
+      _db.collection('inviteCodes').where('usedByUserId', isEqualTo: uid),
     );
   }
 
   /// Belirtilen alt koleksiyondaki tüm dokümanları 450'lik batch'ler halinde siler.
   Future<void> _deleteSubcollection(String path) async {
-    final snap = await _db.collection(path).get();
-    await _deleteDocs(snap.docs.map((d) => d.reference).toList());
+    try {
+      final snap = await _db.collection(path).get();
+      if (snap.docs.isNotEmpty) {
+        await _deleteDocs(snap.docs.map((d) => d.reference).toList());
+      }
+    } catch (e) {
+      debugPrint('Alt koleksiyon silme hatası ($path): $e');
+    }
   }
 
   /// Bir sorgunun döndürdüğü tüm dokümanları siler.
   Future<void> _deleteQuery(Query query) async {
-    final snap = await query.get();
-    await _deleteDocs(snap.docs.map((d) => d.reference).toList());
+    try {
+      final snap = await query.get();
+      if (snap.docs.isNotEmpty) {
+        await _deleteDocs(snap.docs.map((d) => d.reference).toList());
+      }
+    } catch (e) {
+      debugPrint('Sorgu silme hatası: $e');
+    }
   }
 
   /// Referans listesini Firestore batch limiti (500) altında chunk'lara
@@ -421,8 +453,20 @@ class FirestoreService {
   Future<void> _safeDeleteDoc(DocumentReference ref) async {
     try {
       await ref.delete();
-    } catch (_) {
-      // Doc yoksa veya silinemediyse devam et.
+    } catch (e) {
+      debugPrint('Doküman silme hatası (${ref.path}): $e');
+    }
+  }
+
+  /// Yerel Firestore önbelleğini ve bağlantısını sıfırlar.
+  /// Hesap silme veya kilitlenme durumlarında yerel SQLite veritabanının
+  /// sunucuyla tutarsız kalmasını engellemek için kullanılır.
+  Future<void> clearLocalCache() async {
+    try {
+      await _db.terminate();
+      await _db.clearPersistence();
+    } catch (e) {
+      debugPrint('Firestore clearLocalCache hatası: $e');
     }
   }
 }

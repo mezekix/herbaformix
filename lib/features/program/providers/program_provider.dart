@@ -58,9 +58,15 @@ class ProgramProvider with ChangeNotifier {
   void nextStep() {
     switch (_currentStep) {
       case ProgramWizardStep.goalSelection:
-        _currentStep = _selectedGoal == 'weight_loss'
-            ? ProgramWizardStep.weightInput
-            : ProgramWizardStep.mealPlan;
+        if (_selectedGoal == 'weight_loss') {
+          if (_currentWeight != null && _targetWeight != null) {
+            _currentStep = ProgramWizardStep.mealPlan;
+          } else {
+            _currentStep = ProgramWizardStep.weightInput;
+          }
+        } else {
+          _currentStep = ProgramWizardStep.mealPlan;
+        }
       case ProgramWizardStep.weightInput:
         _currentStep = ProgramWizardStep.mealPlan;
       case ProgramWizardStep.mealPlan:
@@ -90,9 +96,18 @@ class ProgramProvider with ChangeNotifier {
   // ── Hedef ─────────────────────────────────────────────────────────────────
   void setGoal(String goal) {
     _selectedGoal = goal;
-    _currentWeight = null;
-    _targetWeight = null;
-    _durationMonths = 1;
+    
+    // Kullanıcının profilinden gelen kilo verilerini SIFIRLAMIYORUZ.
+    if (_currentWeight != null && _targetWeight != null) {
+      try {
+        _durationMonths = calculateMinDuration(_currentWeight!, _targetWeight!);
+      } catch (_) {
+        _durationMonths = 1;
+      }
+    } else {
+      _durationMonths = 1;
+    }
+    
     _slots = [];
     notifyListeners();
   }
@@ -498,21 +513,30 @@ class ProgramProvider with ChangeNotifier {
     }
 
     final goal = profile.userGoal;
-    final isGoalSelected = goal != null && goal.isNotEmpty;
+    final isGoalSelected = goal != null &&
+        (goal == 'weight_loss' || goal == 'healthy_living' || goal == 'weight_gain');
     final isPhysicalInfoEntered = profile.weight != null && profile.targetWeight != null;
+
+    // Profildeki kilo bilgilerini her durumda provider'a aktar
+    if (profile.weight != null) {
+      _currentWeight = profile.weight;
+    }
+    if (profile.targetWeight != null) {
+      _targetWeight = profile.targetWeight;
+    }
+
+    if (profile.weight != null && profile.targetWeight != null) {
+      try {
+        _durationMonths = calculateMinDuration(profile.weight!, profile.targetWeight!);
+      } catch (_) {
+        _durationMonths = 1;
+      }
+    }
 
     if (isGoalSelected) {
       _selectedGoal = goal;
       
       if (isPhysicalInfoEntered) {
-        _currentWeight = profile.weight;
-        _targetWeight = profile.targetWeight;
-        try {
-          _durationMonths = calculateMinDuration(profile.weight!, profile.targetWeight!);
-        } catch (_) {
-          _durationMonths = 1;
-        }
-        
         // Bilgiler tamsa direkt Öğün Planı adımına geç
         _currentStep = ProgramWizardStep.mealPlan;
       } else {

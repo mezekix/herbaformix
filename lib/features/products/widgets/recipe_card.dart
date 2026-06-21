@@ -3,7 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/app_colors.dart';
 import '../../../../core/utils/cloudinary_helper.dart';
 import '../../../../models/recipe_model.dart';
-import 'recipe_detail_sheet.dart';
+import 'recipe_detail_sheet.dart'; // RecipeDetailPage burada tanımlı
 
 class RecipeCard extends StatelessWidget {
   final RecipeModel recipe;
@@ -20,11 +20,10 @@ class RecipeCard extends StatelessWidget {
   });
 
   void _showDetail(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => RecipeDetailSheet(recipe: recipe),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => RecipeDetailPage(recipe: recipe),
+      ),
     );
   }
 

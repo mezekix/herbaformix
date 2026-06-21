@@ -12,6 +12,7 @@ void main() {
           'weight': 78.5,
           'bmi': 25.6,
           'waist': 88.0,
+          'belly': 91.0,
           'hip': 100.0,
           'chest': 95.0,
           'bodyFat': 22.0,
@@ -28,6 +29,7 @@ void main() {
         expect(m.weight, 78.5);
         expect(m.bmi, 25.6);
         expect(m.waist, 88.0);
+        expect(m.belly, 91.0);
         expect(m.hip, 100.0);
         expect(m.chest, 95.0);
         expect(m.bodyFat, 22.0);
@@ -45,6 +47,7 @@ void main() {
         expect(m.weight, 80.0); // int → double
         expect(m.bmi, isNull);
         expect(m.waist, isNull);
+        expect(m.belly, isNull);
         expect(m.hip, isNull);
         expect(m.bodyFat, isNull);
       });
@@ -54,11 +57,11 @@ void main() {
           'date': Timestamp.fromDate(testDate),
           'weight': 75,
           'waist': 90,
-          'bodyFat': 20,
+          'belly': 92,
         }, 'entry_int');
         expect(m.weight, 75.0);
         expect(m.waist, 90.0);
-        expect(m.bodyFat, 20.0);
+        expect(m.belly, 92.0);
       });
     });
 
@@ -84,6 +87,7 @@ void main() {
         final map = m.toMap();
         expect(map.containsKey('bmi'), false);
         expect(map.containsKey('waist'), false);
+        expect(map.containsKey('belly'), false);
         expect(map.containsKey('hip'), false);
         expect(map.containsKey('bodyFat'), false);
       });
@@ -94,13 +98,13 @@ void main() {
           date: testDate,
           weight: 80.0,
           waist: 90.0,
+          belly: 91.5,
           hip: 100.0,
-          bodyFat: 22.5,
         );
         final map = m.toMap();
         expect(map['waist'], 90.0);
+        expect(map['belly'], 91.5);
         expect(map['hip'], 100.0);
-        expect(map['bodyFat'], 22.5);
       });
 
       test('id alanı map\'e dahil edilmez', () {
@@ -120,6 +124,7 @@ void main() {
         expect(round.weight, original.weight);
         expect(round.bmi, original.bmi);
         expect(round.waist, original.waist);
+        expect(round.belly, original.belly);
         expect(round.hip, original.hip);
         expect(round.bodyFat, original.bodyFat);
         expect(round.muscleMass, original.muscleMass);
@@ -140,6 +145,9 @@ void main() {
       test('MeasurementType.waist → waist değeri', () {
         expect(m.valueFor(MeasurementType.waist), 88.0);
       });
+      test('MeasurementType.belly → belly değeri', () {
+        expect(m.valueFor(MeasurementType.belly), 91.0);
+      });
       test('MeasurementType.hip → hip değeri', () {
         expect(m.valueFor(MeasurementType.hip), 100.0);
       });
@@ -152,12 +160,6 @@ void main() {
       test('MeasurementType.thigh → thigh değeri', () {
         expect(m.valueFor(MeasurementType.thigh), 58.0);
       });
-      test('MeasurementType.bodyFat → bodyFat değeri', () {
-        expect(m.valueFor(MeasurementType.bodyFat), 22.0);
-      });
-      test('MeasurementType.muscleMass → muscleMass değeri', () {
-        expect(m.valueFor(MeasurementType.muscleMass), 32.5);
-      });
 
       test('opsiyonel alan boş ise null döner', () {
         final empty = ProgressEntryModel(
@@ -166,7 +168,7 @@ void main() {
           weight: 80.0,
         );
         expect(empty.valueFor(MeasurementType.waist), isNull);
-        expect(empty.valueFor(MeasurementType.bodyFat), isNull);
+        expect(empty.valueFor(MeasurementType.belly), isNull);
       });
     });
 

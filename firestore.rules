@@ -41,6 +41,7 @@ service cloud.firestore {
         get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.assignedDistributorId == userId;
 
       allow create: if isOwner(userId);
+      allow delete: if isOwner(userId);
 
       // Sahibi (kullanıcı) kendi profilinin tüm alanlarını güncelleyebilir.
       // Atanmış distribütör yalnızca sınırlı senkronizasyon alanlarını güncelleyebilir:
@@ -96,7 +97,8 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
 
       match /customers/{customerId} {
-        allow read, create, delete: if isOwner(userId);
+        allow read, create: if isOwner(userId);
+        allow delete: if isOwner(userId) || (signedIn() && resource.data.linkedUserId == request.auth.uid);
         allow update: if isOwner(userId) || (
           signedIn() &&
           request.resource.data.linkedUserId == request.auth.uid &&
@@ -108,7 +110,12 @@ service cloud.firestore {
         );
 
         match /follow_ups/{followUpId} {
-          allow read, write: if isOwner(userId);
+          allow read: if isOwner(userId);
+          allow write: if isOwner(userId) || (
+            signedIn() &&
+            exists(/databases/$(database)/documents/users/$(userId)/customers/$(customerId)) &&
+            get(/databases/$(database)/documents/users/$(userId)/customers/$(customerId)).data.linkedUserId == request.auth.uid
+          );
         }
       }
 
@@ -190,10 +197,12 @@ service cloud.firestore {
     match /motivations/{customerId} {
       allow read: if isOwner(customerId) || isAssignedDistributor(customerId);
       allow write: if isAssignedDistributor(customerId);
+      allow delete: if isOwner(customerId);
 
       match /daily_messages/{messageId} {
         allow read: if isOwner(customerId) || isAssignedDistributor(customerId);
         allow write: if isAssignedDistributor(customerId);
+        allow delete: if isOwner(customerId);
       }
     }
 

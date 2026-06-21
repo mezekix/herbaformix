@@ -627,6 +627,9 @@ class _FollowUpTab extends StatelessWidget {
                     if (entries.any((e) => e.waist != null))
                       _buildChangeChip(
                           'Bel', _calcChange(entries, (e) => e.waist), 'cm'),
+                    if (entries.any((e) => e.belly != null))
+                      _buildChangeChip(
+                          'Göbek', _calcChange(entries, (e) => e.belly), 'cm'),
                     if (entries.any((e) => e.hip != null))
                       _buildChangeChip(
                           'Kalça', _calcChange(entries, (e) => e.hip), 'cm'),
@@ -1416,6 +1419,9 @@ Widget _buildEntryRow(ProgressEntryModel entry) {
               if (entry.waist != null)
                 _entryChip(
                     '${entry.waist!.toStringAsFixed(1)} cm', Icons.straighten),
+              if (entry.belly != null)
+                _entryChip(
+                    '${entry.belly!.toStringAsFixed(1)} cm', Icons.straighten),
               if (entry.hip != null)
                 _entryChip(
                     '${entry.hip!.toStringAsFixed(1)} cm', Icons.straighten),

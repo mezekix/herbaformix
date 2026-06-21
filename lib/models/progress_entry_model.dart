@@ -10,6 +10,7 @@ class ProgressEntryModel {
   final double weight; // kg
   final double? bmi; // Vücut Kitle İndeksi
   final double? waist; // bel cm
+  final double? belly; // göbek cm
   final double? hip; // kalça cm
   final double? chest; // göğüs cm
   final double? bodyFat; // yağ oranı %
@@ -23,6 +24,7 @@ class ProgressEntryModel {
     required this.weight,
     this.bmi,
     this.waist,
+    this.belly,
     this.hip,
     this.chest,
     this.bodyFat,
@@ -38,6 +40,7 @@ class ProgressEntryModel {
       weight: (map['weight'] as num).toDouble(),
       bmi: (map['bmi'] as num?)?.toDouble(),
       waist: (map['waist'] as num?)?.toDouble(),
+      belly: (map['belly'] as num?)?.toDouble(),
       hip: (map['hip'] as num?)?.toDouble(),
       chest: (map['chest'] as num?)?.toDouble(),
       bodyFat: (map['bodyFat'] as num?)?.toDouble(),
@@ -53,6 +56,7 @@ class ProgressEntryModel {
       'weight': weight,
       if (bmi != null) 'bmi': bmi,
       if (waist != null) 'waist': waist,
+      if (belly != null) 'belly': belly,
       if (hip != null) 'hip': hip,
       if (chest != null) 'chest': chest,
       if (bodyFat != null) 'bodyFat': bodyFat,
@@ -69,12 +73,11 @@ class ProgressEntryModel {
     return switch (type) {
       MeasurementType.weight => weight,
       MeasurementType.waist => waist,
+      MeasurementType.belly => belly,
       MeasurementType.hip => hip,
       MeasurementType.chest => chest,
       MeasurementType.arm => arm,
       MeasurementType.thigh => thigh,
-      MeasurementType.bodyFat => bodyFat,
-      MeasurementType.muscleMass => muscleMass,
     };
   }
 
@@ -84,6 +87,7 @@ class ProgressEntryModel {
     double? weight,
     double? bmi,
     double? waist,
+    double? belly,
     double? hip,
     double? chest,
     double? bodyFat,
@@ -97,6 +101,7 @@ class ProgressEntryModel {
       weight: weight ?? this.weight,
       bmi: bmi ?? this.bmi,
       waist: waist ?? this.waist,
+      belly: belly ?? this.belly,
       hip: hip ?? this.hip,
       chest: chest ?? this.chest,
       bodyFat: bodyFat ?? this.bodyFat,

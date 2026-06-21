@@ -33,9 +33,9 @@ class NotificationService {
   // geçerli olur. Bu sebeple ID'leri versiyonladık: eski sessiz kanallar
   // (`meal_reminders`, `test_channel`) initialize() sırasında silinir ve
   // aşağıdaki yeni kanallar (ses+titreşim açık) yerini alır.
-  static const String _mealChannelId = 'meal_reminders_v2';
+  static const String _mealChannelId = 'meal_reminders_v4';
   static const String _mealChannelName = 'Öğün Hatırlatıcıları';
-  static const String _testChannelId = 'test_channel_v2';
+  static const String _testChannelId = 'test_channel_v4';
   static const String _testChannelName = 'Test Bildirimleri';
 
   // Hatırlatma ID offset'i (çakışmayı önler)
@@ -96,17 +96,24 @@ class NotificationService {
 
       // 1) Eski sessiz kanalları temizle (varsa).
       await androidImpl.deleteNotificationChannel(channelId: 'meal_reminders');
+      await androidImpl.deleteNotificationChannel(channelId: 'meal_reminders_v2');
+      await androidImpl.deleteNotificationChannel(channelId: 'meal_reminders_v3');
       await androidImpl.deleteNotificationChannel(channelId: 'test_channel');
+      await androidImpl.deleteNotificationChannel(channelId: 'test_channel_v2');
+      await androidImpl.deleteNotificationChannel(channelId: 'test_channel_v3');
 
-      // 2) Yeni kanalları oluştur (ses + titreşim açık).
+      // 2) Yeni kanalları oluştur (ses + titreşim açık, özel ses dosyası atanmış).
+      const sound = RawResourceAndroidNotificationSound('notification_sound');
       await androidImpl.createNotificationChannel(
         const AndroidNotificationChannel(
           _mealChannelId,
           _mealChannelName,
           description: 'Günlük öğün ve ürün kullanım hatırlatıcıları',
-          importance: Importance.high,
+          importance: Importance.max,
           playSound: true,
+          sound: sound,
           enableVibration: true,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
         ),
       );
       await androidImpl.createNotificationChannel(
@@ -116,11 +123,13 @@ class NotificationService {
           description: 'Sistem testi için anlık bildirimler',
           importance: Importance.max,
           playSound: true,
+          sound: sound,
           enableVibration: true,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
         ),
       );
       debugPrint(
-        '[NotificationService] Android kanalları kuruldu (ses+titreşim açık).',
+        '[NotificationService] Android kanalları kuruldu (özel ses aktif).',
       );
     } catch (e) {
       debugPrint('[NotificationService] _setupAndroidChannels hatası: $e');
@@ -301,14 +310,19 @@ class NotificationService {
       // Payload'a orijinal başlık ve body'yi kaydet (hatırlatma bildirimi için)
       final payload = jsonEncode({'title': title, 'body': body});
 
+      const sound = RawResourceAndroidNotificationSound('notification_sound');
       final androidDetails = AndroidNotificationDetails(
         _mealChannelId,
         _mealChannelName,
         channelDescription: 'Günlük öğün ve ürün kullanım hatırlatıcıları',
-        importance: Importance.high,
+        importance: Importance.max,
         priority: Priority.high,
         playSound: true,
+        sound: sound,
         enableVibration: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+        visibility: NotificationVisibility.public, // Kilit ekranında göster
+        fullScreenIntent: true, // Ekranı uyandır
         icon: '@drawable/ic_notification',
         color: const Color(0xFF7AC144), // AppColors.primary
         actions: const <AndroidNotificationAction>[
@@ -328,6 +342,8 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'notification_sound.wav', // Özel ses
+        interruptionLevel: InterruptionLevel.timeSensitive, // iOS 15+ kilit ekranında uyandırma
       );
       final details = NotificationDetails(
         android: androidDetails,
@@ -404,6 +420,7 @@ class NotificationService {
         'body': 'Bildirim sistemi başarıyla çalışıyor!',
       });
 
+      const sound = RawResourceAndroidNotificationSound('notification_sound');
       const androidDetails = AndroidNotificationDetails(
         _testChannelId,
         _testChannelName,
@@ -411,7 +428,10 @@ class NotificationService {
         importance: Importance.max,
         priority: Priority.max,
         playSound: true,
+        sound: sound,
         enableVibration: true,
+        visibility: NotificationVisibility.public, // Kilit ekranında göster
+        fullScreenIntent: true, // Ekranı uyandır
         icon: '@drawable/ic_notification',
         color: Color(0xFF7AC144),
         actions: <AndroidNotificationAction>[
@@ -431,6 +451,8 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        sound: 'notification_sound.wav', // Özel ses
+        interruptionLevel: InterruptionLevel.timeSensitive, // iOS 15+ kilit ekranında uyandırma
       );
       const details = NotificationDetails(
         android: androidDetails,

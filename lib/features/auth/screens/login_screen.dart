@@ -108,6 +108,28 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _submitAnonymousSignIn() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    final success = await authProvider.signInAnonymously();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      if (!success) {
+        final message = authProvider.errorMessage ?? 'Misafir girişi başarısız oldu.';
+        if (authProvider.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        }
+      }
+    }
+  }
+
   void _toggleMode() {
     setState(() {
       _isRegisterMode = !_isRegisterMode;
@@ -418,6 +440,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderColor: borderColor,
                             bgColor: inputBg,
                             iconColor: stitchPrimary,
+                            onTap: _submitAnonymousSignIn,
                           ),
                         ],
                       ),

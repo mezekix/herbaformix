@@ -22,15 +22,14 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
   final _formKey = GlobalKey<FormState>();
   final _weightCtrl = TextEditingController();
   final _waistCtrl = TextEditingController();
+  final _bellyCtrl = TextEditingController();
   final _hipCtrl = TextEditingController();
   final _chestCtrl = TextEditingController();
-  final _bodyFatCtrl = TextEditingController();
-  final _muscleMassCtrl = TextEditingController();
   final _armCtrl = TextEditingController();
   final _thighCtrl = TextEditingController();
   final _heightCtrl = TextEditingController();
 
-  bool _showMeasurements = false;
+  bool _showMeasurements = true;
   bool _isSaving = false;
   bool _needsHeight = false;
   late DateTime _selectedDate;
@@ -45,14 +44,13 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
     if (e != null) {
       _weightCtrl.text = e.weight.toString();
       _waistCtrl.text = e.waist?.toString() ?? '';
+      _bellyCtrl.text = e.belly?.toString() ?? '';
       _hipCtrl.text = e.hip?.toString() ?? '';
       _chestCtrl.text = e.chest?.toString() ?? '';
-      _bodyFatCtrl.text = e.bodyFat?.toString() ?? '';
-      _muscleMassCtrl.text = e.muscleMass?.toString() ?? '';
       _armCtrl.text = e.arm?.toString() ?? '';
       _thighCtrl.text = e.thigh?.toString() ?? '';
-      if (e.waist != null || e.hip != null || e.chest != null ||
-          e.bodyFat != null || e.muscleMass != null || e.arm != null || e.thigh != null) {
+      if (e.waist != null || e.belly != null || e.hip != null || e.chest != null ||
+          e.arm != null || e.thigh != null) {
         _showMeasurements = true;
       }
     }
@@ -71,10 +69,9 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
   void dispose() {
     _weightCtrl.dispose();
     _waistCtrl.dispose();
+    _bellyCtrl.dispose();
     _hipCtrl.dispose();
     _chestCtrl.dispose();
-    _bodyFatCtrl.dispose();
-    _muscleMassCtrl.dispose();
     _armCtrl.dispose();
     _thighCtrl.dispose();
     _heightCtrl.dispose();
@@ -100,7 +97,13 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
       final h = double.tryParse(_heightCtrl.text.replaceAll(',', '.'));
       if (h != null && h > 0) {
         final updated = userProfile.copyWith(height: h);
-        await authProvider.updateUserProfile(updated);
+        await authProvider.updateUserProfile(updated).timeout(
+          const Duration(seconds: 2),
+          onTimeout: () {
+            debugPrint('[AddMeasurementSheet] updateUserProfile timeout - offline modda olabilir, devam ediliyor.');
+            return false;
+          },
+        );
       }
     }
 
@@ -111,17 +114,14 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
       waist: _waistCtrl.text.isNotEmpty
           ? double.tryParse(_waistCtrl.text.replaceAll(',', '.'))
           : null,
+      belly: _bellyCtrl.text.isNotEmpty
+          ? double.tryParse(_bellyCtrl.text.replaceAll(',', '.'))
+          : null,
       hip: _hipCtrl.text.isNotEmpty
           ? double.tryParse(_hipCtrl.text.replaceAll(',', '.'))
           : null,
       chest: _chestCtrl.text.isNotEmpty
           ? double.tryParse(_chestCtrl.text.replaceAll(',', '.'))
-          : null,
-      bodyFat: _bodyFatCtrl.text.isNotEmpty
-          ? double.tryParse(_bodyFatCtrl.text.replaceAll(',', '.'))
-          : null,
-      muscleMass: _muscleMassCtrl.text.isNotEmpty
-          ? double.tryParse(_muscleMassCtrl.text.replaceAll(',', '.'))
           : null,
       arm: _armCtrl.text.isNotEmpty
           ? double.tryParse(_armCtrl.text.replaceAll(',', '.'))
@@ -324,6 +324,20 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
             if (_showMeasurements) ...[
               const SizedBox(height: 16),
               _buildField(
+                controller: _chestCtrl,
+                label: 'Göğüs (cm)',
+                hint: 'Örn: 96',
+                icon: Icons.straighten,
+              ),
+              const SizedBox(height: 12),
+              _buildField(
+                controller: _bellyCtrl,
+                label: 'Göbek (cm)',
+                hint: 'Örn: 86',
+                icon: Icons.straighten,
+              ),
+              const SizedBox(height: 12),
+              _buildField(
                 controller: _waistCtrl,
                 label: 'Bel (cm)',
                 hint: 'Örn: 82',
@@ -334,13 +348,6 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
                 controller: _hipCtrl,
                 label: 'Kalça (cm)',
                 hint: 'Örn: 104',
-                icon: Icons.straighten,
-              ),
-              const SizedBox(height: 12),
-              _buildField(
-                controller: _chestCtrl,
-                label: 'Göğüs (cm)',
-                hint: 'Örn: 96',
                 icon: Icons.straighten,
               ),
               const SizedBox(height: 12),
@@ -356,20 +363,6 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
                 label: 'Bacak (cm)',
                 hint: 'Örn: 58',
                 icon: Icons.straighten,
-              ),
-              const SizedBox(height: 12),
-              _buildField(
-                controller: _bodyFatCtrl,
-                label: 'Yağ Oranı (%)',
-                hint: 'Örn: 25.3',
-                icon: Icons.water_drop_outlined,
-              ),
-              const SizedBox(height: 12),
-              _buildField(
-                controller: _muscleMassCtrl,
-                label: 'Kas Kütlesi (kg)',
-                hint: 'Örn: 45.0',
-                icon: Icons.fitness_center,
               ),
             ],
 

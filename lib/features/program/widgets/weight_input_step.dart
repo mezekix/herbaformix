@@ -20,6 +20,28 @@ class _WeightInputStepState extends State<WeightInputStep> {
   int? _calculatedMinDuration;
 
   @override
+  void initState() {
+    super.initState();
+    final provider = context.read<ProgramProvider>();
+    if (provider.currentWeight != null) {
+      _currentController.text = provider.currentWeight!.toString();
+    }
+    if (provider.targetWeight != null) {
+      _targetController.text = provider.targetWeight!.toString();
+    }
+    
+    final current = provider.currentWeight;
+    final target = provider.targetWeight;
+    if (current != null && target != null) {
+      try {
+        _calculatedMinDuration = calculateMinDuration(current, target);
+      } catch (_) {
+        _validationError = 'Hedef kilo mevcut kilodan küçük olmalıdır.';
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _currentController.dispose();
     _targetController.dispose();

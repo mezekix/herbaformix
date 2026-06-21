@@ -20,40 +20,48 @@ class CustomerProfileMenu extends StatelessWidget {
         children: [
           // Header Section
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.05),
               border: Border(
                 bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
               ),
             ),
-            child: Column(
+            child: Row(
               children: [
                 CircleAvatar(
-                  radius: 50,
+                  radius: 36,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                   backgroundImage: userProfile?.profilePhotoUrl != null
                       ? NetworkImage(userProfile!.profilePhotoUrl!) // TODO: Handle file:// and initials properly as in HomeScreen
                       : null,
                   child: userProfile?.profilePhotoUrl == null
-                      ? const Icon(Icons.person, size: 50, color: AppColors.primary)
+                      ? const Icon(Icons.person, size: 36, color: AppColors.primary)
                       : null,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  userProfile?.name ?? 'Kullanıcı',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.nightSky,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  userProfile?.email ?? '',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        userProfile?.name ?? 'Kullanıcı',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.nightSky,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        userProfile?.email ?? '',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

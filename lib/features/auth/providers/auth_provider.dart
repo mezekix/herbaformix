@@ -27,6 +27,11 @@ class AuthProvider with ChangeNotifier {
   AuthStatus _status = AuthStatus.uninitialized;
   String? _errorMessage; // Hata mesajlarını tutmak için
   bool _notifyScheduled = false;
+  bool _isProcessingAuth = false; // Aktif bir giriş/kayıt işlemi var mı?
+  bool _isDeletingAccount = false; // Hesap silme işlemi devam ediyor mu?
+
+  bool get isProcessingAuth => _isProcessingAuth;
+  bool get isDeletingAccount => _isDeletingAccount;
 
   /// notifyListeners'ı güvenli bir şekilde erteler.
   ///
@@ -44,7 +49,7 @@ class AuthProvider with ChangeNotifier {
   void notifyListeners() {
     if (_notifyScheduled) return;
     _notifyScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() {
       _notifyScheduled = false;
       super.notifyListeners();
     });
@@ -136,16 +141,23 @@ class AuthProvider with ChangeNotifier {
 
         // Kullanıcı giriş yaptığında veya uygulama açıldığında profilini Firestore'dan çek
         final profile = await _firestoreService.getUserProfile(firebaseUser.uid);
+
         if (profile != null) {
           _userProfile = profile;
           // İzin verildiyse FCM token'ı arka planda senkronla.
           unawaited(_syncFcmTokenIfPermitted(firebaseUser.uid));
-        } else if (_userProfile?.id != firebaseUser.uid) {
-          _userProfile = null;
-          debugPrint("Firestore'da profil bulunamadı: ${firebaseUser.uid}");
-          // Profil yoksa null kalacak, signUp veya Login sonrası işlemler halledebilir
+          _status = AuthStatus.authenticated;
+        } else {
+          // Firestore'da profil bulunamadı! (Silinmiş veya tutarsız hesap)
+          if (_isProcessingAuth) {
+            debugPrint("Firestore'da profil henüz oluşturulmamış olabilir (signIn/signUp aktif). Oturum kapatılması iptal edildi.");
+          } else {
+            debugPrint("Firestore'da profil bulunamadı: ${firebaseUser.uid}. Oturum kapatılıyor...");
+            _userProfile = null;
+            _status = AuthStatus.unauthenticated;
+            unawaited(_authService.signOut());
+          }
         }
-        _status = AuthStatus.authenticated;
       }
     } catch (e) {
       debugPrint("AuthProvider Error (_onAuthStateChanged): $e");
@@ -162,6 +174,7 @@ class AuthProvider with ChangeNotifier {
   Future<bool> signIn(String email, String password) async {
     _status = AuthStatus.authenticating;
     _errorMessage = null;
+    _isProcessingAuth = true;
     notifyListeners();
     try {
       final userCredential = await _authService.signInWithEmailAndPassword(
@@ -176,7 +189,8 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
       
-      // _onAuthStateChanged durumu ve profili güncelleyecek
+      _status = AuthStatus.authenticated;
+      notifyListeners();
       return true;
     } catch (e) {
       debugPrint("AuthProvider Error (signIn): $e");
@@ -184,12 +198,15 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = "Giriş sırasında bir hata oluştu: $e";
       notifyListeners();
       return false;
+    } finally {
+      _isProcessingAuth = false;
     }
   }
 
   Future<bool> signInWithGoogle({UserRole role = UserRole.customer, String? inviteCode}) async {
     _status = AuthStatus.authenticating;
     _errorMessage = null;
+    _isProcessingAuth = true;
     notifyListeners();
     try {
       String? distributorId;
@@ -253,7 +270,8 @@ class AuthProvider with ChangeNotifier {
         notifyListeners();
       }
 
-      // _onAuthStateChanged durumu ve profili güncelleyecek
+      _status = AuthStatus.authenticated;
+      notifyListeners();
       return true;
     } catch (e) {
       debugPrint("AuthProvider Error (signInWithGoogle): $e");
@@ -261,12 +279,62 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = "Google ile giriş sırasında bir hata oluştu: $e";
       notifyListeners();
       return false;
+    } finally {
+      _isProcessingAuth = false;
+    }
+  }
+
+  Future<bool> signInAnonymously() async {
+    _status = AuthStatus.authenticating;
+    _errorMessage = null;
+    _isProcessingAuth = true;
+    notifyListeners();
+    try {
+      final userCredential = await _authService.signInAnonymously();
+      
+      if (userCredential == null) {
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+        return false;
+      }
+      
+      if (userCredential.user != null) {
+        final existingProfile = await _firestoreService.getUserProfile(userCredential.user!.uid);
+        if (existingProfile == null) {
+          final newProfile = UserProfileModel(
+            id: userCredential.user!.uid,
+            email: "Misafir",
+            name: "Misafir Kullanıcı",
+            role: UserRole.customer,
+          );
+          
+          await _firestoreService.setUserProfile(newProfile);
+          _userProfile = newProfile;
+          debugPrint("Anonim giriş sonrası yeni profil oluşturuldu: ${userCredential.user!.uid}");
+        } else {
+          _userProfile = existingProfile;
+          debugPrint("Anonim giriş sonrası mevcut profil yüklendi: ${userCredential.user!.uid}");
+        }
+      }
+
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint("AuthProvider Error (signInAnonymously): $e");
+      _status = AuthStatus.unauthenticated;
+      _errorMessage = "Misafir girişi sırasında bir hata oluştu: $e";
+      notifyListeners();
+      return false;
+    } finally {
+      _isProcessingAuth = false;
     }
   }
 
   Future<bool> signUp(String email, String password, UserRole role) async {
     _status = AuthStatus.authenticating;
     _errorMessage = null;
+    _isProcessingAuth = true;
     notifyListeners();
     try {
       final userCredential = await _authService.createUserWithEmailAndPassword(
@@ -285,7 +353,8 @@ class AuthProvider with ChangeNotifier {
         _userProfile = newProfile;
         debugPrint("Kayıt sonrası yeni profil oluşturuldu: ${newUser.uid}");
         notifyListeners();
-        // _onAuthStateChanged zaten dinlendiği için durumu o güncelleyecek
+        _status = AuthStatus.authenticated;
+        notifyListeners();
         return true;
       }
       _status = AuthStatus.unauthenticated;
@@ -298,6 +367,8 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = "Kayıt sırasında bir hata oluştu: $e";
       notifyListeners();
       return false;
+    } finally {
+      _isProcessingAuth = false;
     }
   }
 
@@ -407,15 +478,22 @@ class AuthProvider with ChangeNotifier {
   ///
   /// Hata fırlatırsa hesap silinmemiştir; çağıran taraf kullanıcıya anlamlı
   /// bir mesaj göstermelidir.
-  Future<void> deleteAccount({String? currentPassword}) async {
+  Future<void> deleteAccount({
+    String? currentPassword,
+    VoidCallback? onBeforeDelete,
+  }) async {
     if (_firebaseUser == null) {
       throw Exception('Kullanıcı oturumu bulunamadı.');
     }
 
     final uid = _firebaseUser!.uid;
-    final email = _firebaseUser!.email;
-    if (email == null) {
-      throw Exception('Kullanıcı e-posta adresi bulunamadı.');
+    final isAnonymous = _firebaseUser!.isAnonymous;
+
+    if (!isAnonymous) {
+      final email = _firebaseUser!.email;
+      if (email == null) {
+        throw Exception('Kullanıcı e-posta adresi bulunamadı.');
+      }
     }
 
     final providerIds =
@@ -425,31 +503,61 @@ class AuthProvider with ChangeNotifier {
 
     try {
       // 1) Provider'a göre reauth
-      if (isPasswordUser) {
-        if (currentPassword == null || currentPassword.isEmpty) {
-          throw Exception('Şifre gerekli.');
+      if (!isAnonymous) {
+        if (isPasswordUser) {
+          if (currentPassword == null || currentPassword.isEmpty) {
+            throw Exception('Şifre gerekli.');
+          }
+          final credential = fb_auth.EmailAuthProvider.credential(
+            email: _firebaseUser!.email!,
+            password: currentPassword,
+          );
+          await _firebaseUser!.reauthenticateWithCredential(credential);
+        } else if (isGoogleUser) {
+          final googleCredential = await _authService.getGoogleAuthCredential();
+          if (googleCredential == null) {
+            throw Exception('Google ile yeniden onay iptal edildi.');
+          }
+          await _firebaseUser!.reauthenticateWithCredential(googleCredential);
+        } else {
+          throw Exception(
+              'Bu hesap için yeniden onay yöntemi bulunamadı (provider: '
+              '${providerIds.join(", ")}).');
         }
-        final credential = fb_auth.EmailAuthProvider.credential(
-          email: email,
-          password: currentPassword,
-        );
-        await _firebaseUser!.reauthenticateWithCredential(credential);
-      } else if (isGoogleUser) {
-        final googleCredential = await _authService.getGoogleAuthCredential();
-        if (googleCredential == null) {
-          throw Exception('Google ile yeniden onay iptal edildi.');
-        }
-        await _firebaseUser!.reauthenticateWithCredential(googleCredential);
-      } else {
-        throw Exception(
-            'Bu hesap için yeniden onay yöntemi bulunamadı (provider: '
-            '${providerIds.join(", ")}).');
       }
 
-      // 2) Firestore verilerini sil
+      // 2) FCM token'ı cihazdan sil
+      try {
+        await FcmService().deleteToken();
+      } catch (e) {
+        debugPrint('FcmService token silme hatası (deleteAccount): $e');
+      }
+
+      // Hesap siliniyor flag'ini aç, böylece providerlar listenerları durdurur.
+      _isDeletingAccount = true;
+      notifyListeners();
+
+      // 3) Firestore verilerini sil
       await _firestoreService.deleteCustomerAccountData(uid);
 
-      // 3) Auth hesabını sil — başarılı olunca _onAuthStateChanged tetiklenir
+      // 4) Google kullanıcısı ise Google oturumunu kapat (hesap seçme ekranı için)
+      if (isGoogleUser) {
+        try {
+          await _authService.signOutGoogleOnly();
+        } catch (e) {
+          debugPrint('Google Sign-Out hatası (deleteAccount): $e');
+        }
+      }
+
+      // 5) Firestore yerel önbelleğini arka planda temizle (akışı bloke etmemesi için await etmiyoruz)
+      unawaited(_firestoreService.clearLocalCache());
+
+      // 6) Yönlendirme gerçekleşmeden önce diyaloğu kapatmak için callback tetikle
+      if (onBeforeDelete != null) {
+        onBeforeDelete();
+      }
+
+      // 7) Auth hesabını sil — başarılı olunca _onAuthStateChanged tetiklenir
       await _firebaseUser!.delete();
     } on fb_auth.FirebaseAuthException catch (e) {
       final message = switch (e.code) {

@@ -32,7 +32,12 @@ class ProgramService {
     try {
       // Mevcut bildirimleri iptal et (NotificationService dışarıdan çağrılır)
       // Önce eski programı sil
-      await _programRef(userId).set(program.toMap());
+      await _programRef(userId).set(program.toMap()).timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          debugPrint('[ProgramService] saveProgram set() timeout - offline modda olabilir, devam ediliyor.');
+        },
+      );
 
       // Günlük rutinleri oluştur
       await _generateRoutinesFromProgram(userId, program, allProducts);
@@ -241,7 +246,12 @@ class ProgramService {
     }
 
     // Tüm silme ve yazma işlemlerini tek seferde uygula
-    await batch.commit();
+    await batch.commit().timeout(
+      const Duration(seconds: 2),
+      onTimeout: () {
+        debugPrint('[ProgramService] _generateRoutinesFromProgram batch.commit() timeout - offline modda olabilir, devam ediliyor.');
+      },
+    );
   }
 
   /// Normal öğün için "Dengeli bir X" formatında label oluşturur

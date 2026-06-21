@@ -12,12 +12,11 @@ import 'package:flutter/material.dart';
 enum MeasurementType {
   weight('Kilo Değişimi', 'kg', Icons.monitor_weight_outlined),
   waist('Bel Değişimi', 'cm', Icons.straighten),
+  belly('Göbek Değişimi', 'cm', Icons.straighten),
   hip('Kalça Değişimi', 'cm', Icons.straighten),
   chest('Göğüs Değişimi', 'cm', Icons.straighten),
   arm('Kol Değişimi', 'cm', Icons.straighten),
-  thigh('Bacak Değişimi', 'cm', Icons.straighten),
-  bodyFat('Yağ Oranı Değişimi', '%', Icons.water_drop_outlined),
-  muscleMass('Kas Kütlesi Değişimi', 'kg', Icons.fitness_center);
+  thigh('Bacak Değişimi', 'cm', Icons.straighten);
 
   final String label;
   final String unit;

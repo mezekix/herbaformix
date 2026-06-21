@@ -93,7 +93,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       final buffer = StringBuffer();
       // Başlık
       buffer.writeln(
-        'Tarih,Kilo (kg),BMI,Bel (cm),Kalça (cm),Göğüs (cm),Kol (cm),Bacak (cm),Yağ Oranı (%),Kas Kütlesi (kg)',
+        'Tarih,Kilo (kg),BMI,Bel (cm),Göbek (cm),Kalça (cm),Göğüs (cm),Kol (cm),Bacak (cm)',
       );
       // Satırlar
       for (final e in provider.entries) {
@@ -102,12 +102,11 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
           '${e.weight},'
           '${e.bmi ?? ''},'
           '${e.waist ?? ''},'
+          '${e.belly ?? ''},'
           '${e.hip ?? ''},'
           '${e.chest ?? ''},'
           '${e.arm ?? ''},'
-          '${e.thigh ?? ''},'
-          '${e.bodyFat ?? ''},'
-          '${e.muscleMass ?? ''}',
+          '${e.thigh ?? ''}',
         );
       }
 

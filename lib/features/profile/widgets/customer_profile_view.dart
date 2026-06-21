@@ -85,7 +85,6 @@ class _CustomerProfileViewState extends State<CustomerProfileView> {
   static const List<String> _genderOptions = [
     'Kadın',
     'Erkek',
-    'Belirtmek İstemiyorum',
   ];
 
   static final DateTime _minDate = DateTime(1900, 1, 1);
@@ -122,7 +121,9 @@ class _CustomerProfileViewState extends State<CustomerProfileView> {
         _nameController.text = userProfile.name ?? '';
         _emailController.text = userProfile.email;
         _phoneController.text = userProfile.phoneNumber ?? '';
-        _selectedGender = userProfile.gender;
+        _selectedGender = userProfile.gender == 'Belirtmek İstemiyorum'
+            ? null
+            : userProfile.gender;
 
         if (userProfile.birthDate != null) {
           _selectedBirthDate = userProfile.birthDate;
