@@ -160,27 +160,30 @@ class WaterStepTile extends StatelessWidget {
                     ),
                     onChanged: (val) async {
                       if (val == null) return;
+                      
+                      final routineService = context.read<RoutineService>();
+                      final waterProvider = context.read<WaterProvider>();
+                      final messenger = ScaffoldMessenger.of(context);
+                      
                       // Rutin durumunu güncelle
-                      await context
-                          .read<RoutineService>()
-                          .updateRoutineStatus(userId, routine.id, val);
+                      await routineService.updateRoutineStatus(userId, routine.id, val);
 
-                      // Su içildiyse WaterProvider'a kaydet
-                      if (val && context.mounted) {
-                        try {
-                          context.read<WaterProvider>().addWater(500);
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Su kaydı yapılamadı, lütfen tekrar deneyin.',
-                                ),
-                                backgroundColor: Colors.orange,
-                              ),
-                            );
-                          }
+                      // Su içildiyse WaterProvider'a kaydet, kaldırıldıysa sil
+                      try {
+                        if (val) {
+                          waterProvider.addWater(500);
+                        } else {
+                          waterProvider.removeWater(500);
                         }
+                      } catch (e) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Su kaydı yapılamadı, lütfen tekrar deneyin.',
+                            ),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
                       }
                     },
                   ),

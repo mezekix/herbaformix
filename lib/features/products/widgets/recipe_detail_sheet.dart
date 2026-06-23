@@ -45,16 +45,6 @@ class RecipeDetailPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 20),
-                  // Başlık
-                  Text(
-                    recipe.title,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   // Süre, Kalori ve Hedef Badge
                   _buildBadgeRow(),
                   const SizedBox(height: 16),
@@ -175,36 +165,17 @@ class RecipeDetailPage extends StatelessWidget {
                     ),
                   ),
 
-                // Alt gradient — başlık okunabilirliği ve geçiş yumuşaklığı
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 120,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withAlpha(80),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Resmin altında shake ismi (expanded durumda)
+                // Resmin altında shake ismi (expanded durumda) - Ortalanmış
                 Positioned(
                   left: 20,
                   right: 20,
-                  bottom: 16,
+                  bottom: 20,
                   child: AnimatedOpacity(
                     opacity: isCollapsed ? 0.0 : 1.0,
                     duration: const Duration(milliseconds: 200),
                     child: Text(
                       recipe.title,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -213,6 +184,15 @@ class RecipeDetailPage extends StatelessWidget {
                           Shadow(
                             blurRadius: 12,
                             color: Colors.black54,
+                            offset: Offset(0, 2),
+                          ),
+                          Shadow(
+                            blurRadius: 36,
+                            color: Colors.black45,
+                          ),
+                          Shadow(
+                            blurRadius: 60,
+                            color: Colors.black38,
                           ),
                         ],
                       ),

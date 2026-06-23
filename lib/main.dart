@@ -25,7 +25,7 @@ void main() async {
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
-    ).timeout(const Duration(seconds: 15));
+    );
   } catch (e) {
     debugPrint('Firebase başlatma hatası: $e');
   }

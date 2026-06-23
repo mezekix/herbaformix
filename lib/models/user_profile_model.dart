@@ -1,4 +1,5 @@
 // Bu dosya, kullanıcı profili verilerini temsil eden model sınıfını içerir.
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'user_role.dart';
 
 /// Kullanıcı profili — **immutable**.
@@ -226,47 +227,54 @@ class UserProfileModel {
       ),
       name: map['name'] as String?,
       distributorLevel: map['distributorLevel'] as String?,
-      monthlyVPTarget: map['monthlyVPTarget'] as int?,
+      monthlyVPTarget: (map['monthlyVPTarget'] as num?)?.toInt(),
       isOnboarded: map['isOnboarded'] ?? false,
-      age: map['age'] as int?,
+      age: (map['age'] as num?)?.toInt(),
       phoneNumber: map['phoneNumber'] as String?,
       weight: (map['weight'] as num?)?.toDouble(),
       height: (map['height'] as num?)?.toDouble(),
       targetWeight: (map['targetWeight'] as num?)?.toDouble(),
-      programStartDate: map['programStartDate'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['programStartDate'] as int)
-          : null,
+      programStartDate: _parseDate(map['programStartDate']),
       userGoal: map['userGoal'] as String?,
       wakeTime: map['wakeTime'] as String?,
       lunchTime: map['lunchTime'] as String?,
       sleepTime: map['sleepTime'] as String?,
-      birthDate: map['birthDate'] is int
-          ? DateTime.fromMillisecondsSinceEpoch(map['birthDate'] as int)
-          : null,
+      birthDate: _parseDate(map['birthDate']),
       gender: map['gender'] as String?,
       healthNotes: map['healthNotes'] as String?,
       allergies: map['allergies'] as String?,
       medications: map['medications'] as String?,
       assignedDistributorId: map['assignedDistributorId'] as String?,
       profilePhotoUrl: map['profilePhotoUrl'] as String?,
-      profilePhotoUpdatedAt: map['profilePhotoUpdatedAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(
-              map['profilePhotoUpdatedAt'] as int)
-          : null,
+      profilePhotoUpdatedAt: _parseDate(map['profilePhotoUpdatedAt']),
       earnedBadges: (map['earnedBadges'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map((e) => e.toString())
               .toList() ??
           const [],
-      waterDailyGoal: map['waterDailyGoal'] as int?,
-      waterMinLimit: map['waterMinLimit'] as int?,
-      waterMaxLimit: map['waterMaxLimit'] as int?,
+      waterDailyGoal: (map['waterDailyGoal'] as num?)?.toInt(),
+      waterMinLimit: (map['waterMinLimit'] as num?)?.toInt(),
+      waterMaxLimit: (map['waterMaxLimit'] as num?)?.toInt(),
       distributorRequestStatus: map['distributorRequestStatus'] as String?,
       fcmToken: map['fcmToken'] as String?,
-      fcmTokenUpdatedAt: map['fcmTokenUpdatedAt'] is int
-          ? DateTime.fromMillisecondsSinceEpoch(
-              map['fcmTokenUpdatedAt'] as int)
-          : null,
+      fcmTokenUpdatedAt: _parseDate(map['fcmTokenUpdatedAt']),
     );
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    if (value is Timestamp) return value.toDate();
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      try {
+        return (value as dynamic).toDate() as DateTime?;
+      } catch (_) {}
+    }
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (_) {}
+    }
+    return null;
   }
 
   // UserProfileModel'i Firestore'a yazmak için Map'e dönüştürür

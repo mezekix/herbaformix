@@ -30,8 +30,38 @@ class UserProfileRepository {
   }
 
   Future<UserProfileModel?> getUserProfile(String userId) async {
-    final d = await ref.doc(userId).get();
-    return d.exists ? d.data() : null;
+    try {
+      final Future<DocumentSnapshot<UserProfileModel>> getFuture = () async {
+        return await ref.doc(userId).get();
+      }();
+
+      final d = await getFuture.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () async {
+          return await ref.doc(userId).get(const GetOptions(source: Source.cache));
+        },
+      );
+      if (!d.exists) {
+        return null;
+      }
+      return d.data();
+    } on FirebaseException catch (e) {
+      debugPrint('[UserProfileRepository] getUserProfile Firebase hatası: ${e.code} - ${e.message}');
+      if (e.code == 'permission-denied') {
+        try {
+          final cacheDoc = await ref.doc(userId).get(const GetOptions(source: Source.cache));
+          if (cacheDoc.exists) {
+            return cacheDoc.data();
+          }
+        } catch (cacheError) {
+          debugPrint('[UserProfileRepository] Önbellekten okuma başarısız: $cacheError');
+        }
+      }
+      rethrow;
+    } catch (e) {
+      debugPrint('[UserProfileRepository] getUserProfile genel hata: $e');
+      rethrow;
+    }
   }
 
   Stream<UserProfileModel?> watchUserProfile(String userId) {

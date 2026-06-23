@@ -9,12 +9,30 @@
       "videoUrl": "",
       "prepTimeMin": 3,
       "calories": 220,
-      "goals": ["weight_loss", "healthy_living", "weight_gain"],
-      "tags": ["kolay", "hızlı", "klasik"],
+      "goals": [
+        "weight_loss",
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "kolay",
+        "hızlı",
+        "klasik"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilyalı", "amount": "2 ölçek", "note": "~50gr" },
-        { "name": "Yarım yağlı süt", "amount": "250ml" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilyalı",
+          "amount": "2 ölçek",
+          "note": "~50gr"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250ml"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Tüm malzemeleri blender'a koy.",
@@ -39,13 +57,33 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 280,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["tatlı", "enerji", "meyveli"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "tatlı",
+        "enerji",
+        "meyveli"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Çikolatalı", "amount": "2 ölçek", "note": "~50gr" },
-        { "name": "Su veya Bitkisel Süt", "amount": "250ml" },
-        { "name": "Muz", "amount": "1/2 adet" },
-        { "name": "Ceviz", "amount": "1 tatlı kaşığı" }
+        {
+          "name": "Formül 1 Çikolatalı",
+          "amount": "2 ölçek",
+          "note": "~50gr"
+        },
+        {
+          "name": "Su veya Bitkisel Süt",
+          "amount": "250ml"
+        },
+        {
+          "name": "Muz",
+          "amount": "1/2 adet"
+        },
+        {
+          "name": "Ceviz",
+          "amount": "1 tatlı kaşığı"
+        }
       ],
       "steps": [
         "Sıvıyı blender'a alın.",
@@ -70,12 +108,28 @@
       "videoUrl": "",
       "prepTimeMin": 4,
       "calories": 190,
-      "goals": ["weight_loss"],
-      "tags": ["ferah", "antioksidan", "hafif"],
+      "goals": [
+        "weight_loss"
+      ],
+      "tags": [
+        "ferah",
+        "antioksidan",
+        "hafif"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Ahududulu & Yaban Mersinli", "amount": "2 ölçek", "note": "~50gr" },
-        { "name": "Su", "amount": "250ml" },
-        { "name": "Dondurulmuş meyve mix", "amount": "1 yemek kaşığı" }
+        {
+          "name": "Formül 1 Ahududulu & Yaban Mersinli",
+          "amount": "2 ölçek",
+          "note": "~50gr"
+        },
+        {
+          "name": "Su",
+          "amount": "250ml"
+        },
+        {
+          "name": "Dondurulmuş meyve mix",
+          "amount": "1 yemek kaşığı"
+        }
       ],
       "steps": [
         "Suyu blender'a ekleyin.",
@@ -100,15 +154,42 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 310,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["rahatlatıcı", "doyurucu", "tarçın"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "rahatlatıcı",
+        "doyurucu",
+        "tarçın"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "200 ml", "note": "%1,5 yağ" },
-        { "name": "Demlenmiş ıhlamur çayı", "amount": "1 çay bardağı", "note": "soğutulmuş" },
-        { "name": "Yulaf ezmesi", "amount": "2 yemek kaşığı" },
-        { "name": "Tarçın", "amount": "1/2 çay kaşığı" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Çikolata Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "200 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Demlenmiş ıhlamur çayı",
+          "amount": "1 çay bardağı",
+          "note": "soğutulmuş"
+        },
+        {
+          "name": "Yulaf ezmesi",
+          "amount": "2 yemek kaşığı"
+        },
+        {
+          "name": "Tarçın",
+          "amount": "1/2 çay kaşığı"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -133,15 +214,41 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 300,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["yeşil", "yüksek protein", "doyurucu"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "yeşil",
+        "yüksek protein",
+        "doyurucu"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Lor peyniri", "amount": "2 yemek kaşığı" },
-        { "name": "Taze ıspanak", "amount": "6 yaprak" },
-        { "name": "Dolmalık fıstık", "amount": "1 tatlı kaşığı" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Lor peyniri",
+          "amount": "2 yemek kaşığı"
+        },
+        {
+          "name": "Taze ıspanak",
+          "amount": "6 yaprak"
+        },
+        {
+          "name": "Dolmalık fıstık",
+          "amount": "1 tatlı kaşığı"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -166,15 +273,40 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 301,
-      "goals": ["healthy_living"],
-      "tags": ["ferah", "meyveli", "zencefil"],
+      "goals": [
+        "healthy_living"
+      ],
+      "tags": [
+        "ferah",
+        "meyveli",
+        "zencefil"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Karışık meyve suyu", "amount": "250 ml" },
-        { "name": "Fındık", "amount": "6 adet" },
-        { "name": "Taze nane", "amount": "3 yaprak" },
-        { "name": "Taze zencefil", "amount": "1 tutam", "note": "rendelenmiş" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Karışık meyve suyu",
+          "amount": "250 ml"
+        },
+        {
+          "name": "Fındık",
+          "amount": "6 adet"
+        },
+        {
+          "name": "Taze nane",
+          "amount": "3 yaprak"
+        },
+        {
+          "name": "Taze zencefil",
+          "amount": "1 tutam",
+          "note": "rendelenmiş"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Meyve suyuna birkaç parça buz ekleyip karıştırın.",
@@ -199,14 +331,39 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 329,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["yüksek protein", "meyveli", "tatlı"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "yüksek protein",
+        "meyveli",
+        "tatlı"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Vişne", "amount": "75 gr", "note": "donmuş" },
-        { "name": "Lor peyniri", "amount": "80 gr", "note": "yağsız" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Vişne",
+          "amount": "75 gr",
+          "note": "donmuş"
+        },
+        {
+          "name": "Lor peyniri",
+          "amount": "80 gr",
+          "note": "yağsız"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -231,14 +388,37 @@
       "videoUrl": "",
       "prepTimeMin": 15,
       "calories": 229,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["hafif", "düşük kalori", "ev yapımı"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "hafif",
+        "düşük kalori",
+        "ev yapımı"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Vişne kompostosu", "amount": "250 ml" },
-        { "name": "Kabuksuz yer fıstığı", "amount": "12 adet" },
-        { "name": "Vişne", "amount": "1 kase", "note": "taze ya da donmuş (komposto için)" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Vişne kompostosu",
+          "amount": "250 ml"
+        },
+        {
+          "name": "Kabuksuz yer fıstığı",
+          "amount": "12 adet"
+        },
+        {
+          "name": "Vişne",
+          "amount": "1 kase",
+          "note": "taze ya da donmuş (komposto için)"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Vişne kompostosu için: 1 lt suya 1 kase vişne ekleyip kaynatın ve soğutun.",
@@ -264,15 +444,41 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 319,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["yaz", "meyveli", "aromatik"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "yaz",
+        "meyveli",
+        "aromatik"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Şeftali", "amount": "150 gr" },
-        { "name": "Badem ekstresi", "amount": "1/4 yemek kaşığı" },
-        { "name": "Taze zencefil", "amount": "birkaç parça" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Şeftali",
+          "amount": "150 gr"
+        },
+        {
+          "name": "Badem ekstresi",
+          "amount": "1/4 yemek kaşığı"
+        },
+        {
+          "name": "Taze zencefil",
+          "amount": "birkaç parça"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -297,14 +503,37 @@
       "videoUrl": "",
       "prepTimeMin": 15,
       "calories": 316,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["geleneksel", "ev yapımı", "enerji"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "geleneksel",
+        "ev yapımı",
+        "enerji"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Elma kompostosu", "amount": "250 ml" },
-        { "name": "Pekmez", "amount": "2 çay kaşığı" },
-        { "name": "Tatlı elma", "amount": "2 adet", "note": "komposto için" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Elma kompostosu",
+          "amount": "250 ml"
+        },
+        {
+          "name": "Pekmez",
+          "amount": "2 çay kaşığı"
+        },
+        {
+          "name": "Tatlı elma",
+          "amount": "2 adet",
+          "note": "komposto için"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Elma kompostosu için: 1 lt suya 2 tatlı elmayı kabuklarını soymadan küp küp doğrayıp ekleyin, kaynatın ve soğutun.",
@@ -330,15 +559,42 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 322,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["sonbahar", "tarçın", "doyurucu"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "sonbahar",
+        "tarçın",
+        "doyurucu"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Balkabağı", "amount": "100 gr", "note": "haşlanmış" },
-        { "name": "Küçük boy muz", "amount": "1 adet" },
-        { "name": "Tarçın", "amount": "1 çay kaşığı" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Balkabağı",
+          "amount": "100 gr",
+          "note": "haşlanmış"
+        },
+        {
+          "name": "Küçük boy muz",
+          "amount": "1 adet"
+        },
+        {
+          "name": "Tarçın",
+          "amount": "1 çay kaşığı"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -363,17 +619,53 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 299,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["antioksidan", "kırmızı meyve", "hafif"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "antioksidan",
+        "kırmızı meyve",
+        "hafif"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Vişne", "amount": "3 adet", "note": "taze ya da donmuş" },
-        { "name": "Böğürtlen", "amount": "3 adet", "note": "taze ya da donmuş" },
-        { "name": "Ahududu", "amount": "3 adet", "note": "taze ya da donmuş" },
-        { "name": "Karpuz", "amount": "1/2 dilim", "note": "yarım avuç içi büyüklüğünde" },
-        { "name": "Taze nane", "amount": "4 yaprak" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Vişne",
+          "amount": "3 adet",
+          "note": "taze ya da donmuş"
+        },
+        {
+          "name": "Böğürtlen",
+          "amount": "3 adet",
+          "note": "taze ya da donmuş"
+        },
+        {
+          "name": "Ahududu",
+          "amount": "3 adet",
+          "note": "taze ya da donmuş"
+        },
+        {
+          "name": "Karpuz",
+          "amount": "1/2 dilim",
+          "note": "yarım avuç içi büyüklüğünde"
+        },
+        {
+          "name": "Taze nane",
+          "amount": "4 yaprak"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -394,20 +686,49 @@
       "productId": "formul1_id",
       "title": "Karpuz Peynir Klasiği",
       "description": "Karpuz, lor peyniri ve nane ile yaz aylarının vazgeçilmez ikilisini shake olarak sunan düşük kalorili tarif.",
-      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192168/formul1_vanilya_karpuz_peynir_klasigi_vifzg3.webp",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1782101603/formul1_vanilya_karpuz_peynir_klasigi_noc42r.webp",
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 251,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["yaz", "düşük kalori", "ferah"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "yaz",
+        "düşük kalori",
+        "ferah"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Lor peyniri", "amount": "1,5 yemek kaşığı" },
-        { "name": "Misket limonu suyu", "amount": "3-4 damla" },
-        { "name": "Karpuz dilimi", "amount": "1 avuç içi büyüklüğünde" },
-        { "name": "Taze nane", "amount": "4 yaprak" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Lor peyniri",
+          "amount": "1,5 yemek kaşığı"
+        },
+        {
+          "name": "Misket limonu suyu",
+          "amount": "3-4 damla"
+        },
+        {
+          "name": "Karpuz dilimi",
+          "amount": "1 avuç içi büyüklüğünde"
+        },
+        {
+          "name": "Taze nane",
+          "amount": "4 yaprak"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -432,18 +753,54 @@
       "videoUrl": "",
       "prepTimeMin": 10,
       "calories": 340,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["tatlı", "kek tadı", "tarçın"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "tatlı",
+        "kek tadı",
+        "tarçın"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Orta boy havuç", "amount": "1 adet", "note": "haşlanmış, dilimlenmiş" },
-        { "name": "Yağsız krem peynir", "amount": "1 yemek kaşığı" },
-        { "name": "Kuru üzüm", "amount": "8 adet" },
-        { "name": "Ceviz", "amount": "1 tam" },
-        { "name": "Tarçın", "amount": "1 çay kaşığı" },
-        { "name": "Toz Hindistan cevizi", "amount": "1 çay kaşığı" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Orta boy havuç",
+          "amount": "1 adet",
+          "note": "haşlanmış, dilimlenmiş"
+        },
+        {
+          "name": "Yağsız krem peynir",
+          "amount": "1 yemek kaşığı"
+        },
+        {
+          "name": "Kuru üzüm",
+          "amount": "8 adet"
+        },
+        {
+          "name": "Ceviz",
+          "amount": "1 tam"
+        },
+        {
+          "name": "Tarçın",
+          "amount": "1 çay kaşığı"
+        },
+        {
+          "name": "Toz Hindistan cevizi",
+          "amount": "1 çay kaşığı"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -468,13 +825,31 @@
       "videoUrl": "",
       "prepTimeMin": 3,
       "calories": 105,
-      "goals": ["weight_loss"],
-      "tags": ["çok hafif", "düşük kalori", "aromatik"],
+      "goals": [
+        "weight_loss"
+      ],
+      "tags": [
+        "çok hafif",
+        "düşük kalori",
+        "aromatik"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Su", "amount": "250 ml" },
-        { "name": "Gül suyu", "amount": "3 tatlı kaşığı" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Su",
+          "amount": "250 ml"
+        },
+        {
+          "name": "Gül suyu",
+          "amount": "3 tatlı kaşığı"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Suya birkaç parça buz ekleyip karıştırın.",
@@ -499,16 +874,46 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 308,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["tatlı", "pasta tadı", "baharatlı"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "tatlı",
+        "pasta tadı",
+        "baharatlı"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Küçük boy yeşil elma", "amount": "1 adet", "note": "kabuğu soyulmuş" },
-        { "name": "Tarçın", "amount": "1 çay kaşığı" },
-        { "name": "Toz Hindistan cevizi", "amount": "1 çay kaşığı" },
-        { "name": "Karanfil", "amount": "2 parça" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Küçük boy yeşil elma",
+          "amount": "1 adet",
+          "note": "kabuğu soyulmuş"
+        },
+        {
+          "name": "Tarçın",
+          "amount": "1 çay kaşığı"
+        },
+        {
+          "name": "Toz Hindistan cevizi",
+          "amount": "1 çay kaşığı"
+        },
+        {
+          "name": "Karanfil",
+          "amount": "2 parça"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -533,16 +938,45 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 120,
-      "goals": ["weight_loss"],
-      "tags": ["ferah", "düşük kalori", "ekşi"],
+      "goals": [
+        "weight_loss"
+      ],
+      "tags": [
+        "ferah",
+        "düşük kalori",
+        "ekşi"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Maden suyu", "amount": "250 ml", "note": "soğuk" },
-        { "name": "Yeşil elma", "amount": "1/4 adet" },
-        { "name": "Rende salatalık", "amount": "1 yemek kaşığı", "note": "çeyrek salatalık rendesi" },
-        { "name": "Misket limonu suyu", "amount": "4 damla" },
-        { "name": "Taze nane", "amount": "6 yaprak" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Maden suyu",
+          "amount": "250 ml",
+          "note": "soğuk"
+        },
+        {
+          "name": "Yeşil elma",
+          "amount": "1/4 adet"
+        },
+        {
+          "name": "Rende salatalık",
+          "amount": "1 yemek kaşığı",
+          "note": "çeyrek salatalık rendesi"
+        },
+        {
+          "name": "Misket limonu suyu",
+          "amount": "4 damla"
+        },
+        {
+          "name": "Taze nane",
+          "amount": "6 yaprak"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Maden suyuna birkaç parça buz ekleyip karıştırın.",
@@ -567,15 +1001,43 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 351,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["meyveli", "C vitamini", "doyurucu"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "meyveli",
+        "C vitamini",
+        "doyurucu"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Çilek", "amount": "75 gr", "note": "donmuş" },
-        { "name": "Kivi", "amount": "1 adet", "note": "çok olgun" },
-        { "name": "Orta boy portakal", "amount": "1/2 adet" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Çilek",
+          "amount": "75 gr",
+          "note": "donmuş"
+        },
+        {
+          "name": "Kivi",
+          "amount": "1 adet",
+          "note": "çok olgun"
+        },
+        {
+          "name": "Orta boy portakal",
+          "amount": "1/2 adet"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -600,15 +1062,43 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 320,
-      "goals": ["healthy_living", "weight_gain"],
-      "tags": ["baharatlı", "chai", "egzotik"],
+      "goals": [
+        "healthy_living",
+        "weight_gain"
+      ],
+      "tags": [
+        "baharatlı",
+        "chai",
+        "egzotik"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Küçük boy muz", "amount": "1 adet" },
-        { "name": "Chai baharat karışımı", "amount": "1/2 kaşık", "note": "tarçın, karanfil, beyaz biber, kakule" },
-        { "name": "Herbalife Bitkisel Konsantre Çay", "amount": "1/2 çay kaşığı", "note": "Klasik Lezzet" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Küçük boy muz",
+          "amount": "1 adet"
+        },
+        {
+          "name": "Chai baharat karışımı",
+          "amount": "1/2 kaşık",
+          "note": "tarçın, karanfil, beyaz biber, kakule"
+        },
+        {
+          "name": "Herbalife Bitkisel Konsantre Çay",
+          "amount": "1/2 çay kaşığı",
+          "note": "Klasik Lezzet"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -633,16 +1123,44 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 212,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["düşük kalori", "doyurucu", "yoğurtlu"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "düşük kalori",
+        "doyurucu",
+        "yoğurtlu"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Su", "amount": "200 ml" },
-        { "name": "Light yoğurt", "amount": "3 yemek kaşığı" },
-        { "name": "Yulaf ezmesi", "amount": "1 yemek kaşığı" },
-        { "name": "Portakal kabuğu rendesi", "amount": "1 çay kaşığı" },
-        { "name": "Kuru üzüm", "amount": "8 adet" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Çikolata Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Su",
+          "amount": "200 ml"
+        },
+        {
+          "name": "Light yoğurt",
+          "amount": "3 yemek kaşığı"
+        },
+        {
+          "name": "Yulaf ezmesi",
+          "amount": "1 yemek kaşığı"
+        },
+        {
+          "name": "Portakal kabuğu rendesi",
+          "amount": "1 çay kaşığı"
+        },
+        {
+          "name": "Kuru üzüm",
+          "amount": "8 adet"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Suya birkaç parça buz ekleyip karıştırın.",
@@ -667,15 +1185,41 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 255,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["yüksek protein", "aromatik", "fıstık"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "yüksek protein",
+        "aromatik",
+        "fıstık"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Fıstık ezmesi", "amount": "1 tatlı kaşığı" },
-        { "name": "Portakal kabuğu rendesi", "amount": "1 çay kaşığı" },
-        { "name": "Misket limonu suyu", "amount": "3 damla" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Çikolata Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Fıstık ezmesi",
+          "amount": "1 tatlı kaşığı"
+        },
+        {
+          "name": "Portakal kabuğu rendesi",
+          "amount": "1 çay kaşığı"
+        },
+        {
+          "name": "Misket limonu suyu",
+          "amount": "3 damla"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -700,14 +1244,37 @@
       "videoUrl": "",
       "prepTimeMin": 4,
       "calories": 236,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["antioksidan", "ferah", "nar"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "antioksidan",
+        "ferah",
+        "nar"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "150 ml", "note": "%1,5 yağ" },
-        { "name": "Nar suyu", "amount": "100 ml" },
-        { "name": "Taze nane", "amount": "4 yaprak" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Çikolata Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "150 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Nar suyu",
+          "amount": "100 ml"
+        },
+        {
+          "name": "Taze nane",
+          "amount": "4 yaprak"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -732,15 +1299,42 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 386,
-      "goals": ["weight_gain", "healthy_living"],
-      "tags": ["yüksek kalori", "antrenman", "doyurucu"],
+      "goals": [
+        "weight_gain",
+        "healthy_living"
+      ],
+      "tags": [
+        "yüksek kalori",
+        "antrenman",
+        "doyurucu"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Çilek", "amount": "4 adet" },
-        { "name": "Rende havuç", "amount": "2 yemek kaşığı", "note": "yarım havuç rendesi" },
-        { "name": "File badem", "amount": "1 yemek kaşığı" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Çikolata Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Çilek",
+          "amount": "4 adet"
+        },
+        {
+          "name": "Rende havuç",
+          "amount": "2 yemek kaşığı",
+          "note": "yarım havuç rendesi"
+        },
+        {
+          "name": "File badem",
+          "amount": "1 yemek kaşığı"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -765,15 +1359,42 @@
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 357,
-      "goals": ["weight_gain", "healthy_living"],
-      "tags": ["yüksek protein", "kremsi", "antep fıstığı"],
+      "goals": [
+        "weight_gain",
+        "healthy_living"
+      ],
+      "tags": [
+        "yüksek protein",
+        "kremsi",
+        "antep fıstığı"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml", "note": "%1,5 yağ" },
-        { "name": "Labne peyniri", "amount": "2 tatlı kaşığı" },
-        { "name": "Toz antep fıstığı", "amount": "2 tatlı kaşığı" },
-        { "name": "Rende salatalık", "amount": "2 yemek kaşığı", "note": "yarım salatalık rendesi" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Çikolata Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml",
+          "note": "%1,5 yağ"
+        },
+        {
+          "name": "Labne peyniri",
+          "amount": "2 tatlı kaşığı"
+        },
+        {
+          "name": "Toz antep fıstığı",
+          "amount": "2 tatlı kaşığı"
+        },
+        {
+          "name": "Rende salatalık",
+          "amount": "2 yemek kaşığı",
+          "note": "yarım salatalık rendesi"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Süte birkaç parça buz ekleyip karıştırın.",
@@ -794,18 +1415,40 @@
       "productId": "formul1_id",
       "title": "Damla Sakızlı Kahve Tadında",
       "description": "Soya sütü, hazır kahve ve damla sakızı ile sabah enerjisi veren özgün bir tarif.",
-      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192187/formul1_cikolata_damla_sakizli_kahve_lanto5.webp",
+      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1782098533/formul1_cikolata_damla_sakizli_kc42lu.webp",
       "videoUrl": "",
       "prepTimeMin": 4,
       "calories": 221,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["sabah", "kahveli", "enerji"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "sabah",
+        "kahveli",
+        "enerji"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Çikolata Aromalı Shake", "amount": "2 çorba kaşığı" },
-        { "name": "Soya sütü", "amount": "250 ml" },
-        { "name": "Hazır kahve", "amount": "1 tatlı kaşığı" },
-        { "name": "Damla sakızı", "amount": "1 çay kaşığı" },
-        { "name": "Buz", "amount": "4-5 küp" }
+        {
+          "name": "Formül 1 Çikolata Aromalı Shake",
+          "amount": "2 çorba kaşığı"
+        },
+        {
+          "name": "Soya sütü",
+          "amount": "250 ml"
+        },
+        {
+          "name": "Hazır kahve",
+          "amount": "1 tatlı kaşığı"
+        },
+        {
+          "name": "Damla sakızı",
+          "amount": "1 çay kaşığı"
+        },
+        {
+          "name": "Buz",
+          "amount": "4-5 küp"
+        }
       ],
       "steps": [
         "Soya sütüne birkaç parça buz ekleyip karıştırın.",
@@ -830,16 +1473,45 @@
       "videoUrl": "",
       "prepTimeMin": 3,
       "calories": 255,
-      "goals": ["weight_loss", "healthy_living"],
-      "tags": ["nane", "ferah", "vanilya"],
+      "goals": [
+        "weight_loss",
+        "healthy_living"
+      ],
+      "tags": [
+        "nane",
+        "ferah",
+        "vanilya"
+      ],
       "ingredients": [
-        { "name": "Formül 1 Vanilya Aromalı Shake", "amount": "2 çorba kaşığı", "note": "26g" },
-        { "name": "Yarım yağlı süt", "amount": "250 ml" },
-        { "name": "Taze nane", "amount": "4-5 dal" },
-        { "name": "Büyük boy kayısı", "amount": "1 adet" },
-        { "name": "Tarçın", "amount": "Bir tutam" },
-        { "name": "Kakule", "amount": "Bir tutam" },
-        { "name": "Buz parçaları", "amount": "İsteğe göre" }
+        {
+          "name": "Formül 1 Vanilya Aromalı Shake",
+          "amount": "2 çorba kaşığı",
+          "note": "26g"
+        },
+        {
+          "name": "Yarım yağlı süt",
+          "amount": "250 ml"
+        },
+        {
+          "name": "Taze nane",
+          "amount": "4-5 dal"
+        },
+        {
+          "name": "Büyük boy kayısı",
+          "amount": "1 adet"
+        },
+        {
+          "name": "Tarçın",
+          "amount": "Bir tutam"
+        },
+        {
+          "name": "Kakule",
+          "amount": "Bir tutam"
+        },
+        {
+          "name": "Buz parçaları",
+          "amount": "İsteğe göre"
+        }
       ],
       "steps": [
         "Malzemeleri karıştırıcıya (blender) ekleyin.",

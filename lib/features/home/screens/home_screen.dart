@@ -27,7 +27,6 @@ import '../../orders/screens/order_list_screen.dart';
 import '../../products/providers/product_provider.dart';
 import '../../products/providers/recipe_provider.dart';
 import '../../products/widgets/recipe_card.dart';
-import '../../products/screens/add_edit_product_screen.dart';
 import '../../products/screens/product_list_screen.dart';
 
 import '../../profile/screens/profile_screen.dart';
@@ -48,7 +47,7 @@ import '../../calorie_tracker/widgets/food_search_sheet.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/motivation_widget.dart';
-import '../widgets/daily_success_ring.dart';
+import '../widgets/daily_compact_success_card.dart';
 import '../widgets/vp_pulse_card.dart';
 import '../widgets/today_actions_strip.dart';
 import '../widgets/customer_pipeline_bar.dart';
@@ -100,45 +99,58 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Özel gün, streak ve saate göre selamlama metni döndürür.
   /// [firstName] boşsa sadece "Merhaba!" döner.
-  String _getGreeting(String firstName, {UserProfileModel? userProfile, int streak = 0}) {
+  String _getAppBarGreeting(String firstName, {UserProfileModel? userProfile}) {
     if (firstName.isEmpty) return 'Merhaba!';
+    final now = DateTime.now();
+    final hour = now.hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Günaydın, $firstName! ☀️';
+    } else if (hour >= 12 && hour < 18) {
+      return 'İyi günler, $firstName! 👋';
+    } else if (hour >= 18 && hour < 22) {
+      return 'İyi akşamlar, $firstName! 🌙';
+    } else {
+      return 'İyi geceler, $firstName! 🌟';
+    }
+  }
 
+  String _getDailyComment({UserProfileModel? userProfile, int streak = 0}) {
     final now = DateTime.now();
 
     // 1. Doğum günü kontrolü
     if (userProfile?.birthDate != null) {
       final bd = userProfile!.birthDate!;
       if (bd.month == now.month && bd.day == now.day) {
-        return 'Mutlu yıllar, $firstName! 🎂 Bugün kendinle gurur duy.';
+        return 'Bugün kendinle gurur duy. 🎂';
       }
     }
 
-    // 2. Programa başlama yıl dönümü (tam ay sayısı)
+    // 2. Programa başlama yıl dönümü
     if (userProfile?.programStartDate != null) {
       final start = userProfile!.programStartDate!;
       if (start.day == now.day && start.month != now.month) {
         final months = (now.year - start.year) * 12 + (now.month - start.month);
         if (months > 0) {
-          return 'Tam $months aydır bu yoldasın, $firstName! Gurur verici. 🏆';
+          return 'Tam $months aydır bu yoldasın! 🏆';
         }
       }
     }
 
-    // 3. 7 günlük seri kontrolü
-    if (streak >= 7) {
-      return '7 günlük seride koşuyorsun, $firstName! Durma. 🔥';
+    // 3. Seri kontrolü
+    if (streak >= 3) {
+      return '$streak günlük seridesin! Durma. 🔥';
     }
 
-    // 4. Saat bazlı selamlama
+    // 4. Standart yorumlar
     final hour = now.hour;
     if (hour >= 5 && hour < 12) {
-      return 'Günaydın, $firstName! Bugün harika görünüyorsun. ✨';
+      return 'Bugün harika görünüyorsun. ✨';
     } else if (hour >= 12 && hour < 18) {
-      return 'İyi günler, $firstName! Enerjin nasıl? 💪';
+      return 'Enerjin nasıl? 💪';
     } else if (hour >= 18 && hour < 22) {
-      return 'İyi akşamlar, $firstName! Bugünü değerlendirme zamanı. 🌙';
+      return 'Bugünü değerlendirme zamanı. 🌙';
     } else {
-      return 'Gece geç saatte varsın, $firstName. Dinlenmeyi unutma. 🌟';
+      return 'Dinlenmeyi unutma. 🌟';
     }
   }
 
@@ -303,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _showQuickAddMenu(context);
               },
               tooltip: 'Hızlı Ekle',
-              child: const Icon(Icons.add),
+              child: const Icon(Icons.add, color: Colors.white),
             ),
     );
   }
@@ -501,8 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () => context.goNamed(ProfileScreen.routeName),
                   child: Builder(
                     builder: (context) {
-                      final streak = context.watch<HomeProvider>().completionStreak;
-                      final greeting = _getGreeting(firstName, userProfile: userProfile, streak: streak);
+                      final greeting = _getAppBarGreeting(firstName, userProfile: userProfile);
                       final (prefix, rest) = _splitGreeting(greeting);
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -599,17 +610,17 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
-              _buildCustomerHeroProgress(context),
               const SizedBox(height: 12),
+              _buildCustomerHeroProgress(context),
+              const SizedBox(height: 10),
               _buildCustomerDailyChecklist(context),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               _buildCustomerWaterTracker(context),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               _buildCustomerCalorieTracker(context),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               _buildExerciseToggleCard(context),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
               const MotivationWidget(),
               const SizedBox(height: 96),
             ],
@@ -693,76 +704,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Distributor header için avatar — gerçek fotoğraf varsa göster,
-  /// yoksa isimden üretilen renkli baş harf dairesi.
-  Widget _buildDistributorAvatar(BuildContext context, UserProfileModel? userProfile) {
-    final name = userProfile?.name ?? '';
-    final photoUrl = userProfile?.profilePhotoUrl;
-    final userId = userProfile?.id;
-    final photoUpdatedAt = userProfile?.profilePhotoUpdatedAt;
-
-    final initials = name.trim().split(' ').take(2)
-        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
-        .join();
-    final bgColor = AvatarColorHelper.forUser(userId);
-    final textColor = AvatarColorHelper.textColorFor(bgColor);
-
-    final isStale = photoUrl != null &&
-        photoUrl.isNotEmpty &&
-        photoUpdatedAt != null &&
-        DateTime.now().difference(photoUpdatedAt).inDays > 90;
-
-    Widget avatarContent;
-    if (photoUrl != null && photoUrl.isNotEmpty &&
-        !photoUrl.startsWith('/') && !photoUrl.startsWith('file://')) {
-      avatarContent = Image.network(
-        photoUrl,
-        fit: BoxFit.cover,
-        width: 44,
-        height: 44,
-        errorBuilder: (context, error, stackTrace) => _buildInitialsWidget(initials, bgColor, textColor),
-      );
-    } else if (photoUrl != null && photoUrl.isNotEmpty &&
-        !kIsWeb && (photoUrl.startsWith('/') || photoUrl.startsWith('file://'))) {
-      avatarContent = Image.file(
-        File(photoUrl.replaceFirst('file://', '')),
-        fit: BoxFit.cover,
-        width: 44,
-        height: 44,
-        errorBuilder: (context, error, stackTrace) => _buildInitialsWidget(initials, bgColor, textColor),
-      );
-    } else {
-      avatarContent = _buildInitialsWidget(initials, bgColor, textColor);
-    }
-
-    return Tooltip(
-      message: isStale ? 'Profil fotoğrafını güncelle' : 'Profilim',
-      child: GestureDetector(
-        onTap: () => context.goNamed(ProfileScreen.routeName),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isStale ? Colors.amber.shade400 : AppColors.primary,
-              width: isStale ? 2.5 : 2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isStale
-                    ? Colors.amber.withAlpha(80)
-                    : AppColors.primary.withAlpha(50),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipOval(child: avatarContent),
-        ),
-      ),
-    );
-  }
 
   /// Kritik aksiyonlar listesindeki müşteri satırı için
   /// isimden üretilen renkli baş harf avatar'ı.
@@ -921,7 +862,8 @@ class _HomeScreenState extends State<HomeScreen> {
       child: StreamBuilder<List<DailyRoutineModel>>(
         stream: _routinesStream ?? const Stream.empty(),
         builder: (context, snapshot) {
-          final routines = snapshot.data ?? [];
+          final rawRoutines = snapshot.data ?? [];
+          final routines = rawRoutines.where((r) => !r.isWaterStep).toList();
           final completedCount = routines.where((r) => r.isCompleted).length;
           final totalCount = routines.length;
           final hasProgram = totalCount > 0;
@@ -933,37 +875,15 @@ class _HomeScreenState extends State<HomeScreen> {
           // Egzersiz ilerleme oranı
           final exerciseProgress = context.watch<ExerciseService>().progress;
 
+          // Streak ve Günlük yorum
+          final streak = context.watch<HomeProvider>().completionStreak;
+          final dailyComment = _getDailyComment(userProfile: userProfile, streak: streak);
+
           // Gün sayısı: programStartDate'ten itibaren
           final startDate = userProfile?.programStartDate;
           final dayNumber = startDate != null
               ? DateTime.now().difference(startDate).inDays + 1
               : 1;
-
-          // Aktif görev metni — ilk tamamlanmamış rutin
-          String activeTaskLabel = '';
-          if (hasProgram) {
-            final nextRoutine = routines.where((r) => !r.isCompleted).toList();
-            if (nextRoutine.isNotEmpty) {
-              final r = nextRoutine.first;
-              String taskName = '';
-              if (r.isWaterStep) {
-                taskName = 'Su İç';
-              } else if (r.isNormalMealStep) {
-                taskName = r.productId;
-              } else {
-                final product = context.read<ProductProvider>().products.firstWhere(
-                  (p) => p.id == r.productId,
-                  orElse: () => ProductModel(id: '', name: 'Ürün', vp: 0),
-                );
-                taskName = product.name;
-              }
-              activeTaskLabel = '$taskName tamamla';
-            } else if (waterProgress < 1.0) {
-              activeTaskLabel = 'Su içmeyi tamamla 💧';
-            } else if (exerciseProgress < 1.0) {
-              activeTaskLabel = 'Egzersizini tamamla 🏋️';
-            }
-          }
 
           // Program yoksa teşvik kartı göster
           if (!hasProgram && snapshot.connectionState != ConnectionState.waiting) {
@@ -974,10 +894,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                  border: Border.all(color: AppColors.primary.withAlpha(50)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
+                      color: Colors.black.withAlpha(10),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -988,7 +908,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Container(
                       width: 56, height: 56,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
+                        color: AppColors.primary.withAlpha(25),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.rocket_launch_outlined, color: AppColors.primary, size: 28),
@@ -1017,66 +937,66 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
-          // Program varsa — Günlük Başarı Halkası
-          return Container(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Üst satır: "Gün X" badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    GestureDetector(
-                      onTap: () => setState(() => _customerNavIndex = 1),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.calendar_today, color: AppColors.primary, size: 14),
-                            const SizedBox(width: 4),
-                            Text(
-                              'GÜN $dayNumber',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.primary,
-                                letterSpacing: 0.8,
-                              ),
+          if (userProfile == null) return const SizedBox.shrink();
+
+          // Program varsa — Yeni Kompakt Başarı Kartı
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Üst satır: "Gün X" badge ve Günlük Yorum
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => setState(() => _customerNavIndex = 1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withAlpha(25),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.calendar_today, color: AppColors.primary, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'GÜN $dayNumber',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                              letterSpacing: 0.8,
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (dailyComment.isNotEmpty) ...[
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        dailyComment,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.garden,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 12),
-                // Halka
-                DailySuccessRing(
-                  productProgress: productProgress,
-                  waterProgress: waterProgress.clamp(0.0, 1.0),
-                  exerciseProgress: exerciseProgress,
-                  activeTaskLabel: activeTaskLabel,
-                  hasProgram: hasProgram,
-                  size: 190,
-                ),
-              ],
-            ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              DailyCompactSuccessCard(
+                productProgress: productProgress,
+                waterProgress: waterProgress.clamp(0.0, 1.0),
+                exerciseProgress: exerciseProgress,
+              ),
+            ],
           );
         },
       ),
@@ -1095,20 +1015,30 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             decoration: BoxDecoration(
-              color: isCompleted
-                  ? const Color(0xFFFFF7ED) // açık turuncu
-                  : Colors.white,
               borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isCompleted
+                    ? const [
+                        Color(0xFFFFEAD2), // Tamamlanmış sıcak turuncu geçişi
+                        Color(0xFFFFFFFF),
+                      ]
+                    : const [
+                        Color(0xFFFFF8F2), // Tamamlanmamış hafif turuncu geçişi
+                        Color(0xFFFFFFFF),
+                      ],
+              ),
               border: Border.all(
                 color: isCompleted
                     ? const Color(0xFFF97316).withValues(alpha: 0.3)
-                    : Colors.grey.shade200,
+                    : const Color(0xFFF97316).withValues(alpha: 0.1),
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -1205,7 +1135,12 @@ class _HomeScreenState extends State<HomeScreen> {
           final rawRoutines = snapshot.data ?? [];
           final incompleteRoutines = rawRoutines.where((r) => !r.isCompleted).toList()
             ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-          
+            
+          // Tüm rutinler tamamlandıysa widget'ı tamamen gizle
+          if (rawRoutines.isNotEmpty && incompleteRoutines.isEmpty) {
+            return const SizedBox.shrink();
+          }
+
           final routines = <DailyRoutineModel>[];
           if (incompleteRoutines.isNotEmpty) {
             routines.add(incompleteRoutines.first);
@@ -1213,15 +1148,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
           final completedCount = rawRoutines.where((r) => r.isCompleted).length;
           final totalCount = rawRoutines.length;
+          final activeRoutine = incompleteRoutines.firstOrNull;
+          final activeRoutineTimeStr = activeRoutine != null ? DateFormat('HH:mm').format(activeRoutine.scheduledTime) : null;
 
           return Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.only(top: 20),
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(28),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFDCF2CE), // Belirgin taze fıstık yeşili
+                  Color(0xFFFFFFFF), // Beyaz
+                ],
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
+                  color: Colors.black.withAlpha(8),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -1231,34 +1175,69 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Öğün Takibi',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    if (totalCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Öğün Takibi',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1B5E20), // Koyu yeşil
                         ),
-                        child: Text(
-                          '$completedCount/$totalCount Tamamlandı',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
+                      ),
+                      const Spacer(),
+                      if (activeRoutineTimeStr != null && activeRoutine != null) ...[
+                        GestureDetector(
+                          onTap: () async {
+                            final newTime = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(activeRoutine.scheduledTime),
+                            );
+                            if (!context.mounted || newTime == null) return;
+                            final now = DateTime.now();
+                            await context.read<RoutineService>().updateRoutineTime(
+                              userProfile.id, activeRoutine.id,
+                              DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
+                            );
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                activeRoutineTimeStr,
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.access_time, size: 16, color: AppColors.primary),
+                            ],
                           ),
                         ),
-                      ),
-                  ],
+                        const Spacer(),
+                      ],
+                      if (totalCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withAlpha(20),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '$completedCount/$totalCount Tamamlandı',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -1268,9 +1247,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   )
                 else if (rawRoutines.isEmpty)
-                  _buildEmptyRoutineContent(context)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    child: _buildEmptyRoutineContent(context),
+                  )
                 else if (incompleteRoutines.isEmpty)
-                  _buildAllCompletedContent(context, rawRoutines.length)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                    child: _buildAllCompletedContent(context, rawRoutines.length),
+                  )
                 else
                   _buildStitchChecklistItems(context, routines, userProfile),
               ],
@@ -1348,8 +1333,6 @@ class _HomeScreenState extends State<HomeScreen> {
     List<DailyRoutineModel> routines,
     UserProfileModel userProfile,
   ) {
-    final timeFormat = DateFormat('HH:mm');
-
     return ImplicitlyAnimatedList<DailyRoutineModel>(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -1361,39 +1344,28 @@ class _HomeScreenState extends State<HomeScreen> {
         if (routine.isWaterStep) {
           child = _buildStitchChecklistTile(
             context: context,
-            timeLabel: timeFormat.format(routine.scheduledTime),
             title: 'Su İç (500 ml)',
             isCompleted: routine.isCompleted,
             isNext: !routine.isCompleted && routines
                 .where((r) => !r.isCompleted)
                 .firstOrNull
                 ?.id == routine.id,
+            isLast: i == routines.length - 1,
             onChanged: (val) async {
-              if (val != null && context.mounted) {
-                await context.read<RoutineService>().updateRoutineStatus(
+              if (val != null) {
+                final routineService = context.read<RoutineService>();
+                final waterProvider = context.read<WaterProvider>();
+                
+                await routineService.updateRoutineStatus(
                   userProfile.id, routine.id, val,
                 );
-                if (context.mounted) {
-                  if (val) {
-                    context.read<WaterProvider>().addWater(500);
-                  } else {
-                    // İşareti kaldırınca su miktarını geri al
-                    context.read<WaterProvider>().removeWater(500);
-                  }
+                
+                if (val) {
+                  waterProvider.addWater(500);
+                } else {
+                  waterProvider.removeWater(500);
                 }
               }
-            },
-            onTimeTap: () async {
-              final newTime = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.fromDateTime(routine.scheduledTime),
-              );
-              if (!context.mounted || newTime == null) return;
-              final now = DateTime.now();
-              await context.read<RoutineService>().updateRoutineTime(
-                userProfile.id, routine.id,
-                DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
-              );
             },
           );
         }
@@ -1402,31 +1374,20 @@ class _HomeScreenState extends State<HomeScreen> {
         else if (routine.isNormalMealStep) {
           child = _buildStitchChecklistTile(
             context: context,
-            timeLabel: timeFormat.format(routine.scheduledTime),
             title: routine.productId, // Biz burada "Sağlıklı Tabak" vb. etiketi productId'de saklıyoruz.
             isCompleted: routine.isCompleted,
             isNext: !routine.isCompleted && routines
                 .where((r) => !r.isCompleted)
                 .firstOrNull
                 ?.id == routine.id,
+            isLast: i == routines.length - 1,
             onChanged: (val) async {
-              if (val != null && context.mounted) {
-                await context.read<RoutineService>().updateRoutineStatus(
+              if (val != null) {
+                final routineService = context.read<RoutineService>();
+                await routineService.updateRoutineStatus(
                   userProfile.id, routine.id, val,
                 );
               }
-            },
-            onTimeTap: () async {
-              final newTime = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.fromDateTime(routine.scheduledTime),
-              );
-              if (!context.mounted || newTime == null) return;
-              final now = DateTime.now();
-              await context.read<RoutineService>().updateRoutineTime(
-                userProfile.id, routine.id,
-                DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
-              );
             },
             onTap: () {
               // Opsiyonel olarak, normal öğün için de tavsiyeler vb. gösterilebilir.
@@ -1447,9 +1408,9 @@ class _HomeScreenState extends State<HomeScreen> {
           );
 
           Widget? recipeCardWidget;
-          final isShake = product.name.toLowerCase().contains('formül 1') || product.name.toLowerCase().contains('shake');
+          final isShake = _isShakeMeal(product.name);
           if (isShake) {
-             final dailyRecipe = context.read<RecipeProvider>().getDailyRecipe(userProfile.userGoal);
+             final dailyRecipe = context.read<RecipeProvider>().getRecipeForRoutine(userProfile.userGoal, routine.id);
              if (dailyRecipe != null) {
                 recipeCardWidget = RecipeCard(recipe: dailyRecipe, isCompact: true);
              }
@@ -1457,32 +1418,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
           child = _buildStitchChecklistTile(
             context: context,
-            timeLabel: timeFormat.format(routine.scheduledTime),
             title: product.name,
             isCompleted: routine.isCompleted,
             isNext: !routine.isCompleted && routines
                 .where((r) => !r.isCompleted)
                 .firstOrNull
                 ?.id == routine.id,
+            isLast: i == routines.length - 1,
             childBelowTitle: recipeCardWidget,
             onChanged: (val) async {
-              if (val != null && context.mounted) {
-                await context.read<RoutineService>().updateRoutineStatus(
+              if (val != null) {
+                final routineService = context.read<RoutineService>();
+                await routineService.updateRoutineStatus(
                   userProfile.id, routine.id, val,
                 );
               }
-            },
-            onTimeTap: () async {
-              final newTime = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.fromDateTime(routine.scheduledTime),
-              );
-              if (!context.mounted || newTime == null) return;
-              final now = DateTime.now();
-              await context.read<RoutineService>().updateRoutineTime(
-                userProfile.id, routine.id,
-                DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
-              );
             },
             onTap: () {
               // Tarif göster
@@ -1561,95 +1511,84 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Stitch HTML'ine sadık tek checklist satırı
   Widget _buildStitchChecklistTile({
     required BuildContext context,
-    required String timeLabel,
     required String title,
     required bool isCompleted,
     required bool isNext,
     required ValueChanged<bool?> onChanged,
-    required VoidCallback onTimeTap,
     VoidCallback? onTap,
     Widget? childBelowTitle,
+    bool isLast = false,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF9FAFB),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isNext
-                ? AppColors.primary.withValues(alpha: 0.3)
-                : Colors.grey.shade200,
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Checkbox
-            GestureDetector(
-              onTap: () => onChanged(!isCompleted),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isCompleted ? AppColors.primary : Colors.transparent,
-                  border: Border.all(
-                    color: isCompleted ? AppColors.primary : Colors.grey.shade300,
-                    width: 2,
-                  ),
-                ),
-                child: isCompleted
-                    ? const Icon(Icons.check, color: Colors.white, size: 14)
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 14),
-            // İçerik
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Zaman etiketi
-                  GestureDetector(
-                    onTap: onTimeTap,
-                    child: Text(
-                      timeLabel,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                        color: isCompleted
-                            ? Colors.grey.shade400
-                            : isNext
-                                ? AppColors.primary
-                                : Colors.grey.shade500,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Checkbox
+                GestureDetector(
+                  onTap: () => onChanged(!isCompleted),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCompleted
+                          ? AppColors.primary
+                          : (isNext ? AppColors.primary.withAlpha(40) : Colors.transparent),
+                      border: Border.all(
+                        color: isCompleted || isNext
+                            ? AppColors.primary
+                            : AppColors.primary.withAlpha(80),
+                        width: 2,
                       ),
                     ),
+                    child: isCompleted
+                        ? const Icon(Icons.check, color: Colors.white, size: 22)
+                        : null,
                   ),
-                  const SizedBox(height: 2),
-                  // Öğün adı
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: isCompleted ? Colors.grey.shade400 : AppColors.nightSky,
-                      decoration: isCompleted ? TextDecoration.lineThrough : null,
-                    ),
+                ),
+                const SizedBox(width: 14),
+                // İçerik
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Öğün adı
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: isCompleted ? const Color(0xFF8CAF8F) : AppColors.primary,
+                          decoration: isCompleted ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                      if (childBelowTitle != null) ...[
+                        const SizedBox(height: 8),
+                        childBelowTitle,
+                      ],
+                    ],
                   ),
-                  if (childBelowTitle != null) ...[
-                    const SizedBox(height: 8),
-                    childBelowTitle,
-                  ],
-                ],
+                ),
+              ],
+            ),
+          ),
+          if (!isLast)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Divider(
+                height: 1,
+                thickness: 0.5,
+                color: AppColors.primary.withAlpha(35),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -1664,11 +1603,14 @@ class _HomeScreenState extends State<HomeScreen> {
           final consumedL = (consumed / 1000).toStringAsFixed(1);
           final goalL = (goal / 1000).toStringAsFixed(1);
 
+          const blueAccent = Color(0xFF26B0EF); // #26b0ef
+          const blueBg = Color(0xFFEBF3FF); // Yumuşak açık mavi zemin
+          const blueTextDark = Color(0xFF1E3A8A); // Koyu lacivert başlık/yazı
+
           return Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              // Stitch: bg-[#eef6e9] — açık yeşil
-              color: const Color(0xFFEEF6E9),
+              color: blueBg,
               borderRadius: BorderRadius.circular(32),
             ),
             child: Row(
@@ -1680,16 +1622,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Başlık
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.water_drop, color: AppColors.primary, size: 20),
-                          const SizedBox(width: 6),
-                          const Text(
+                          Icon(Icons.water_drop, color: blueAccent, size: 20),
+                          SizedBox(width: 6),
+                          Text(
                             'Su Tüketimi',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.nightSky,
+                              color: blueTextDark,
                             ),
                           ),
                         ],
@@ -1705,7 +1647,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.nightSky,
+                              color: blueTextDark,
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -1714,7 +1656,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade500,
+                              color: blueTextDark.withAlpha(150),
                             ),
                           ),
                         ],
@@ -1734,11 +1676,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color: AppColors.primary,
+                            color: blueAccent,
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.2),
+                                color: blueAccent.withAlpha(50),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -1765,7 +1707,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // "Tüm Kayıtlar" text butonu
                       GestureDetector(
                         onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
@@ -1773,11 +1715,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
+                                color: blueAccent,
                               ),
                             ),
-                            const SizedBox(width: 2),
-                            Icon(Icons.chevron_right, color: AppColors.primary, size: 16),
+                            SizedBox(width: 2),
+                            Icon(Icons.chevron_right, color: blueAccent, size: 16),
                           ],
                         ),
                       ),
@@ -1805,19 +1747,48 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Consumer<CalorieProvider>(
         builder: (context, calorie, _) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              final userProfile = context.read<AuthProvider>().userProfile;
+              final exerciseLevel =
+                  context.read<WaterProvider>().todaySummary?.exerciseLevel ??
+                      'moderate';
+              calorie.recomputeIfAuto(
+                profile: userProfile,
+                exerciseLevel: exerciseLevel,
+              );
+            }
+          });
+
           final consumed = calorie.totalCalories;
           final goal = calorie.calorieGoal;
           final progress = calorie.progress.clamp(0.0, 1.0);
           final overGoal = consumed > goal;
           final accent = overGoal
               ? const Color(0xFFE65100) // koyu turuncu — hedef aşımı
-              : const Color(0xFFE67E22); // amber/turuncu
+              : const Color(0xFFFE9836); // #fe9836
+          final orangeTextDark = overGoal ? const Color(0xFF7C2D12) : const Color(0xFF9A3412); // Koyu kahve/turuncu tonları
 
           return Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF1E0), // açık peach
               borderRadius: BorderRadius.circular(32),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFF1E0), // Açık şeftali tonu
+                  Color(0xFFFFFFFF), // Beyaz
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(8),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(color: const Color(0xFFFE9836).withValues(alpha: 0.15)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -1832,12 +1803,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           Icon(Icons.local_fire_department,
                               color: accent, size: 20),
                           const SizedBox(width: 6),
-                          const Text(
+                          Text(
                             'Kalori Takibi',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.nightSky,
+                              color: orangeTextDark,
                             ),
                           ),
                         ],
@@ -1849,10 +1820,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             '$consumed',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.nightSky,
+                              color: orangeTextDark,
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -1861,7 +1832,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade500,
+                              color: orangeTextDark.withAlpha(150),
                             ),
                           ),
                         ],
@@ -1922,10 +1893,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               'Tüm Kayıtlar',
                               style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: accent,
-                              ),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: accent),
                             ),
                             const SizedBox(width: 2),
                             Icon(Icons.chevron_right,
@@ -2509,14 +2479,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   context.goNamed(AddEditOrderScreen.routeName);
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.add_shopping_cart),
-                title: const Text('Yeni Ürün Ekle'),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.goNamed(AddEditProductScreen.routeName);
-                },
-              ),
             ],
           ),
         );
@@ -2815,34 +2777,36 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       );
                     } else if (item.actionType == NotificationActionType.waterRoutine && item.routineId != null) {
-                      await context.read<RoutineService>().updateRoutineStatus(
+                      final routineService = context.read<RoutineService>();
+                      final waterProvider = context.read<WaterProvider>();
+                      final messenger = ScaffoldMessenger.of(context);
+                      await routineService.updateRoutineStatus(
                         userProfile.id,
                         item.routineId!,
                         true,
                       );
-                      if (context.mounted) {
-                        context.read<WaterProvider>().addWater(500);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Su adımı tamamlandı ve 500 ml su eklendi! 💧'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      }
+                      waterProvider.addWater(500);
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Su adımı tamamlandı ve 500 ml su eklendi! 💧'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
                     } else if (item.routineId != null) {
-                      await context.read<RoutineService>().updateRoutineStatus(
+                      final routineService = context.read<RoutineService>();
+                      final messenger = ScaffoldMessenger.of(context);
+                      await routineService.updateRoutineStatus(
                         userProfile.id,
                         item.routineId!,
                         true,
                       );
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${item.title} tamamlandı! 🎉'),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      }
+
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('${item.title} tamamlandı! 🎉'),
+                          duration: const Duration(seconds: 1),
+                        ),
+                      );
                     }
                   },
                   icon: const Icon(Icons.check, size: 14, color: Colors.white),
@@ -3025,7 +2989,7 @@ class _WaterGlassWidget extends StatelessWidget {
               curve: Curves.easeInOut,
               height: 120 * (fillHeight / 100),
               decoration: BoxDecoration(
-                color: Colors.blue.shade400.withValues(alpha: 0.8),
+                color: const Color(0xFF26B0EF).withValues(alpha: 0.8),
               ),
               child: Stack(
                 children: [
@@ -3036,7 +3000,7 @@ class _WaterGlassWidget extends StatelessWidget {
                     right: 0,
                     child: Container(
                       height: 8,
-                      color: Colors.blue.shade300.withValues(alpha: 0.5),
+                      color: const Color(0xFF26B0EF).withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -3233,5 +3197,15 @@ class _MiniActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _isShakeMeal(String name) {
+  final n = name.toLowerCase();
+  return n.contains('formül 1') ||
+      n.contains('formul 1') ||
+      n.contains('shake') ||
+      n.contains('şek') ||
+      n.contains('mama') ||
+      n.contains('f1');
 }
 

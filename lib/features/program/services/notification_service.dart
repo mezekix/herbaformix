@@ -371,7 +371,7 @@ class NotificationService {
         scheduledDate: scheduledDate,
         notificationDetails: details,
         payload: payload,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: isOneTime ? null : DateTimeComponents.time,
       );
 

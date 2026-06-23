@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -183,6 +184,18 @@ class ProgramSummaryStep extends StatelessWidget {
                         const SnackBar(
                           content: Text('En az bir öğüne ürün eklemelisin.'),
                           backgroundColor: Colors.orange,
+                        ),
+                      );
+                      return;
+                    }
+
+                    final connectivityResult = await Connectivity().checkConnectivity();
+                    if (connectivityResult.contains(ConnectivityResult.none)) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edip tekrar deneyin.'),
+                          backgroundColor: Colors.red,
                         ),
                       );
                       return;

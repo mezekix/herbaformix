@@ -68,4 +68,13 @@ class RecipeProvider extends ChangeNotifier {
     
     return listToUse[index];
   }
+
+  /// Belirli bir öğün adımına (routineId) göre farklı tarif getirir
+  RecipeModel? getRecipeForRoutine(String? userGoal, String routineId) {
+    if (_recipes.isEmpty) return null;
+    final filtered = filterByGoal(_recipes, userGoal);
+    final listToUse = filtered.isNotEmpty ? filtered : _recipes;
+    final index = routineId.hashCode.abs() % listToUse.length;
+    return listToUse[index];
+  }
 }

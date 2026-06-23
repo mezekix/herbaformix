@@ -107,7 +107,17 @@ class ProgramService {
           .where('scheduledTime',
               isLessThan: Timestamp.fromDate(endOfDay))
           .limit(1)
-          .get();
+          .get()
+          .timeout(
+            const Duration(seconds: 2),
+            onTimeout: () => routinesRef
+                .where('scheduledTime',
+                    isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+                .where('scheduledTime',
+                    isLessThan: Timestamp.fromDate(endOfDay))
+                .limit(1)
+                .get(const GetOptions(source: Source.cache)),
+          );
 
       if (snap.docs.isEmpty) {
         final program = await getActiveProgram(userId);
@@ -140,7 +150,14 @@ class ProgramService {
     final todayDocs = await routinesRef
         .where('scheduledTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
         .where('scheduledTime', isLessThan: Timestamp.fromDate(endOfDay))
-        .get();
+        .get()
+        .timeout(
+          const Duration(seconds: 2),
+          onTimeout: () => routinesRef
+              .where('scheduledTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+              .where('scheduledTime', isLessThan: Timestamp.fromDate(endOfDay))
+              .get(const GetOptions(source: Source.cache)),
+        );
 
     final completedMap = <String, bool>{};
     final batch = _firestore.batch(); // Atomik işlem için batch kullanıyoruz

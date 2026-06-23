@@ -424,44 +424,58 @@ class _FollowUpTab extends StatelessWidget {
   }
 
   Widget _buildQuickActions(BuildContext context, bool hasLinkedUser) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        if (hasLinkedUser)
-          _actionButton(
-            icon: Icons.edit_calendar_outlined,
-            label: 'Program Yaz',
-            onPressed: () {
-              context.goNamed(
-                CreateProgramScreen.routeName,
-                extra: ProgramEditorArgs(
-                  targetUserId: customer.linkedUserId!,
-                  targetCustomerName:
-                      '${customer.firstName} ${customer.lastName}'.trim(),
-                  isDistributorMode: true,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double itemWidth = (constraints.maxWidth - 8) / 2;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (hasLinkedUser)
+              SizedBox(
+                width: itemWidth,
+                child: _actionButton(
+                  icon: Icons.edit_calendar_outlined,
+                  label: 'Program Yaz',
+                  onPressed: () {
+                    context.goNamed(
+                      CreateProgramScreen.routeName,
+                      extra: ProgramEditorArgs(
+                        targetUserId: customer.linkedUserId!,
+                        targetCustomerName:
+                            '${customer.firstName} ${customer.lastName}'.trim(),
+                        isDistributorMode: true,
+                      ),
+                    );
+                  },
+                  filled: true,
                 ),
-              );
-            },
-            filled: true,
-          ),
-        if (hasLinkedUser)
-          _actionButton(
-            icon: Icons.favorite_outline,
-            label: 'Motivasyon Mesajı',
-            onPressed: () => _showMotivationMessageSheet(
-              context,
-              customer.linkedUserId!,
-              '${customer.firstName} ${customer.lastName}'.trim(),
+              ),
+            if (hasLinkedUser)
+              SizedBox(
+                width: itemWidth,
+                child: _actionButton(
+                  icon: Icons.favorite_outline,
+                  label: 'Motivasyon',
+                  onPressed: () => _showMotivationMessageSheet(
+                    context,
+                    customer.linkedUserId!,
+                    '${customer.firstName} ${customer.lastName}'.trim(),
+                  ),
+                ),
+              ),
+            SizedBox(
+              width: itemWidth,
+              child: _actionButton(
+                icon: Icons.add_task_outlined,
+                label: 'Plansız Takip',
+                onPressed: () =>
+                    _showAddFollowUpSheet(context, customer, followUpProvider),
+              ),
             ),
-          ),
-        _actionButton(
-          icon: Icons.add_task_outlined,
-          label: 'Plansız Takip Ekle',
-          onPressed: () =>
-              _showAddFollowUpSheet(context, customer, followUpProvider),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -524,46 +538,55 @@ class _FollowUpTab extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _buildMetricCard(
-                  context,
-                  title: 'Son Kilo',
-                  value: latestProgress != null
-                      ? '${latestProgress.weight.toStringAsFixed(1)} kg'
-                      : (profile?.weight != null
-                          ? '${profile!.weight!.toStringAsFixed(1)} kg'
-                          : 'Yok'),
-                  subtitle: latestProgress != null
-                      ? DateFormat('dd.MM').format(latestProgress.date)
-                      : 'Kayıt yok',
-                ),
-                _buildMetricCard(
-                  context,
-                  title: 'Su Takibi',
-                  value: '${insights.todayWaterMl}/${insights.waterGoalMl} ml',
-                  subtitle:
-                      '%${(waterPercent * 100).clamp(0, 100).round()}',
-                ),
-                _buildMetricCard(
-                  context,
-                  title: 'Öğün Tamamlama',
-                  value:
-                      '${insights.completedRoutinesLast7Days}/${insights.totalRoutinesLast7Days}',
-                  subtitle:
-                      '%${(insights.completionRate * 100).clamp(0, 100).round()}',
-                ),
-                _buildMetricCard(
-                  context,
-                  title: 'Son Aktivite',
-                  value: lastActivityText,
-                  subtitle: insights.lastActivityAt == null
-                      ? 'Henüz yok'
-                      : _relativeTime(insights.lastActivityAt!),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final double itemWidth = (constraints.maxWidth - 12) / 2;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _buildMetricCard(
+                      context,
+                      title: 'Son Kilo',
+                      value: latestProgress != null
+                          ? '${latestProgress.weight.toStringAsFixed(1)} kg'
+                          : (profile?.weight != null
+                              ? '${profile!.weight!.toStringAsFixed(1)} kg'
+                              : 'Yok'),
+                      subtitle: latestProgress != null
+                          ? DateFormat('dd.MM').format(latestProgress.date)
+                          : 'Kayıt yok',
+                      width: itemWidth,
+                    ),
+                    _buildMetricCard(
+                      context,
+                      title: 'Su Takibi',
+                      value: '${insights.todayWaterMl}/${insights.waterGoalMl} ml',
+                      subtitle:
+                          '%${(waterPercent * 100).clamp(0, 100).round()}',
+                      width: itemWidth,
+                    ),
+                    _buildMetricCard(
+                      context,
+                      title: 'Öğün Tamamlama',
+                      value:
+                          '${insights.completedRoutinesLast7Days}/${insights.totalRoutinesLast7Days}',
+                      subtitle:
+                          '%${(insights.completionRate * 100).clamp(0, 100).round()}',
+                      width: itemWidth,
+                    ),
+                    _buildMetricCard(
+                      context,
+                      title: 'Son Aktivite',
+                      value: lastActivityText,
+                      subtitle: insights.lastActivityAt == null
+                          ? 'Henüz yok'
+                          : _relativeTime(insights.lastActivityAt!),
+                      width: itemWidth,
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -1339,9 +1362,10 @@ Widget _buildMetricCard(
   required String title,
   required String value,
   required String subtitle,
+  double? width,
 }) {
   return Container(
-    width: 150,
+    width: width ?? 150,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Colors.grey.shade50,

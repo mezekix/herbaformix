@@ -16,9 +16,9 @@ class CalorieCalculationEngine {
   static const double _multHeavy = 1.725;
 
   /// userGoal başına günlük kalori offset'i (kcal).
-  /// Zayıflama: ~0.5 kg/hafta hedefi için günlük 500 kcal açık.
+  /// Zayıflama: Aylık ortalama 5 kg hedefi doğrultusunda günlük 1280 kcal açık.
   /// Kilo alma: ~0.5 kg/hafta için 500 kcal fazlalık.
-  static const int _offsetWeightLoss = -500;
+  static const int _offsetWeightLoss = -1280;
   static const int _offsetWeightGain = 500;
   static const int _offsetMaintenance = 0;
 

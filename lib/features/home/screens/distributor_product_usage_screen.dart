@@ -615,8 +615,9 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
             isCompleted: routine.isCompleted,
             isNext: !routine.isCompleted && routines.where((r) => !r.isCompleted).firstOrNull?.id == routine.id,
             onChanged: (val) async {
-              if (val != null && context.mounted) {
-                await context.read<RoutineService>().updateRoutineStatus(userProfile.id, routine.id, val);
+              if (val != null) {
+                final routineService = context.read<RoutineService>();
+                await routineService.updateRoutineStatus(userProfile.id, routine.id, val);
               }
             },
             onTimeTap: () async {
@@ -646,8 +647,9 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
             isCompleted: routine.isCompleted,
             isNext: !routine.isCompleted && routines.where((r) => !r.isCompleted).firstOrNull?.id == routine.id,
             onChanged: (val) async {
-              if (val != null && context.mounted) {
-                await context.read<RoutineService>().updateRoutineStatus(userProfile.id, routine.id, val);
+              if (val != null) {
+                final routineService = context.read<RoutineService>();
+                await routineService.updateRoutineStatus(userProfile.id, routine.id, val);
               }
             },
             onTimeTap: () async {

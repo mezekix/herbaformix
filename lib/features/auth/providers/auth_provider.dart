@@ -161,8 +161,9 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint("AuthProvider Error (_onAuthStateChanged): $e");
+      _userProfile = null;
       _status = AuthStatus.unauthenticated;
-      _errorMessage = "Bir hata oluştu: $e";
+      _errorMessage = "Profil yükleme hatası: $e";
     } finally {
       debugPrint(
         "AuthProvider: Durum değişti -> $_status, Firebase Kullanıcı: ${_firebaseUser?.uid}, Profil: ${_userProfile?.name}",
@@ -393,10 +394,13 @@ class AuthProvider with ChangeNotifier {
     try {
       await _firestoreService.setUserProfile(updatedProfile);
       _userProfile = updatedProfile; // Lokal state'i de güncelle
+      _errorMessage = null;
       notifyListeners();
       return true;
     } catch (e) {
       debugPrint("Profil güncelleme hatası (AuthProvider): $e");
+      _errorMessage = "Profil güncellenemedi: $e";
+      notifyListeners();
       return false;
     }
   }

@@ -305,8 +305,8 @@ class RecipeCard extends StatelessWidget {
                     recipe.title,
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.garden,
                     ),
                   ),
                 ],

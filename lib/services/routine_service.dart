@@ -1,6 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/daily_routine_model.dart';
 import '../models/product_model.dart';
+import '../features/program/services/notification_service.dart';
+import '../features/program/services/program_service.dart';
+import '../features/program/models/program_model.dart';
+import 'repositories/calorie_repository.dart';
+import '../features/calorie_tracker/models/meal_model.dart';
+import 'package:flutter/foundation.dart';
 
 class RoutineService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -117,16 +124,170 @@ class RoutineService {
         .collection('dailyRoutines')
         .doc(routineId)
         .update({'isCompleted': isCompleted});
+
+    try {
+      final routineDoc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('dailyRoutines')
+          .doc(routineId)
+          .get();
+      if (!routineDoc.exists) return;
+      final data = routineDoc.data()!;
+      final productId = data['productId'] as String? ?? '';
+      
+      final stepType = data['stepType'] as String? ?? 'product';
+      
+      String nameToCheck = productId;
+      if (stepType == 'product' || stepType == 'RoutineStepType.product') {
+         final productDoc = await _firestore.collection('products').doc(productId).get();
+         if (productDoc.exists) {
+            nameToCheck = productDoc.data()?['name'] as String? ?? productId;
+         }
+      }
+
+      final lower = nameToCheck.toLowerCase();
+      final isShake = lower.contains('formül 1') ||
+          lower.contains('formul 1') ||
+          lower.contains('formula 1') ||
+          lower.contains('formül1') ||
+          lower.contains('formul1') ||
+          lower.contains('formula1') ||
+          lower.contains('shake') ||
+          lower.contains('şek') ||
+          lower.contains('mama') ||
+          lower.contains('f1');
+
+      if (isShake) {
+        final calorieRepo = CalorieRepository(firestore: _firestore);
+        if (isCompleted) {
+           final meal = Meal(
+             id: routineId,
+             name: nameToCheck,
+             calories: 250,
+             timestamp: DateTime.now(),
+           );
+           await calorieRepo.addMealToday(userId, meal);
+        } else {
+           await calorieRepo.removeMealToday(userId, routineId);
+        }
+      }
+    } catch (e) {
+      debugPrint('[RoutineService] Auto-calorie error: $e');
+    }
   }
 
   // Rutin saatini güncelle
   Future<void> updateRoutineTime(String userId, String routineId, DateTime newTime) async {
+    // 1. Mevcut rutini oku (slotId almak için)
+    final routineDoc = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('dailyRoutines')
+        .doc(routineId)
+        .get();
+
+    if (!routineDoc.exists) return;
+    final routine = DailyRoutineModel.fromMap(routineDoc.data()!, routineDoc.id);
+
+    // 2. dailyRoutines dokümanındaki scheduledTime'ı güncelle
     await _firestore
         .collection('users')
         .doc(userId)
         .collection('dailyRoutines')
         .doc(routineId)
         .update({'scheduledTime': Timestamp.fromDate(newTime)});
+
+    // 3. Aktif programdaki slotun saatini güncelle (slotId yoksa eski saatle eşleştir)
+    final programService = ProgramService();
+    final program = await programService.getActiveProgram(userId);
+
+    if (program != null) {
+      final oldTimeStr = '${routine.scheduledTime.hour.toString().padLeft(2, '0')}:${routine.scheduledTime.minute.toString().padLeft(2, '0')}';
+      final newTimeStr = '${newTime.hour.toString().padLeft(2, '0')}:${newTime.minute.toString().padLeft(2, '0')}';
+      
+      final updatedSlots = program.slots.map((s) {
+        final isMatch = (routine.slotId != null && routine.slotId!.isNotEmpty && s.id == routine.slotId) || 
+                        ((routine.slotId == null || routine.slotId!.isEmpty) && s.scheduledTime == oldTimeStr);
+                        
+        if (isMatch) {
+          return s.copyWith(scheduledTime: newTimeStr);
+        }
+        return s;
+      }).toList();
+
+      final updatedProgram = program.copyWith(slots: updatedSlots);
+      
+      // Aktif programı Firestore'da güncelle
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('program')
+          .doc('active')
+          .set(updatedProgram.toMap());
+
+      // 4. Eğer güncelleyen kullanıcı kendi programını güncelliyorsa local bildirimleri de yenile
+      final currentUid = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUid == userId) {
+        await _rescheduleNotifications(updatedProgram);
+      }
+    }
+  }
+
+  // Bildirimleri yeniden zamanlama yardımcı fonksiyonu (ProgramProvider'dakine benzer)
+  Future<void> _rescheduleNotifications(ProgramModel program) async {
+    final notificationService = NotificationService();
+    await notificationService.initialize();
+    
+    // Önce tüm program bildirimlerini iptal et
+    await notificationService.cancelAllProgramNotifications();
+
+    for (final slot in program.slots) {
+      final id = getMealNotificationId(slot.id);
+      String title = '⏰ ${slot.label} Zamanı!';
+      String body = 'Öğününüzü/Ürününüzü almayı unutmayın.';
+      
+      if (slot.products.isNotEmpty) {
+        final productNames = slot.products.map((p) => p.productName).join(', ');
+        title = '🥤 ${slot.label} Zamanı!';
+        body = '$productNames kullanmayı unutmayın.';
+      } else if (slot.isNormalMeal) {
+        title = '🍽️ ${slot.label} Zamanı!';
+        body = 'Sağlıklı bir öğün tüketmeyi unutmayın.';
+      } else {
+        title = '🍎 ${slot.label} Zamanı!';
+        body = 'Ara öğün zamanı geldi, atıştırmalığınızı unutmayın.';
+      }
+      
+      await notificationService.scheduleMealNotification(
+        notificationId: id,
+        title: title,
+        body: body,
+        scheduledTime: slot.scheduledTime,
+      );
+
+      // Su bildirimi
+      if (slot.kind != MealSlotKind.snack) {
+        final timeParts = slot.scheduledTime.split(':');
+        if (timeParts.length == 2) {
+          final mealHour = int.tryParse(timeParts[0]) ?? 0;
+          final mealMinute = int.tryParse(timeParts[1]) ?? 0;
+          final now = DateTime.now();
+          final mealTime = DateTime(now.year, now.month, now.day, mealHour, mealMinute);
+          final waterTime = mealTime.subtract(const Duration(minutes: 30));
+          
+          final waterScheduledTime = '${waterTime.hour.toString().padLeft(2, '0')}:${waterTime.minute.toString().padLeft(2, '0')}';
+          final waterId = id + 100000;
+          
+          await notificationService.scheduleMealNotification(
+            notificationId: waterId,
+            title: '💧 Su Hatırlatıcısı',
+            body: '${slot.label} öncesinde 1 büyük bardak (500ml) su içmeyi unutmayın.',
+            scheduledTime: waterScheduledTime,
+          );
+        }
+      }
+    }
   }
 
   // Belirli bir tarihin rutinlerini getir

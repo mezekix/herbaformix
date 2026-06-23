@@ -47,6 +47,16 @@ class CalorieTrackerScreen extends StatelessWidget {
           final exerciseLevel =
               context.read<WaterProvider>().todaySummary?.exerciseLevel ??
                   'moderate';
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              provider.recomputeIfAuto(
+                profile: profile,
+                exerciseLevel: exerciseLevel,
+              );
+            }
+          });
+
           final missing = provider.missingProfileFields(profile);
           return SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),

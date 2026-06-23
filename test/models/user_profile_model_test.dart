@@ -91,6 +91,27 @@ void main() {
             'uid_no_badges');
         expect(m.earnedBadges, isEmpty);
       });
+
+      test('sayısal alanlar double/int karışık geldiğinde doğru toInt() dönüşümü yapılır', () {
+        final map = baseMap()
+          ..['age'] = 30.5
+          ..['waterDailyGoal'] = 2500.0
+          ..['waterMinLimit'] = 1500.0
+          ..['waterMaxLimit'] = 4500.0
+          ..['monthlyVPTarget'] = 500.0;
+        final m = UserProfileModel.fromMap(map, 'uid_cast');
+        expect(m.age, 30);
+        expect(m.waterDailyGoal, 2500);
+        expect(m.waterMinLimit, 1500);
+        expect(m.waterMaxLimit, 4500);
+        expect(m.monthlyVPTarget, 500);
+      });
+
+      test('earnedBadges içinde String olmayan elemanlar string\'e çevrilir', () {
+        final map = baseMap()..['earnedBadges'] = [123, true, 'streak_7'];
+        final m = UserProfileModel.fromMap(map, 'uid_badge_cast');
+        expect(m.earnedBadges, ['123', 'true', 'streak_7']);
+      });
     });
 
     group('toMap()', () {
