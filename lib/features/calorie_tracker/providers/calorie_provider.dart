@@ -8,6 +8,7 @@ import '../../../models/user_profile_model.dart';
 import '../../../services/repositories/calorie_repository.dart';
 import '../models/calorie_daily_log.dart';
 import '../models/meal_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Bugünkü kalori durumunu Firestore'dan dinleyen ve geçmişi sorgulayan provider.
 ///
@@ -91,7 +92,7 @@ class CalorieProvider with ChangeNotifier {
 
     // İlk gün log'u yoksa kısa bir async tetik — gözlemleyici null görmesin.
     unawaited(_repo.ensureTodayLog(userId).catchError((Object e) {
-      debugPrint('[CalorieProvider] ensureTodayLog: $e');
+      AppLogger.error('[CalorieProvider] ensureTodayLog: $e', tag: 'CalorieProvider', error: e);
       return CalorieDailyLog.empty(date: DateTime.now());
     }));
 
@@ -101,7 +102,7 @@ class CalorieProvider with ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
     }, onError: (Object e) {
-      debugPrint('[CalorieProvider] watchDay error: $e');
+      AppLogger.error('[CalorieProvider] watchDay error: $e', tag: 'CalorieProvider');
       _errorMessage = 'Kalori verileri yüklenemedi: $e';
       _isLoading = false;
       notifyListeners();
@@ -156,7 +157,7 @@ class CalorieProvider with ChangeNotifier {
         isAuto: true,
       );
     } catch (e) {
-      debugPrint('[CalorieProvider] recomputeIfAuto: $e');
+      AppLogger.error('[CalorieProvider] recomputeIfAuto: $e', tag: 'CalorieProvider', error: e);
     } finally {
       _isRecomputing = false;
     }
@@ -176,7 +177,7 @@ class CalorieProvider with ChangeNotifier {
     try {
       await _repo.addMealToday(uid, meal, defaultGoal: calorieGoal);
     } catch (e) {
-      debugPrint('[CalorieProvider] addMeal: $e');
+      AppLogger.error('[CalorieProvider] addMeal: $e', tag: 'CalorieProvider', error: e);
       _errorMessage = 'Öğün eklenemedi: $e';
       notifyListeners();
     }
@@ -188,7 +189,7 @@ class CalorieProvider with ChangeNotifier {
     try {
       await _repo.removeMealToday(uid, mealId);
     } catch (e) {
-      debugPrint('[CalorieProvider] removeMeal: $e');
+      AppLogger.error('[CalorieProvider] removeMeal: $e', tag: 'CalorieProvider', error: e);
       _errorMessage = 'Öğün silinemedi: $e';
       notifyListeners();
     }
@@ -208,7 +209,7 @@ class CalorieProvider with ChangeNotifier {
         isAuto: false,
       );
     } catch (e) {
-      debugPrint('[CalorieProvider] setManualGoal: $e');
+      AppLogger.error('[CalorieProvider] setManualGoal: $e', tag: 'CalorieProvider', error: e);
       _errorMessage = 'Hedef güncellenemedi: $e';
       notifyListeners();
     }
@@ -238,7 +239,7 @@ class CalorieProvider with ChangeNotifier {
       );
       return true;
     } catch (e) {
-      debugPrint('[CalorieProvider] switchToAutoGoal: $e');
+      AppLogger.error('[CalorieProvider] switchToAutoGoal: $e', tag: 'CalorieProvider', error: e);
       _errorMessage = 'Hedef güncellenemedi: $e';
       notifyListeners();
       return false;

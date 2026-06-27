@@ -1,18 +1,94 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_10y.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'package:herbaformix/core/logger.dart';
+import 'package:herbaformix/services/routine_service.dart';
+
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) async {
+  if (notificationResponse.actionId == 'actionSnooze') {
+    final plugin = FlutterLocalNotificationsPlugin();
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
+    const iosSettings = DarwinInitializationSettings();
+    const initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+    await plugin.initialize(settings: initSettings);
+
+    final payload = notificationResponse.payload;
+    String title = '🔔 Hatırlatma';
+    String body = 'Öğününüzü/Ürününüzü almayı unutmayın!';
+    if (payload != null && payload.isNotEmpty) {
+      try {
+        final data = jsonDecode(payload) as Map<String, dynamic>;
+        title = data['title'] as String? ?? title;
+        body = data['body'] as String? ?? body;
+      } catch (_) {}
+    }
+
+    tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
+    // Şimdilik sabit 15 dk erteleme
+    final scheduledDate = tz.TZDateTime.now(tz.local).add(const Duration(minutes: 15));
+
+    final androidDetails = const AndroidNotificationDetails(
+      'meal_reminders_v4',
+      'Öğün Hatırlatıcıları',
+      channelDescription: 'Günlük öğün ve ürün kullanım hatırlatıcıları',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('notification_sound'),
+      enableVibration: true,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      visibility: NotificationVisibility.public,
+      fullScreenIntent: true,
+      icon: '@drawable/ic_notification',
+      color: Color(0xFF7AC144),
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction(
+          'actionConsume',
+          '✅ Tükettim',
+          showsUserInterface: true,
+        ),
+        AndroidNotificationAction(
+          'actionSnooze',
+          '⏳ 15 Dk Ertele',
+          showsUserInterface: false,
+        ),
+      ],
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: const DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'notification_sound.wav',
+        interruptionLevel: InterruptionLevel.timeSensitive,
+      ),
+    );
+
+    final reminderId = (notificationResponse.id ?? 0) + 900000;
+
+    await plugin.zonedSchedule(
+      id: reminderId,
+      title: '⏳ Erteledin: $title',
+      body: body,
+      scheduledDate: scheduledDate,
+      notificationDetails: details,
+      payload: payload,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+}
+
 /// Öğün saatlerinde push bildirimleri yöneten servis.
-/// flutter_local_notifications v21 API'si kullanılır.
-/// Bildirim hataları program akışını engellemez (graceful degradation).
-///
-/// Bildirim butonları:
-///   - "Tamam" → bildirimi kapatır
-///   - "Daha Sonra" → 15 dk sonra 1 defalık hatırlatma bildirimi zamanlar
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -71,6 +147,7 @@ class NotificationService {
       final result = await _plugin.initialize(
         settings: initSettings,
         onDidReceiveNotificationResponse: _onNotificationResponse,
+        onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       );
       _initialized = result ?? false;
       if (_initialized) {
@@ -78,7 +155,7 @@ class NotificationService {
       }
       return _initialized;
     } catch (e) {
-      debugPrint('[NotificationService] initialize hatası: $e');
+      AppLogger.error('initialize hatası', tag: 'NotificationService', error: e);
       return false;
     }
   }
@@ -128,23 +205,61 @@ class NotificationService {
           audioAttributesUsage: AudioAttributesUsage.alarm,
         ),
       );
-      debugPrint(
-        '[NotificationService] Android kanalları kuruldu (özel ses aktif).',
-      );
+      AppLogger.debug('Android kanalları kuruldu (özel ses aktif)', tag: 'NotificationService');
     } catch (e) {
-      debugPrint('[NotificationService] _setupAndroidChannels hatası: $e');
+      AppLogger.error('_setupAndroidChannels hatası', tag: 'NotificationService', error: e);
     }
   }
 
-  /// Bildirim tıklama/aksiyon callback'i.
-  void _onNotificationResponse(NotificationResponse response) {
-    debugPrint(
-      '[NotificationService] Bildirim yanıtı: '
-      'actionId=${response.actionId}, id=${response.id}, payload=${response.payload}',
+  /// Bildirim tıklama/aksiyon callback'i (Ön plan).
+  void _onNotificationResponse(NotificationResponse response) async {
+    AppLogger.debug(
+      'Bildirim yanıtı: actionId=${response.actionId}, id=${response.id}',
+      tag: 'NotificationService',
     );
 
-    // "Tamam" veya doğrudan tıklama → ek işlem yok, bildirim kapanır.
-    // "İncele" tıklandığında showsUserInterface: true olduğu için uygulama açılır.
+    if (response.actionId == 'actionConsume' || response.actionId == null || response.actionId!.isEmpty) {
+      try {
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          final data = jsonDecode(payload) as Map<String, dynamic>;
+          final slotId = data['slotId'] as String?;
+          final uid = FirebaseAuth.instance.currentUser?.uid;
+
+          if (uid != null && slotId != null) {
+            final now = DateTime.now();
+            final startOfDay = DateTime(now.year, now.month, now.day);
+            final endOfDay = startOfDay.add(const Duration(days: 1));
+
+            final firestore = FirebaseFirestore.instance;
+            final isWater = data['isWater'] == true;
+
+            final snapshot = await firestore
+                .collection('users')
+                .doc(uid)
+                .collection('dailyRoutines')
+                .where('scheduledTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+                .where('scheduledTime', isLessThan: Timestamp.fromDate(endOfDay))
+                .get();
+
+            for (var doc in snapshot.docs) {
+              if (doc.data()['slotId'] != slotId) continue;
+
+              final stepType = doc.data()['stepType'] as String?;
+              final isRoutineWater = stepType == 'RoutineStepType.water' || stepType == 'water' || doc.data()['productId'] == 'water_step';
+
+              if (isWater == isRoutineWater) {
+                final routineService = RoutineService();
+                await routineService.updateRoutineStatus(uid, doc.id, true);
+                AppLogger.info('Öğün/Su otomatik tamamlandı: ${doc.id}', tag: 'NotificationService');
+              }
+            }
+          }
+        }
+      } catch (e) {
+        AppLogger.error('Otomatik işaretleme hatası', tag: 'NotificationService', error: e);
+      }
+    }
   }
 
   // /// Payload bilgisinden 15 dk sonrası için hatırlatma bildirimi zamanlar.
@@ -234,7 +349,7 @@ class NotificationService {
       }
       return false;
     } catch (e) {
-      debugPrint('[NotificationService] hasPermission hatası: $e');
+      AppLogger.error('hasPermission hatası', tag: 'NotificationService', error: e);
       return false;
     }
   }
@@ -262,7 +377,7 @@ class NotificationService {
       }
       return false;
     } catch (e) {
-      debugPrint('[NotificationService] requestPermission hatası: $e');
+      AppLogger.error('requestPermission hatası', tag: 'NotificationService', error: e);
       return false;
     }
   }
@@ -278,12 +393,12 @@ class NotificationService {
       final canSchedule = await androidImpl.canScheduleExactNotifications();
       if (canSchedule == true) return true;
 
-      debugPrint('[NotificationService] Exact alarm izni yok, isteniyor...');
+      AppLogger.warning('Exact alarm izni yok, isteniyor...', tag: 'NotificationService');
       final granted = await androidImpl.requestExactAlarmsPermission();
-      debugPrint('[NotificationService] Exact alarm izni sonucu: $granted');
+      AppLogger.debug('Exact alarm izni sonucu: $granted', tag: 'NotificationService');
       return granted ?? false;
     } catch (e) {
-      debugPrint('[NotificationService] Exact alarm izin kontrolü hatası: $e');
+      AppLogger.error('Exact alarm izin kontrolü hatası', tag: 'NotificationService', error: e);
       return false;
     }
   }
@@ -296,6 +411,8 @@ class NotificationService {
     required String title,
     required String body,
     required String scheduledTime,
+    String? slotId,
+    bool isWater = false,
     bool isOneTime = false,
   }) async {
     try {
@@ -304,11 +421,16 @@ class NotificationService {
       // Android 12+ exact alarm izin kontrolü
       final hasExactAlarm = await _ensureExactAlarmPermission();
       if (!hasExactAlarm) {
-        debugPrint('[NotificationService] ⚠️ Exact alarm izni verilmedi, bildirim zamanlanamayabilir.');
+        AppLogger.warning('Exact alarm izni verilmedi, bildirim zamanlanamayabilir', tag: 'NotificationService');
       }
 
-      // Payload'a orijinal başlık ve body'yi kaydet (hatırlatma bildirimi için)
-      final payload = jsonEncode({'title': title, 'body': body});
+      // Payload'a orijinal başlık, body ve aksiyonlar için gerekenleri kaydet
+      final payload = jsonEncode({
+        'title': title, 
+        'body': body,
+        'slotId': slotId,
+        'isWater': isWater,
+      });
 
       const sound = RawResourceAndroidNotificationSound('notification_sound');
       final androidDetails = AndroidNotificationDetails(
@@ -327,13 +449,13 @@ class NotificationService {
         color: const Color(0xFF7AC144), // AppColors.primary
         actions: const <AndroidNotificationAction>[
           AndroidNotificationAction(
-            actionView,
-            '🔍 İncele',
+            'actionConsume',
+            '✅ Tükettim',
             showsUserInterface: true,
           ),
           AndroidNotificationAction(
-            actionOk,
-            '✅ Tamam',
+            'actionSnooze',
+            '⏳ 15 Dk Ertele',
             showsUserInterface: false,
           ),
         ],
@@ -371,16 +493,16 @@ class NotificationService {
         scheduledDate: scheduledDate,
         notificationDetails: details,
         payload: payload,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: isOneTime ? null : DateTimeComponents.time,
       );
 
-      debugPrint(
-        '[NotificationService] ✅ Bildirim zamanlandı: id=$notificationId, '
-        'hedef=$scheduledDate (şimdi=$now), oneTime=$isOneTime',
+      AppLogger.debug(
+        'Bildirim zamanlandı: id=$notificationId, hedef=$scheduledDate, oneTime=$isOneTime',
+        tag: 'NotificationService',
       );
     } catch (e) {
-      debugPrint('[NotificationService] ❌ scheduleMealNotification hatası: $e');
+      AppLogger.error('scheduleMealNotification hatası', tag: 'NotificationService', error: e);
     }
   }
 
@@ -388,11 +510,9 @@ class NotificationService {
   Future<void> cancelAllProgramNotifications() async {
     try {
       await _plugin.cancelAll();
-      debugPrint('[NotificationService] Tüm program bildirimleri iptal edildi.');
+      AppLogger.debug('Tüm program bildirimleri iptal edildi', tag: 'NotificationService');
     } catch (e) {
-      debugPrint(
-        '[NotificationService] cancelAllProgramNotifications hatası: $e',
-      );
+      AppLogger.error('cancelAllProgramNotifications hatası', tag: 'NotificationService', error: e);
     }
   }
 
@@ -466,9 +586,9 @@ class NotificationService {
         notificationDetails: details,
         payload: payload,
       );
-      debugPrint('[NotificationService] Test bildirimi gönderildi.');
+      AppLogger.debug('Test bildirimi gönderildi', tag: 'NotificationService');
     } catch (e) {
-      debugPrint('[NotificationService] showTestNotification hatası: $e');
+      AppLogger.error('showTestNotification hatası', tag: 'NotificationService', error: e);
     }
   }
 }

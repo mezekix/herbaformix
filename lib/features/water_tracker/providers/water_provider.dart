@@ -13,6 +13,7 @@ import '../../../services/weather_service.dart';
 import '../../program/models/program_model.dart';
 import '../../program/services/program_service.dart';
 import '../utils/water_calculation_constants.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class WaterProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
@@ -74,7 +75,7 @@ class WaterProvider with ChangeNotifier {
         _updateWaterGoal();
       },
       onError: (e) {
-        debugPrint('WaterProvider profile stream hatası: $e');
+        AppLogger.error('WaterProvider profile stream hatası: $e', tag: 'WaterProvider');
       },
     );
 
@@ -86,7 +87,7 @@ class WaterProvider with ChangeNotifier {
         _updateWaterGoal();
       },
       onError: (e) {
-        debugPrint('WaterProvider program stream hatası: $e');
+        AppLogger.error('WaterProvider program stream hatası: $e', tag: 'WaterProvider');
       },
     );
 
@@ -104,7 +105,7 @@ class WaterProvider with ChangeNotifier {
         }
       },
       onError: (e) {
-        debugPrint('WaterProvider summary stream hatası: $e');
+        AppLogger.error('WaterProvider summary stream hatası: $e', tag: 'WaterProvider');
       },
     );
 
@@ -119,7 +120,7 @@ class WaterProvider with ChangeNotifier {
             safeNotifyListeners();
           },
           onError: (e) {
-            debugPrint('WaterProvider logs stream hatası: $e');
+            AppLogger.error('WaterProvider logs stream hatası: $e', tag: 'WaterProvider');
             _isLoading = false;
             safeNotifyListeners();
           },
@@ -265,7 +266,7 @@ class WaterProvider with ChangeNotifier {
     try {
       await _firestoreService.addWaterLog(_userId!, log);
     } catch (e) {
-      debugPrint('WaterProvider addWater hatası: $e');
+      AppLogger.error('WaterProvider addWater hatası: $e', tag: 'WaterProvider', error: e);
     }
   }
 
@@ -276,7 +277,7 @@ class WaterProvider with ChangeNotifier {
     try {
       await _firestoreService.deleteWaterLog(_userId!, last.id);
     } catch (e) {
-      debugPrint('WaterProvider removeLastLog hatası: $e');
+      AppLogger.error('WaterProvider removeLastLog hatası: $e', tag: 'WaterProvider', error: e);
     }
   }
 
@@ -286,7 +287,7 @@ class WaterProvider with ChangeNotifier {
     try {
       await _firestoreService.deleteWaterLog(_userId!, logId);
     } catch (e) {
-      debugPrint('WaterProvider removeLog hatası: $e');
+      AppLogger.error('WaterProvider removeLog hatası: $e', tag: 'WaterProvider', error: e);
     }
   }
 
@@ -301,7 +302,7 @@ class WaterProvider with ChangeNotifier {
       );
       await _firestoreService.updateWaterLog(_userId!, updatedLog);
     } catch (e) {
-      debugPrint('WaterProvider updateWaterLog hatası: $e');
+      AppLogger.error('WaterProvider updateWaterLog hatası: $e', tag: 'WaterProvider', error: e);
     }
   }
 
@@ -336,7 +337,7 @@ class WaterProvider with ChangeNotifier {
       }
       safeNotifyListeners();
     } catch (e) {
-      debugPrint('WaterProvider setDailyGoal hatası: $e');
+      AppLogger.error('WaterProvider setDailyGoal hatası: $e', tag: 'WaterProvider', error: e);
     }
   }
 
@@ -346,7 +347,7 @@ class WaterProvider with ChangeNotifier {
     try {
       await _firestoreService.clearWaterLogs(_userId!, DateTime.now());
     } catch (e) {
-      debugPrint('WaterProvider resetDailyProgress hatası: $e');
+      AppLogger.error('WaterProvider resetDailyProgress hatası: $e', tag: 'WaterProvider', error: e);
     }
   }
 

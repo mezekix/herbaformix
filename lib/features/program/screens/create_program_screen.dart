@@ -12,6 +12,7 @@ import '../widgets/goal_selection_step.dart';
 import '../widgets/weight_input_step.dart';
 import '../widgets/meal_plan_step.dart';
 import '../widgets/program_summary_step.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Müşteri program oluşturma wizard ekranı.
 /// 4 adım: Hedef Seçimi → (Kilo Girişi) → Öğün Planı → Özet & Onay
@@ -57,7 +58,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
             provider.initializeWizardWithProfile(profile);
           }
         } catch (e) {
-          debugPrint('Profil yüklenirken hata: $e');
+          AppLogger.error('Profil yüklenirken hata: $e', tag: 'CreateProgramScreen', error: e);
           if (mounted) {
             provider.resetWizard();
           }

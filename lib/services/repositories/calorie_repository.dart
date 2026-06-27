@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../features/calorie_tracker/models/calorie_daily_log.dart';
 import '../../features/calorie_tracker/models/meal_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// `/users/{uid}/calorieLogs/{YYYY-MM-DD}` — günlük kalori kayıtları.
 ///
@@ -36,7 +36,7 @@ class CalorieRepository {
       if (!doc.exists || doc.data() == null) return null;
       return CalorieDailyLog.fromMap(doc.data()!, doc.id);
     } on FirebaseException catch (e) {
-      debugPrint('[CalorieRepository] getDay hatası: ${e.message}');
+      AppLogger.error('[CalorieRepository] getDay hatası: ${e.message}', tag: 'CalorieRepository', error: e);
       return null;
     }
   }
@@ -88,7 +88,7 @@ class CalorieRepository {
       final data = snap.docs.first.data();
       return data['dailyGoal'] as int?;
     } on FirebaseException catch (e) {
-      debugPrint('[CalorieRepository] _findMostRecentGoal: ${e.message}');
+      AppLogger.error('[CalorieRepository] _findMostRecentGoal: ${e.message}', tag: 'CalorieRepository', error: e);
       return null;
     }
   }

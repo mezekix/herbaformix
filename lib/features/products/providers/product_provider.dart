@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../models/product_model.dart';
 import '../../../services/firestore_service.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class ProductProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
@@ -42,7 +43,7 @@ class ProductProvider with ChangeNotifier {
         safeNotifyListeners(); // UI'ı güncelle
       },
       onError: (error) {
-        debugPrint("ProductProvider Hata: $error");
+        AppLogger.error("ProductProvider Hata: $error", tag: 'ProductProvider');
         _isLoading = false;
         _products = []; // Hata durumunda listeyi boşalt
         safeNotifyListeners();
@@ -65,7 +66,7 @@ class ProductProvider with ChangeNotifier {
       await _firestoreService.addProduct(product);
       // Stream will auto-update the list. No need to call notifyListeners unless for other UI changes.
     } catch (e) {
-      debugPrint("ProductProvider Hata (addProduct): $e");
+      AppLogger.error("ProductProvider Hata (addProduct): $e", tag: 'ProductProvider', error: e);
       rethrow;
     }
   }
@@ -75,7 +76,7 @@ class ProductProvider with ChangeNotifier {
       await _firestoreService.updateProduct(product);
       // Stream will auto-update the list.
     } catch (e) {
-      debugPrint("ProductProvider Hata (updateProduct): $e");
+      AppLogger.error("ProductProvider Hata (updateProduct): $e", tag: 'ProductProvider', error: e);
       rethrow;
     }
   }
@@ -87,7 +88,7 @@ class ProductProvider with ChangeNotifier {
       // No need to call notifyListeners() if the list is the only thing changing,
       // as the stream handles it. But good for other UI feedback.
     } catch (e) {
-      debugPrint("ProductProvider Hata (deleteProduct): $e");
+      AppLogger.error("ProductProvider Hata (deleteProduct): $e", tag: 'ProductProvider', error: e);
       // Optionally, re-throw the error to be caught in the UI layer.
       rethrow;
     }

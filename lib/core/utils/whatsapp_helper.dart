@@ -8,9 +8,9 @@
 // `<queries>` bloğunda `com.whatsapp` ve `com.whatsapp.w4b` paket adları
 // eklenmelidir; aksi halde `canLaunchUrl` false döner.
 
-import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Türkiye için varsayılan ülke kodu (başında + olmadan).
 const String kDefaultCountryCode = '90';
@@ -31,7 +31,7 @@ Future<bool> sendInviteViaWhatsApp({
 }) async {
   final normalized = normalizePhoneForWhatsApp(phone);
   if (normalized == null) {
-    debugPrint('WhatsApp gönderim hatası: telefon normalize edilemedi -> $phone');
+    AppLogger.error('WhatsApp gönderim hatası: telefon normalize edilemedi -> $phone', tag: 'WhatsappHelper');
     return false;
   }
 
@@ -52,12 +52,12 @@ Future<bool> sendInviteViaWhatsApp({
   try {
     final canLaunch = await canLaunchUrl(uri);
     if (!canLaunch) {
-      debugPrint('WhatsApp gönderim hatası: canLaunchUrl false -> $uri');
+      AppLogger.error('WhatsApp gönderim hatası: canLaunchUrl false -> $uri', tag: 'WhatsappHelper');
       return false;
     }
     return await launchUrl(uri, mode: LaunchMode.externalApplication);
   } catch (e) {
-    debugPrint('WhatsApp gönderim hatası: $e');
+    AppLogger.error('WhatsApp gönderim hatası: $e', tag: 'WhatsappHelper', error: e);
     return false;
   }
 }

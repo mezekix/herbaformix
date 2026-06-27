@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../features/calorie_tracker/models/food_item.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// `assets/food_database.json`'dan yemek listesini lazy yükler ve Türkçe
 /// karakter normalize edilmiş arama sağlar.
@@ -38,9 +38,9 @@ class FoodRepository {
           .map((e) => FoodItem.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
       _cache = items;
-      debugPrint('[FoodRepository] ${items.length} yemek yüklendi.');
+      AppLogger.info('[FoodRepository] ${items.length} yemek yüklendi.', tag: 'FoodRepository');
     } catch (e) {
-      debugPrint('[FoodRepository] yükleme hatası: $e');
+      AppLogger.error('[FoodRepository] yükleme hatası: $e', tag: 'FoodRepository', error: e);
       _cache = const [];
     } finally {
       _loadFuture = null;

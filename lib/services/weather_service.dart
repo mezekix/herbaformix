@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:herbaformix/core/logger.dart';
 
 class WeatherService {
   // Önemli değerler string olarak tanımlanmalı
@@ -25,10 +25,9 @@ class WeatherService {
     // API anahtarı tanımlı değilse: graceful degradation (PRD 3.5.1).
     // Sistem çökmez; WaterCalculationEngine varsayılan 22°C / %50 nem ile devam eder.
     if (apiKey.isEmpty) {
-      debugPrint(
-        'WeatherService: OWM_API_KEY tanımlanmamış. '
-        '--dart-define=OWM_API_KEY=<anahtar> ile geçirin. '
-        'Hava durumu fallback değerleriyle devam edilecek.',
+      AppLogger.warning(
+        'OWM_API_KEY tanımlanmamış — hava durumu fallback değerleriyle devam edilecek',
+        tag: 'WeatherService',
       );
       return null;
     }
@@ -53,11 +52,11 @@ class WeatherService {
 
         return (temp: temp, humidity: humidity, status: status);
       } else {
-        debugPrint('WeatherService API Hatası: ${response.statusCode} - ${response.body}');
+        AppLogger.error('WeatherService API Hatası: ${response.statusCode} - ${response.body}', tag: 'WeatherService');
         return null;
       }
     } catch (e) {
-      debugPrint('WeatherService Exception: $e');
+      AppLogger.error('WeatherService Exception: $e', tag: 'WeatherService', error: e);
       return null;
     }
   }

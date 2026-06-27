@@ -73,7 +73,8 @@ service cloud.firestore {
     }
 
     match /inviteCodes/{codeId} {
-      allow read: if true;
+      allow get: if true;
+      allow list: if signedIn();
 
       allow create: if isDistributor() &&
         request.resource.data.isUsed == false &&
@@ -175,8 +176,11 @@ service cloud.firestore {
         resource.data.customerId == request.auth.uid ||
         ('linkedUserId' in resource.data && resource.data.linkedUserId == request.auth.uid)
       );
-      // Sadece consultant olarak kendini gösteren distribütör oluşturabilir.
-      allow create: if signedIn() && request.resource.data.consultantId == request.auth.uid;
+      // Sadece consultant olarak kendini gösteren distribütör oluşturabilir ve
+      // gösterdiği müşterinin gerçekten onun müşterisi olduğunu ispatlamalıdır.
+      allow create: if signedIn() && 
+        request.resource.data.consultantId == request.auth.uid &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)/customers/$(request.resource.data.customerId));
       // Sadece kaydı oluşturan consultant güncelleyebilir/silebilir.
       allow update, delete: if signedIn() && resource.data.consultantId == request.auth.uid;
     }

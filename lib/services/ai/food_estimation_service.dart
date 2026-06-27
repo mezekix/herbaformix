@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Gemini Flash modeline yemek adı verip tahmini kalori bilgisini alır.
 ///
@@ -126,7 +126,7 @@ class FoodEstimationService {
     } on FoodEstimationException {
       rethrow;
     } catch (e) {
-      debugPrint('[FoodEstimationService] hata: $e');
+      AppLogger.error('[FoodEstimationService] hata: $e', tag: 'FoodEstimationService', error: e);
       throw FoodEstimationException(
         'Tahmin başarısız: ${e.toString().replaceFirst('Exception: ', '')}',
       );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:herbaformix/core/logger.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
@@ -241,8 +242,9 @@ class _SlotCardState extends State<_SlotCard> {
                       : null,
                   onTap: () {
                     Navigator.pop(ctx);
-                    debugPrint(
-                        '[SlotCard] Ürün ekleniyor: ${p.name} → ${widget.slot.id}');
+                    AppLogger.debug(
+                        'Ürün ekleniyor: ${p.name}',
+                        tag: 'MealPlanStep');
                     widget.onAddProduct(p);
                   },
                 );

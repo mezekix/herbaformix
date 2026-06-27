@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../services/repositories/program_template_repository.dart';
 import '../models/program_template_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Program şablonlarının liste cache'i ve CRUD aksiyonları.
 ///
@@ -48,7 +49,7 @@ class ProgramTemplateProvider with ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
     }, onError: (Object e) {
-      debugPrint('[ProgramTemplateProvider] watch hatası: $e');
+      AppLogger.error('[ProgramTemplateProvider] watch hatası: $e', tag: 'ProgramTemplateProvider');
       _isLoading = false;
       _errorMessage = 'Şablonlar yüklenemedi: $e';
       notifyListeners();
@@ -66,7 +67,7 @@ class ProgramTemplateProvider with ChangeNotifier {
       final id = await _repo.create(template);
       return id;
     } catch (e) {
-      debugPrint('[ProgramTemplateProvider] create hatası: $e');
+      AppLogger.error('[ProgramTemplateProvider] create hatası: $e', tag: 'ProgramTemplateProvider', error: e);
       _errorMessage = 'Şablon oluşturulamadı: $e';
       notifyListeners();
       return null;
@@ -78,7 +79,7 @@ class ProgramTemplateProvider with ChangeNotifier {
       await _repo.update(template);
       return true;
     } catch (e) {
-      debugPrint('[ProgramTemplateProvider] update hatası: $e');
+      AppLogger.error('[ProgramTemplateProvider] update hatası: $e', tag: 'ProgramTemplateProvider', error: e);
       _errorMessage = 'Şablon güncellenemedi: $e';
       notifyListeners();
       return false;
@@ -90,7 +91,7 @@ class ProgramTemplateProvider with ChangeNotifier {
       await _repo.delete(id);
       return true;
     } catch (e) {
-      debugPrint('[ProgramTemplateProvider] delete hatası: $e');
+      AppLogger.error('[ProgramTemplateProvider] delete hatası: $e', tag: 'ProgramTemplateProvider', error: e);
       _errorMessage = 'Şablon silinemedi: $e';
       notifyListeners();
       return false;

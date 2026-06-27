@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:herbaformix/core/logger.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -37,7 +38,7 @@ class AuthService {
       );
     } on FirebaseAuthException catch (e) {
       // Hata yönetimi (örneğin, kullanıcıya göstermek için)
-      debugPrint('Giriş hatası: ${e.message}');
+      AppLogger.error('Giriş hatası', tag: 'AuthService', error: e);
       return null;
     }
   }
@@ -59,7 +60,7 @@ class AuthService {
 
       return await _firebaseAuth.signInWithCredential(credential);
     } catch (e) {
-      debugPrint('Google ile giriş hatası: $e');
+      AppLogger.error('Google ile giriş hatası', tag: 'AuthService', error: e);
       rethrow;
     }
   }
@@ -69,7 +70,7 @@ class AuthService {
     try {
       return await _firebaseAuth.signInAnonymously();
     } on FirebaseAuthException catch (e) {
-      debugPrint('Anonim giriş hatası: ${e.message}');
+      AppLogger.error('Anonim giriş hatası', tag: 'AuthService', error: e);
       return null;
     }
   }
@@ -93,7 +94,7 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
     } catch (e) {
-      debugPrint('getGoogleAuthCredential hatası: $e');
+      AppLogger.error('getGoogleAuthCredential hatası', tag: 'AuthService', error: e);
       rethrow;
     }
   }
@@ -109,7 +110,7 @@ class AuthService {
         password: password,
       );
     } on FirebaseAuthException catch (e) {
-      debugPrint('Kayıt hatası: ${e.message}');
+      AppLogger.error('Kayıt hatası', tag: 'AuthService', error: e);
       return null;
     }
   }
@@ -120,7 +121,7 @@ class AuthService {
     try {
       await _googleSignIn.signOut();
     } catch (e) {
-      debugPrint('Google Sign-Out hatası: $e');
+      AppLogger.error('Google Sign-Out hatası', tag: 'AuthService', error: e);
     }
   }
 
@@ -129,7 +130,7 @@ class AuthService {
     try {
       await _googleSignIn.signOut();
     } catch (e) {
-      debugPrint('Google Sign-Out hatası (signOutGoogleOnly): $e');
+      AppLogger.error('Google Sign-Out hatası (signOutGoogleOnly)', tag: 'AuthService', error: e);
     }
   }
 
@@ -138,7 +139,7 @@ class AuthService {
     try {
       await _firebaseAuth.sendPasswordResetEmail(email: email);
     } catch (e) {
-      debugPrint('Şifre sıfırlama hatası: $e');
+      AppLogger.error('Şifre sıfırlama hatası', tag: 'AuthService', error: e);
       rethrow;
     }
   }

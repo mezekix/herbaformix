@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../../../models/product_model.dart';
 import '../../../models/recipe_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class RecipeProvider extends ChangeNotifier {
   List<RecipeModel> _recipes = [];
@@ -25,7 +26,7 @@ class RecipeProvider extends ChangeNotifier {
       _recipes = recipeList.map((x) => RecipeModel.fromMap(x)).toList();
       
     } catch (e) {
-      debugPrint('Tarifler yüklenirken hata: $e');
+      AppLogger.error('Tarifler yüklenirken hata: $e', tag: 'RecipeProvider', error: e);
       _recipes = [];
     } finally {
       _isLoading = false;

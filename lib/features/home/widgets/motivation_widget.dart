@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../services/firestore_service.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/program/providers/program_provider.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class MotivationWidget extends StatefulWidget {
   const MotivationWidget({super.key});
@@ -59,7 +60,7 @@ class _MotivationWidgetState extends State<MotivationWidget> {
         }
       });
     } catch (e) {
-      debugPrint('loadQuotes hatası: $e');
+      AppLogger.error('loadQuotes hatası: $e', tag: 'MotivationWidget', error: e);
     } finally {
       _loadingQuotes = false;
     }
@@ -85,7 +86,7 @@ class _MotivationWidgetState extends State<MotivationWidget> {
         }
       }
     } catch (e) {
-      debugPrint('loadDistributorMessage hatası: $e');
+      AppLogger.error('loadDistributorMessage hatası: $e', tag: 'MotivationWidget', error: e);
     }
   }
 

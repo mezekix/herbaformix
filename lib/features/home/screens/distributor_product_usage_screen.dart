@@ -21,6 +21,7 @@ import '../widgets/motivation_widget.dart';
 import '../widgets/daily_success_ring.dart';
 import '../../program/services/notification_service.dart';
 import '../../../services/fcm_service.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class DistributorProductUsageScreen extends StatefulWidget {
   static const String routeName = 'distributor-usage';
@@ -44,7 +45,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
       await NotificationService().requestPermission();
       await FcmService().requestPermission();
     } catch (e) {
-      debugPrint('[DistributorUsage] Notification permission error: $e');
+      AppLogger.error('[DistributorUsage] Notification permission error: $e', tag: 'DistributorProductUsageScreen', error: e);
     }
   }
 

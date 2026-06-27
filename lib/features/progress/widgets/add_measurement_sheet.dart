@@ -7,6 +7,7 @@ import '../../../core/app_colors.dart';
 import '../../../models/progress_entry_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/progress_provider.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Kilo ve vücut ölçümü girişi için bottom sheet.
 class AddMeasurementSheet extends StatefulWidget {
@@ -100,7 +101,7 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
         await authProvider.updateUserProfile(updated).timeout(
           const Duration(seconds: 2),
           onTimeout: () {
-            debugPrint('[AddMeasurementSheet] updateUserProfile timeout - offline modda olabilir, devam ediliyor.');
+            AppLogger.debug('[AddMeasurementSheet] updateUserProfile timeout - offline modda olabilir, devam ediliyor.', tag: 'AddMeasurementSheet');
             return false;
           },
         );

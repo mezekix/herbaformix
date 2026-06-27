@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
+import '../../../core/utils/email_validator.dart';
 import '../../../models/user_role.dart'; // Rol modelini import et
 import '../providers/auth_provider.dart';
 // import 'package:go_router/go_router.dart'; // Gerekirse yönlendirme için
@@ -257,12 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
                           ),
                         ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty || !value.contains('@')) {
-                            return 'Geçerli bir e-posta girin.';
-                          }
-                          return null;
-                        },
+                        validator: EmailValidator.validate,
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 12),
@@ -415,12 +411,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       
                       const SizedBox(height: 16),
                       
-                      // Social Buttons
+                      // Social Buttons & Guest
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildSocialButton(
-                            icon: Icons.g_mobiledata, // Fallback icon since we don't have SVG
+                            icon: Icons.g_mobiledata, // Google
                             borderColor: borderColor,
                             bgColor: inputBg,
                             iconColor: textPrimary,
@@ -433,19 +429,32 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderColor: borderColor,
                             bgColor: inputBg,
                             iconColor: textPrimary,
-                          ),
-                          const SizedBox(width: 24),
-                          _buildSocialButton(
-                            icon: Icons.face,
-                            borderColor: borderColor,
-                            bgColor: inputBg,
-                            iconColor: stitchPrimary,
-                            onTap: _submitAnonymousSignIn,
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Apple ile giriş özelliği yakında eklenecektir.'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
                       
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: _submitAnonymousSignIn,
+                        child: const Text(
+                          'Misafir Olarak Devam Et',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: stitchPrimary,
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 8),
                       
                       // Footer
                       Row(
@@ -572,12 +581,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
               borderRadius: BorderRadius.circular(30),
             ),
           ),
-          validator: (value) {
-            if (value == null || value.isEmpty || !value.contains('@')) {
-              return 'Geçerli bir e-posta girin.';
-            }
-            return null;
-          },
+          validator: EmailValidator.validate,
         ),
       ),
       actions: [

@@ -7,6 +7,7 @@ import '../../../services/firestore_service.dart';
 import '../../../services/routine_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../program/services/program_service.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Kritik aksiyonlar listesi için filtre seçenekleri.
 enum ActionFilter { all, overdue, returnRisk, measurement }
@@ -127,7 +128,7 @@ class HomeProvider with ChangeNotifier {
       _completionStreak = streak;
       notifyListeners();
     } catch (e) {
-      debugPrint('HomeProvider streak yüklenirken hata: $e');
+      AppLogger.error('HomeProvider streak yüklenirken hata: $e', tag: 'HomeProvider', error: e);
     }
   }
 
@@ -155,7 +156,7 @@ class HomeProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            debugPrint('HomeProvider Hata (listenToUpcomingFollowUps): $error');
+            AppLogger.error('HomeProvider Hata (listenToUpcomingFollowUps): $error', tag: 'HomeProvider');
             _isLoading = false;
             _allFollowUps = [];
             notifyListeners();

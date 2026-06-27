@@ -16,6 +16,7 @@ import 'services/auth_service.dart';
 import 'services/fcm_service.dart';
 import 'services/firestore_service.dart';
 import 'services/routine_service.dart';
+import 'package:herbaformix/core/logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,13 +28,13 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    debugPrint('Firebase başlatma hatası: $e');
+    AppLogger.error('Firebase başlatma hatası: $e', tag: 'Main', error: e);
   }
 
   // Firestore offline persistence
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    cacheSizeBytes: 52428800, // 50 MB
   );
 
   // FCM background handler kaydı

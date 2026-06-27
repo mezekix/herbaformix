@@ -7,7 +7,7 @@ import '../features/program/services/program_service.dart';
 import '../features/program/models/program_model.dart';
 import 'repositories/calorie_repository.dart';
 import '../features/calorie_tracker/models/meal_model.dart';
-import 'package:flutter/foundation.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class RoutineService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -173,7 +173,7 @@ class RoutineService {
         }
       }
     } catch (e) {
-      debugPrint('[RoutineService] Auto-calorie error: $e');
+      AppLogger.error('[RoutineService] Auto-calorie error: $e', tag: 'RoutineService', error: e);
     }
   }
 
@@ -264,6 +264,8 @@ class RoutineService {
         title: title,
         body: body,
         scheduledTime: slot.scheduledTime,
+        slotId: slot.id,
+        isWater: false,
       );
 
       // Su bildirimi
@@ -284,6 +286,8 @@ class RoutineService {
             title: '💧 Su Hatırlatıcısı',
             body: '${slot.label} öncesinde 1 büyük bardak (500ml) su içmeyi unutmayın.',
             scheduledTime: waterScheduledTime,
+            slotId: slot.id,
+            isWater: true,
           );
         }
       }

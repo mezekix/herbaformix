@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:herbaformix/core/logger.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -151,9 +152,9 @@ class _SplashScreenState extends State<SplashScreen>
       // Timeout: 10 saniye geçti ama auth hâlâ netleşmedi.
       // Login'e yönlendir. Auth sonradan tamamlanırsa router redirect
       // otomatik olarak doğru sayfaya yönlendirecek.
-      debugPrint(
-        '[SplashScreen] Auth timeout ($_maxAuthRetries × 100ms). '
-        'Status: ${authProvider.status}. Login\'e yönlendiriliyor.',
+      AppLogger.warning(
+        'Auth timeout — Login ekranına yönlendiriliyor',
+        tag: 'SplashScreen',
       );
     }
 

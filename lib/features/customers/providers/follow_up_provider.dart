@@ -6,6 +6,7 @@ import '../../../models/scheduled_follow_up_model.dart';
 import '../../../models/follow_up_model.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Belirli bir müşterinin takip görüşmelerini (follow-ups) yöneten Provider.
 ///
@@ -73,7 +74,7 @@ class FollowUpProvider with ChangeNotifier {
             notifyListeners(); // Arayüzü yeni veriyle ve "yükleme bitti" durumuyla güncelle.
           },
           onError: (error) {
-            debugPrint("FollowUpProvider Hata (listenToFollowUps): $error");
+            AppLogger.error("FollowUpProvider Hata (listenToFollowUps): $error", tag: 'FollowUpProvider');
             _isLoading = false;
             _followUps = []; // Hata durumunda listeyi temizle.
             notifyListeners(); // Arayüzü hata durumuyla güncelle.
@@ -84,8 +85,9 @@ class FollowUpProvider with ChangeNotifier {
   /// Firestore'dan gelen anlık PLANLANMIŞ takip verilerini dinler.
   void _listenToScheduledFollowUps() {
     if (_userId.isEmpty) {
-      debugPrint(
-        "FollowUpProvider Hata: Kullanıcı ID'si boş olduğu için planlanmış takipler dinlenemiyor.",
+      AppLogger.warning(
+        'Kullanıcı ID boş — planlanmış takipler dinlenemiyor',
+        tag: 'FollowUpProvider',
       );
       _isLoading = false;
       _scheduledFollowUps = [];
@@ -105,8 +107,10 @@ class FollowUpProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            debugPrint(
-              "FollowUpProvider Hata (listenToScheduledFollowUps): $error",
+            AppLogger.error(
+              'Planlanmış takipler dinleme hatası',
+              tag: 'FollowUpProvider',
+              error: error,
             );
             _isLoading = false;
             _scheduledFollowUps = [];
@@ -140,7 +144,7 @@ class FollowUpProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("FollowUpProvider Hata (addFollowUp): $e");
+      AppLogger.error("FollowUpProvider Hata (addFollowUp): $e", tag: 'FollowUpProvider', error: e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -159,7 +163,7 @@ class FollowUpProvider with ChangeNotifier {
       await _firestoreService.updateFollowUp(_userId, _customerId, followUp);
       return true;
     } catch (e) {
-      debugPrint("FollowUpProvider Hata (updateFollowUp): $e");
+      AppLogger.error("FollowUpProvider Hata (updateFollowUp): $e", tag: 'FollowUpProvider', error: e);
       return false;
     } finally {
       _isLoading = false;
@@ -183,7 +187,7 @@ class FollowUpProvider with ChangeNotifier {
       // Bu yüzden lokal listeyi manuel olarak düzenlememize gerek yok.
       return true;
     } catch (e) {
-      debugPrint("FollowUpProvider Hata (deleteFollowUp): $e");
+      AppLogger.error("FollowUpProvider Hata (deleteFollowUp): $e", tag: 'FollowUpProvider', error: e);
       return false; // Hata durumunda false döndür.
     } finally {
       // İşlem başarılı da olsa, başarısız da olsa yüklenme durumunu kapat.

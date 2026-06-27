@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../models/customer_model.dart';
 import '../../models/follow_up_model.dart';
 import '../../models/scheduled_follow_up_model.dart';
 import '../../models/user_profile_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Distribütörün müşteri CRM'i:
 /// - `/users/{distributorId}/customers/{customerId}` (ana müşteri kayıtları)
@@ -50,7 +50,7 @@ class CustomerRepository {
       final d = await customersRef(userId).doc(customerId).get();
       return d.exists ? d.data() : null;
     } catch (e) {
-      debugPrint("CustomerRepository.getCustomer hatası: $e");
+      AppLogger.error("CustomerRepository.getCustomer hatası: $e", tag: 'CustomerRepository', error: e);
       rethrow;
     }
   }
@@ -67,7 +67,7 @@ class CustomerRepository {
       if (s.docs.isEmpty) return null;
       return s.docs.first.data();
     } catch (e) {
-      debugPrint("CustomerRepository.getCustomerByLinkedUserId hatası: $e");
+      AppLogger.error("CustomerRepository.getCustomerByLinkedUserId hatası: $e", tag: 'CustomerRepository', error: e);
       return null;
     }
   }
@@ -148,7 +148,7 @@ class CustomerRepository {
         batch.delete(doc.reference);
       }
     } catch (e) {
-      debugPrint('deleteCustomer: scheduled_follow_ups temizlenirken hata: $e');
+      AppLogger.error('deleteCustomer: scheduled_follow_ups temizlenirken hata: $e', tag: 'CustomerRepository', error: e);
     }
 
     // 3) Geçmiş takipler
@@ -158,7 +158,7 @@ class CustomerRepository {
         batch.delete(doc.reference);
       }
     } catch (e) {
-      debugPrint('deleteCustomer: follow_ups temizlenirken hata: $e');
+      AppLogger.error('deleteCustomer: follow_ups temizlenirken hata: $e', tag: 'CustomerRepository', error: e);
     }
 
     // 4) Bağlı kullanıcı varsa assignedDistributorId'sini temizle
@@ -190,7 +190,7 @@ class CustomerRepository {
         .snapshots()
         .map((s) => s.docs.map((d) => d.data()).toList())
         .handleError((error) {
-      debugPrint("getFollowUps hatası (müşteri: $customerId): $error");
+      AppLogger.error("getFollowUps hatası (müşteri: $customerId): $error", tag: 'CustomerRepository');
       return <FollowUpModel>[];
     });
   }
@@ -203,7 +203,7 @@ class CustomerRepository {
     try {
       await followUpsRef(userId, customerId).add(followUp);
     } catch (e) {
-      debugPrint("addFollowUp hatası: $e");
+      AppLogger.error("addFollowUp hatası: $e", tag: 'CustomerRepository', error: e);
       throw Exception("Takip görüşmesi eklenemedi: $e");
     }
   }
@@ -218,7 +218,7 @@ class CustomerRepository {
           .doc(followUp.id)
           .update(followUp.toMap());
     } catch (e) {
-      debugPrint("updateFollowUp hatası: $e");
+      AppLogger.error("updateFollowUp hatası: $e", tag: 'CustomerRepository', error: e);
       throw Exception("Takip görüşmesi güncellenemedi: $e");
     }
   }
@@ -231,7 +231,7 @@ class CustomerRepository {
     try {
       await followUpsRef(userId, customerId).doc(followUpId).delete();
     } catch (e) {
-      debugPrint("deleteFollowUp hatası: $e");
+      AppLogger.error("deleteFollowUp hatası: $e", tag: 'CustomerRepository', error: e);
       throw Exception("Takip görüşmesi silinemedi: $e");
     }
   }
@@ -289,7 +289,7 @@ class CustomerRepository {
       }
       await batch.commit();
     } catch (e) {
-      debugPrint("addScheduledFollowUpBatch hatası: $e");
+      AppLogger.error("addScheduledFollowUpBatch hatası: $e", tag: 'CustomerRepository', error: e);
       throw Exception("Planlanmış takipler oluşturulamadı: $e");
     }
   }
@@ -298,7 +298,7 @@ class CustomerRepository {
     try {
       await scheduledFollowUpsRef().doc(id).update({'isCompleted': true});
     } catch (e) {
-      debugPrint("markScheduledFollowUpAsCompleted hatası: $e");
+      AppLogger.error("markScheduledFollowUpAsCompleted hatası: $e", tag: 'CustomerRepository', error: e);
       throw Exception("Takip tamamlandı olarak işaretlenemedi: $e");
     }
   }
@@ -311,7 +311,7 @@ class CustomerRepository {
         'dueDate': Timestamp.fromDate(newDueDate),
       });
     } catch (e) {
-      debugPrint("snoozeScheduledFollowUp hatası: $e");
+      AppLogger.error("snoozeScheduledFollowUp hatası: $e", tag: 'CustomerRepository', error: e);
       throw Exception("Takip ertelenemedi: $e");
     }
   }
@@ -320,7 +320,7 @@ class CustomerRepository {
     try {
       await scheduledFollowUpsRef().doc(id).delete();
     } catch (e) {
-      debugPrint("deleteScheduledFollowUp hatası: $e");
+      AppLogger.error("deleteScheduledFollowUp hatası: $e", tag: 'CustomerRepository', error: e);
       throw Exception("Planlanmış takip silinemedi: $e");
     }
   }

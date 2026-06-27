@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../models/customer_model.dart';
 import '../models/distributor_customer_insights.dart';
@@ -21,6 +20,7 @@ import 'repositories/product_repository.dart';
 import 'repositories/progress_repository.dart';
 import 'repositories/user_profile_repository.dart';
 import 'repositories/water_repository.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// `FirestoreService` artık bir **facade**'dir. Tüm gerçek mantık
 /// `lib/services/repositories/` altındaki odaklı repository sınıflarındadır:
@@ -365,7 +365,7 @@ class FirestoreService {
               .doc(crmRecord.id));
         }
       } catch (e) {
-        debugPrint('Distribütör CRM kaydı silme hatası: $e');
+        AppLogger.error('Distribütör CRM kaydı silme hatası: $e', tag: 'FirestoreService', error: e);
       }
     }
 
@@ -376,7 +376,7 @@ class FirestoreService {
         await _deleteSubcollection('users/$uid/customers/${customerDoc.id}/follow_ups');
       }
     } catch (e) {
-      debugPrint('Müşteriler follow_ups silme hatası: $e');
+      AppLogger.error('Müşteriler follow_ups silme hatası: $e', tag: 'FirestoreService', error: e);
     }
 
     await _deleteSubcollection('users/$uid/customers');
@@ -419,7 +419,7 @@ class FirestoreService {
         await _deleteDocs(snap.docs.map((d) => d.reference).toList());
       }
     } catch (e) {
-      debugPrint('Alt koleksiyon silme hatası ($path): $e');
+      AppLogger.error('Alt koleksiyon silme hatası ($path): $e', tag: 'FirestoreService', error: e);
     }
   }
 
@@ -431,7 +431,7 @@ class FirestoreService {
         await _deleteDocs(snap.docs.map((d) => d.reference).toList());
       }
     } catch (e) {
-      debugPrint('Sorgu silme hatası: $e');
+      AppLogger.error('Sorgu silme hatası: $e', tag: 'FirestoreService', error: e);
     }
   }
 
@@ -454,7 +454,7 @@ class FirestoreService {
     try {
       await ref.delete();
     } catch (e) {
-      debugPrint('Doküman silme hatası (${ref.path}): $e');
+      AppLogger.error('Doküman silme hatası (${ref.path}): $e', tag: 'FirestoreService', error: e);
     }
   }
 
@@ -466,7 +466,7 @@ class FirestoreService {
       await _db.terminate();
       await _db.clearPersistence();
     } catch (e) {
-      debugPrint('Firestore clearLocalCache hatası: $e');
+      AppLogger.error('Firestore clearLocalCache hatası: $e', tag: 'FirestoreService', error: e);
     }
   }
 }

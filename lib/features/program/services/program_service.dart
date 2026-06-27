@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../../models/daily_routine_model.dart';
 import '../../../models/product_model.dart';
 import '../../../services/routine_service.dart';
 import '../models/program_model.dart';
+import 'package:herbaformix/core/logger.dart';
 /// Müşteri programı için Firestore CRUD işlemlerini yöneten servis.
 /// Firestore yolu: users/{uid}/program (tek doküman, ID = 'active')
 class ProgramService {
@@ -35,14 +35,14 @@ class ProgramService {
       await _programRef(userId).set(program.toMap()).timeout(
         const Duration(seconds: 2),
         onTimeout: () {
-          debugPrint('[ProgramService] saveProgram set() timeout - offline modda olabilir, devam ediliyor.');
+          AppLogger.debug('[ProgramService] saveProgram set() timeout - offline modda olabilir, devam ediliyor.', tag: 'ProgramService');
         },
       );
 
       // Günlük rutinleri oluştur
       await _generateRoutinesFromProgram(userId, program, allProducts);
     } on FirebaseException catch (e) {
-      debugPrint('[ProgramService] saveProgram hatası: ${e.message}');
+      AppLogger.error('[ProgramService] saveProgram hatası: ${e.message}', tag: 'ProgramService', error: e);
       rethrow;
     }
   }
@@ -54,7 +54,7 @@ class ProgramService {
       if (!doc.exists || doc.data() == null) return null;
       return ProgramModel.fromMap(doc.data()!, doc.id);
     } on FirebaseException catch (e) {
-      debugPrint('[ProgramService] getActiveProgram hatası: ${e.message}');
+      AppLogger.error('[ProgramService] getActiveProgram hatası: ${e.message}', tag: 'ProgramService', error: e);
       return null;
     }
   }
@@ -73,7 +73,7 @@ class ProgramService {
       await _programRef(userId).delete();
       await _routineService.clearAllRoutines(userId);
     } on FirebaseException catch (e) {
-      debugPrint('[ProgramService] deleteProgram hatası: ${e.message}');
+      AppLogger.error('[ProgramService] deleteProgram hatası: ${e.message}', tag: 'ProgramService', error: e);
       rethrow;
     }
   }
@@ -84,7 +84,7 @@ class ProgramService {
       final doc = await _programRef(userId).get();
       return doc.exists && (doc.data()?['isActive'] == true);
     } on FirebaseException catch (e) {
-      debugPrint('[ProgramService] hasActiveProgram hatası: ${e.message}');
+      AppLogger.error('[ProgramService] hasActiveProgram hatası: ${e.message}', tag: 'ProgramService', error: e);
       return false;
     }
   }
@@ -122,12 +122,12 @@ class ProgramService {
       if (snap.docs.isEmpty) {
         final program = await getActiveProgram(userId);
         if (program != null && program.isActive) {
-          debugPrint('[ProgramService] Bugün için rutin bulunamadı, oluşturuluyor...');
+          AppLogger.warning('[ProgramService] Bugün için rutin bulunamadı, oluşturuluyor...', tag: 'ProgramService');
           await _generateRoutinesFromProgram(userId, program, []);
         }
       }
     } catch (e) {
-      debugPrint('[ProgramService] ensureTodayRoutines hatası: $e');
+      AppLogger.error('[ProgramService] ensureTodayRoutines hatası: $e', tag: 'ProgramService', error: e);
     }
   }
 
@@ -266,7 +266,7 @@ class ProgramService {
     await batch.commit().timeout(
       const Duration(seconds: 2),
       onTimeout: () {
-        debugPrint('[ProgramService] _generateRoutinesFromProgram batch.commit() timeout - offline modda olabilir, devam ediliyor.');
+        AppLogger.debug('[ProgramService] _generateRoutinesFromProgram batch.commit() timeout - offline modda olabilir, devam ediliyor.', tag: 'ProgramService');
       },
     );
   }

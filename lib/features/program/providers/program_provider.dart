@@ -341,6 +341,8 @@ class ProgramProvider with ChangeNotifier {
         title: title,
         body: body,
         scheduledTime: slot.scheduledTime,
+        slotId: slot.id,
+        isWater: false,
       );
 
       // 2. Öğün (snack değilse) için 30 dk öncesine SU bildirimi
@@ -362,6 +364,8 @@ class ProgramProvider with ChangeNotifier {
             title: '💧 Su Hatırlatıcısı',
             body: '${slot.label} öncesinde 1 büyük bardak (500ml) su içmeyi unutmayın.',
             scheduledTime: waterScheduledTime,
+            slotId: slot.id,
+            isWater: true,
           );
         }
       }

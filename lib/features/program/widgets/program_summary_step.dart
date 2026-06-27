@@ -12,6 +12,7 @@ import '../../../services/firestore_service.dart';
 import '../models/program_editor_args.dart';
 import '../models/program_model.dart';
 import '../providers/program_provider.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class ProgramSummaryStep extends StatelessWidget {
   final ProgramEditorArgs? editorArgs;
@@ -225,7 +226,7 @@ class ProgramSummaryStep extends StatelessWidget {
                           }
                         }
                       } catch (e) {
-                        debugPrint('Kullanıcı profili güncellenirken hata: $e');
+                        AppLogger.error('Kullanıcı profili güncellenirken hata: $e', tag: 'ProgramSummaryStep', error: e);
                       }
 
                       if (context.mounted) {

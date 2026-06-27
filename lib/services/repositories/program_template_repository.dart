@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../features/program/models/program_template_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// `/programs/{programId}` — distribütörlerin oluşturduğu şablon program kataloğu.
 ///
@@ -44,7 +44,7 @@ class ProgramTemplateRepository {
       if (!doc.exists || doc.data() == null) return null;
       return ProgramTemplateModel.fromMap(doc.data()!, doc.id);
     } on FirebaseException catch (e) {
-      debugPrint('[ProgramTemplateRepository] getById hatası: ${e.message}');
+      AppLogger.error('[ProgramTemplateRepository] getById hatası: ${e.message}', tag: 'ProgramTemplateRepository', error: e);
       return null;
     }
   }

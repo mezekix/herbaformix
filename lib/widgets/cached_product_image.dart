@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/image_utils.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class CachedProductImage extends StatelessWidget {
   final String? imageUrl;
@@ -42,7 +43,7 @@ class CachedProductImage extends StatelessWidget {
         ),
       ),
       errorWidget: (context, url, error) {
-        debugPrint('Resim yüklenemedi: $url, Hata: $error');
+        AppLogger.error('Resim yüklenemedi: $url, Hata: $error', tag: 'CachedProductImage');
         return _buildFallbackImage();
       },
     );

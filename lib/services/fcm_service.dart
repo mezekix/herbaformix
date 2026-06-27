@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 
+import 'package:herbaformix/core/logger.dart';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -11,8 +13,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 /// bu nedenle global state'e veya UI'a erişemez. Yalnızca log + minimum işlem.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('[FcmService][bg] mesaj alındı: ${message.messageId} '
-      'data=${message.data}');
+  AppLogger.debug('Arka plan mesajı alındı: ${message.messageId}', tag: 'FcmService');
 }
 
 /// Firebase Cloud Messaging (FCM) wrapper'ı.
@@ -72,7 +73,7 @@ class FcmService {
       // 3) Token yenileme stream'i.
       _tokenRefreshSub?.cancel();
       _tokenRefreshSub = _fm.onTokenRefresh.listen((newToken) {
-        debugPrint('[FcmService] token yenilendi');
+        AppLogger.info('Token yenilendi', tag: 'FcmService');
         onTokenRefresh?.call(newToken);
       });
 
@@ -84,7 +85,7 @@ class FcmService {
       _openedFromBgSub?.cancel();
       _openedFromBgSub = FirebaseMessaging.onMessageOpenedApp.listen(
         (message) {
-          debugPrint('[FcmService] arka plandan açıldı: ${message.data}');
+          AppLogger.debug('Bildirimden açıldı, type: ${message.data['type']}', tag: 'FcmService');
           onNotificationTap?.call(message.data);
         },
       );
@@ -92,8 +93,7 @@ class FcmService {
       // 6) Uygulama tamamen kapalıyken bildirime tıklanmışsa initial mesajı al.
       final initialMessage = await _fm.getInitialMessage();
       if (initialMessage != null) {
-        debugPrint(
-            '[FcmService] initial message: ${initialMessage.data}');
+        AppLogger.debug('Initial message, type: ${initialMessage.data['type']}', tag: 'FcmService');
         // Router henüz hazır olmayabilir; küçük gecikmeyle çağır.
         Future.delayed(const Duration(milliseconds: 500), () {
           onNotificationTap?.call(initialMessage.data);
@@ -101,9 +101,9 @@ class FcmService {
       }
 
       _initialized = true;
-      debugPrint('[FcmService] initialize tamam.');
+      AppLogger.info('Initialize tamam', tag: 'FcmService');
     } catch (e) {
-      debugPrint('[FcmService] initialize hatası: $e');
+      AppLogger.error('Initialize hatası', tag: 'FcmService', error: e);
     }
   }
 
@@ -120,10 +120,10 @@ class FcmService {
       final granted =
           settings.authorizationStatus == AuthorizationStatus.authorized ||
               settings.authorizationStatus == AuthorizationStatus.provisional;
-      debugPrint('[FcmService] izin durumu: ${settings.authorizationStatus}');
+      AppLogger.info('İzin durumu: ${settings.authorizationStatus}', tag: 'FcmService');
       return granted;
     } catch (e) {
-      debugPrint('[FcmService] requestPermission hatası: $e');
+      AppLogger.error('requestPermission hatası', tag: 'FcmService', error: e);
       return false;
     }
   }
@@ -142,7 +142,7 @@ class FcmService {
       }
       return await _fm.getToken();
     } catch (e) {
-      debugPrint('[FcmService] getToken hatası: $e');
+      AppLogger.error('getToken hatası', tag: 'FcmService', error: e);
       return null;
     }
   }
@@ -152,13 +152,12 @@ class FcmService {
     try {
       await _fm.deleteToken();
     } catch (e) {
-      debugPrint('[FcmService] deleteToken hatası: $e');
+      AppLogger.error('deleteToken hatası', tag: 'FcmService', error: e);
     }
   }
 
   Future<void> _handleForeground(RemoteMessage message) async {
-    debugPrint('[FcmService][fg] data=${message.data}, '
-        'notification=${message.notification?.title}');
+    AppLogger.debug('Foreground mesaj alındı, type: ${message.data['type']}', tag: 'FcmService');
     final notification = message.notification;
     if (notification == null) return;
 
@@ -185,7 +184,7 @@ class FcmService {
         payload: jsonEncode(message.data),
       );
     } catch (e) {
-      debugPrint('[FcmService] foreground local show hatası: $e');
+      AppLogger.error('Foreground local show hatası', tag: 'FcmService', error: e);
     }
   }
 
@@ -203,7 +202,7 @@ class FcmService {
         ),
       );
     } catch (e) {
-      debugPrint('[FcmService] _ensureAndroidChannel hatası: $e');
+      AppLogger.error('Android kanal oluşturma hatası', tag: 'FcmService', error: e);
     }
   }
 }

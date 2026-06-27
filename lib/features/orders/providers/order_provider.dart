@@ -10,6 +10,7 @@ import '../../../models/user_role.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../customers/providers/customer_provider.dart'; // Müşteri bilgisi için
+import 'package:herbaformix/core/logger.dart';
 
 class OrderProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
@@ -116,7 +117,7 @@ class OrderProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            debugPrint("OrderProvider Hata (fetchOrders): $error");
+            AppLogger.error("OrderProvider Hata (fetchOrders): $error", tag: 'OrderProvider');
             _isLoading = false;
             _orders = [];
             notifyListeners();
@@ -162,7 +163,7 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("OrderProvider Hata (addOrder): $e");
+      AppLogger.error("OrderProvider Hata (addOrder): $e", tag: 'OrderProvider', error: e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -190,8 +191,9 @@ class OrderProvider with ChangeNotifier {
       // --- OTOMATİK TAKİP OLUŞTURMA MANTIĞI ---
       // Eğer yeni durum "Teslim Edildi" ise, planı oluştur.
       if (order.status == OrderStatus.delivered) {
-        debugPrint(
-          "Sipariş 'Teslim Edildi' olarak güncellendi. Takip planı oluşturuluyor...",
+        AppLogger.info(
+          'Sipariş Teslim Edildi olarak güncellendi. Takip planı oluşturuluyor...',
+          tag: 'OrderProvider',
         );
 
         final CustomerModel? customer = await _customerProvider.getCustomerById(
@@ -199,13 +201,15 @@ class OrderProvider with ChangeNotifier {
         );
 
         if (customer != null) {
-          debugPrint(
-            "'${customer.firstName}' için takip planı oluşturma metodu çağrılıyor.",
+          AppLogger.info(
+            'Müşteri için takip planı oluşturma metodu çağrılıyor',
+            tag: 'OrderProvider',
           );
           await _createStandardFollowUpSchedule(customer);
         } else {
-          debugPrint(
-            "HATA: Takip planı oluşturulamadı çünkü müşteri ID'si (${order.customerId}) bulunamadı.",
+          AppLogger.error(
+            'Takip planı oluşturulamadı — müşteri bulunamadı',
+            tag: 'OrderProvider',
           );
         }
       }
@@ -214,7 +218,7 @@ class OrderProvider with ChangeNotifier {
       notifyListeners(); // isLoading durumu için
       return true;
     } catch (e) {
-      debugPrint("OrderProvider Hata (updateOrder): $e");
+      AppLogger.error("OrderProvider Hata (updateOrder): $e", tag: 'OrderProvider', error: e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -244,9 +248,9 @@ class OrderProvider with ChangeNotifier {
 
     // Güvenlik: başka bir danışmanın müşterisine takip oluşturma
     if (consultantId != _currentUserId) {
-      debugPrint(
-        "HATA: Takip planı oluşturulamıyor — müşteri başka bir danışmana ait. "
-        "consultantId: $consultantId, currentUserId: $_currentUserId",
+      AppLogger.error(
+        'Takip planı oluşturulamıyor — müşteri başka bir danışmana ait',
+        tag: 'OrderProvider',
       );
       return;
     }
@@ -272,11 +276,12 @@ class OrderProvider with ChangeNotifier {
 
     try {
       await _firestoreService.addScheduledFollowUpBatch(followUpBatch);
-      debugPrint(
-        "BAŞARILI: '${customer.firstName} ${customer.lastName}' için takip planı oluşturuldu.",
+      AppLogger.info(
+        'Müşteri için takip planı oluşturuldu',
+        tag: 'OrderProvider',
       );
     } catch (e) {
-      debugPrint("HATA: Takip planı oluşturulurken hata: $e");
+      AppLogger.error("HATA: Takip planı oluşturulurken hata: $e", tag: 'OrderProvider', error: e);
     }
   }
 
@@ -292,7 +297,7 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("OrderProvider Hata (deleteOrder): $e");
+      AppLogger.error("OrderProvider Hata (deleteOrder): $e", tag: 'OrderProvider', error: e);
       _isLoading = false;
       notifyListeners();
       return false;

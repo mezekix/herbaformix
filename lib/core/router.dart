@@ -36,6 +36,7 @@ import '../features/program/screens/edit_program_template_screen.dart';
 import '../features/program/screens/program_templates_screen.dart';
 import '../features/program/models/program_editor_args.dart';
 import '../features/program/models/program_template_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -241,14 +242,15 @@ class AppRouter {
       final String currentLocation = state.matchedLocation;
       final String currentPath = state.uri.toString(); // Tam path'i almak için
 
-      debugPrint(
-        "[Redirect Check] Path: $currentPath, Location: $currentLocation, AuthStatus: ${auth.status}, LoggedIn: $loggedIn",
+      AppLogger.debug(
+        'Redirect Check — Path: $currentPath, AuthStatus: ${auth.status}',
+        tag: 'Router',
       );
 
       // Eğer Splash Screen'deysek, Splash kendi yönlendirmesini yapacak.
       if (currentLocation == SplashScreen.routeName ||
           currentPath == SplashScreen.routeName) {
-        debugPrint("[Redirect Decision] Splash'te kalınıyor.");
+        AppLogger.debug("[Redirect Decision] Splash'te kalınıyor.", tag: 'Router');
         return null;
       }
 
@@ -260,26 +262,28 @@ class AppRouter {
                                     currentLocation.contains(CustomerOnboardingScreen.routeName);
 
         if (isCustomer && !isOnboarded && !isGoingToOnboarding) {
-          debugPrint("[Redirect Decision] Müşteri onboarding tamamlamamış -> Onboarding'e yönlendiriliyor.");
+          AppLogger.debug("[Redirect Decision] Müşteri onboarding tamamlamamış -> Onboarding'e yönlendiriliyor.", tag: 'Router');
           return '${HomeScreen.routeName}/${CustomerOnboardingScreen.routeName}';
         }
 
         if (isCustomer && isOnboarded && isGoingToOnboarding) {
-          debugPrint("[Redirect Decision] Müşteri onboarding tamamlamış ama onboarding'e gitmeye çalışıyor -> Ana Sayfa'ya yönlendiriliyor.");
+          AppLogger.debug("[Redirect Decision] Müşteri onboarding tamamlamış ama onboarding'e gitmeye çalışıyor -> Ana Sayfa'ya yönlendiriliyor.", tag: 'Router');
           return HomeScreen.routeName;
         }
 
         // Eğer Login sayfasındaysa, Ana Sayfa'ya yönlendir.
         if (currentLocation == LoginScreen.routeName ||
             currentPath == LoginScreen.routeName) {
-          debugPrint(
-            "[Redirect Decision] Giriş yapıldı, Login ekranında -> Ana Sayfa'ya yönlendiriliyor ($HomeScreen.routeName).",
+          AppLogger.debug(
+            'Giriş yapıldı, Login ekranında → Ana Sayfaya yönlendiriliyor',
+            tag: 'Router',
           );
           return HomeScreen.routeName; // '/home'
         }
         // Diğer durumlarda (Home, Profile vb.) yönlendirme yapma, olduğu yerde kal.
-        debugPrint(
-          "[Redirect Decision] Giriş yapıldı, $currentLocation ekranında -> Kalınıyor.",
+        AppLogger.debug(
+          'Giriş yapıldı, $currentLocation ekranında → Kalınıyor',
+          tag: 'Router',
         );
         return null;
       }
@@ -288,14 +292,16 @@ class AppRouter {
         // Eğer Login sayfasında değilse (ve Splash de değil), Login'e yönlendir.
         if (currentLocation != LoginScreen.routeName &&
             currentPath != LoginScreen.routeName) {
-          debugPrint(
-            "[Redirect Decision] Giriş yapılmamış, $currentLocation ekranında -> Login'e yönlendiriliyor ($LoginScreen.routeName).",
+          AppLogger.debug(
+            'Giriş yapılmamış → Login ekranına yönlendiriliyor',
+            tag: 'Router',
           );
           return LoginScreen.routeName; // '/login'
         }
         // Zaten Login sayfasındaysa (veya Splash'teyse), yönlendirme yapma.
-        debugPrint(
-          "[Redirect Decision] Giriş yapılmamış, Login ekranında -> Kalınıyor.",
+        AppLogger.debug(
+          'Giriş yapılmamış, Login ekranında → Kalınıyor',
+          tag: 'Router',
         );
         return null;
       }

@@ -63,7 +63,7 @@ class InviteCodeRepository {
     final code = await _uniqueCode();
     final now = DateTime.now();
     final model = InviteCodeModel(
-      id: '',
+      id: code,
       code: code,
       distributorId: distributorId,
       createdAt: now,
@@ -77,7 +77,8 @@ class InviteCodeRepository {
       customerEmail: customerEmail,
     );
 
-    final docRef = await ref.add(model);
+    final docRef = ref.doc(code);
+    await docRef.set(model);
     final snapshot = await docRef.get();
     return snapshot.data()!;
   }
@@ -90,9 +91,13 @@ class InviteCodeRepository {
   }) async {
     final code = await _uniqueCode();
 
-    final customerDocRef =
-        _db.collection('users').doc(distributorId).collection('customers').doc();
-    final inviteDocRef = _db.collection('inviteCodes').doc();
+    final customerDocRef = _db
+        .collection('users')
+        .doc(distributorId)
+        .collection('customers')
+        .doc();
+
+    final inviteDocRef = _db.collection('inviteCodes').doc(code);
 
     final now = DateTime.now();
 
@@ -108,11 +113,11 @@ class InviteCodeRepository {
       isActive: customer.isActive,
       notes: customer.notes,
       linkedUserId: null,
-      inviteCodeId: inviteDocRef.id,
+      inviteCodeId: code,
     );
 
     final inviteToWrite = InviteCodeModel(
-      id: inviteDocRef.id,
+      id: code,
       code: code,
       distributorId: distributorId,
       createdAt: now,
@@ -150,7 +155,7 @@ class InviteCodeRepository {
   }) async {
     final code = await _uniqueCode();
 
-    final newInviteDocRef = _db.collection('inviteCodes').doc();
+    final newInviteDocRef = _db.collection('inviteCodes').doc(code);
     final oldInviteDocRef = _db.collection('inviteCodes').doc(oldInviteCodeId);
     final customerDocRef = _db
         .collection('users')
@@ -160,7 +165,7 @@ class InviteCodeRepository {
 
     final now = DateTime.now();
     final newInvite = InviteCodeModel(
-      id: newInviteDocRef.id,
+      id: code,
       code: code,
       distributorId: distributorId,
       createdAt: now,
@@ -192,10 +197,25 @@ class InviteCodeRepository {
   /// Geçerli bir davet kodunu doğrular ve [InviteCodeModel]'i döner.
   /// Kullanılmış / süresi geçmiş kodlarda anlamlı hata fırlatır.
   Future<InviteCodeModel?> validateInviteCode(String code) async {
-    final s = await ref.where('code', isEqualTo: code).limit(1).get();
-    if (s.docs.isEmpty) return null;
+    // Önce yeni yöntem (id == code) ile doğrudan dökümanı getirmeyi deniyoruz
+    final docSnapshot = await ref.doc(code).get();
+    
+    InviteCodeModel? inviteCode;
+    
+    if (docSnapshot.exists) {
+      inviteCode = docSnapshot.data();
+    } else {
+      // Geriye dönük uyumluluk: Eski UUID tabanlı kodlar için liste sorgusu
+      try {
+        final s = await ref.where('code', isEqualTo: code).limit(1).get();
+        if (s.docs.isNotEmpty) {
+          inviteCode = s.docs.first.data();
+        }
+      } catch (_) {}
+    }
 
-    final inviteCode = s.docs.first.data();
+    if (inviteCode == null) return null;
+
     final effective = inviteCode.effectiveStatus;
 
     if (effective == InviteStatus.used || inviteCode.isUsed) {

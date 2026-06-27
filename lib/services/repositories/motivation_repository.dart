@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// `/motivations/{customerId}/daily_messages` ve `/motivation_scores/{docId}` —
 /// distribütör motivasyon mesajları + müşteri günlük motivasyon skorları.
@@ -29,7 +29,7 @@ class MotivationRepository {
       if (s.docs.isEmpty) return null;
       return s.docs.first.data()['distributor_mesaji'] as String?;
     } catch (e) {
-      debugPrint('getDistributorMotivationMessage hatası: $e');
+      AppLogger.error('getDistributorMotivationMessage hatası: $e', tag: 'MotivationRepository', error: e);
       return null;
     }
   }
@@ -56,7 +56,7 @@ class MotivationRepository {
         'sistem_soz_index': now.millisecondsSinceEpoch ~/ 86400000 % 100,
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('saveDistributorMotivationMessage hatası: $e');
+      AppLogger.error('saveDistributorMotivationMessage hatası: $e', tag: 'MotivationRepository', error: e);
     }
   }
 
@@ -72,7 +72,7 @@ class MotivationRepository {
         'musteri_id': customerId,
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('saveMotivationScore hatası: $e');
+      AppLogger.error('saveMotivationScore hatası: $e', tag: 'MotivationRepository', error: e);
     }
   }
 
@@ -100,7 +100,7 @@ class MotivationRepository {
           .map((d) => (d.data()['skor'] as num?)?.toInt() ?? 0)
           .toList();
     } catch (e) {
-      debugPrint('getMotivationScoresLastDays hatası: $e');
+      AppLogger.error('getMotivationScoresLastDays hatası: $e', tag: 'MotivationRepository', error: e);
       return const [];
     }
   }

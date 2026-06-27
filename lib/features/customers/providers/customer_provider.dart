@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../../../models/customer_model.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class CombinedCustomerEntry {
   final String id;
@@ -127,7 +128,7 @@ class CustomerProvider with ChangeNotifier {
         notifyListeners();
       },
       onError: (error) {
-        debugPrint("CustomerProvider Hata (fetchCustomers): $error");
+        AppLogger.error("CustomerProvider Hata (fetchCustomers): $error", tag: 'CustomerProvider');
         _isLoading = false;
         _customers = [];
         notifyListeners();
@@ -160,7 +161,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("CustomerProvider Hata (addCustomer): $e");
+      AppLogger.error("CustomerProvider Hata (addCustomer): $e", tag: 'CustomerProvider', error: e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -179,7 +180,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("CustomerProvider Hata (updateCustomer): $e");
+      AppLogger.error("CustomerProvider Hata (updateCustomer): $e", tag: 'CustomerProvider', error: e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -196,7 +197,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("CustomerProvider Hata (deleteCustomer): $e");
+      AppLogger.error("CustomerProvider Hata (deleteCustomer): $e", tag: 'CustomerProvider', error: e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -217,7 +218,7 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("CustomerProvider Hata (deleteCombinedCustomer): $e");
+      AppLogger.error("CustomerProvider Hata (deleteCombinedCustomer): $e", tag: 'CustomerProvider', error: e);
       _isLoading = false;
       notifyListeners();
       return false;
@@ -242,7 +243,7 @@ class CustomerProvider with ChangeNotifier {
       final doc = await _firestoreService.getCustomerByLinkedUserId(_currentUserId!, customerId);
       if (doc != null) return doc;
     } catch (e) {
-      debugPrint("CustomerProvider Hata (getCustomerById): $e");
+      AppLogger.error("CustomerProvider Hata (getCustomerById): $e", tag: 'CustomerProvider', error: e);
     }
 
     return null;
@@ -354,7 +355,7 @@ class CustomerProvider with ChangeNotifier {
 
       return result;
     } catch (e) {
-      debugPrint('CustomerProvider Hata (getCombinedCustomers): $e');
+      AppLogger.error('CustomerProvider Hata (getCombinedCustomers): $e', tag: 'CustomerProvider', error: e);
       return [];
     }
   }

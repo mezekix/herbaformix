@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Günlük egzersiz durumunu yöneten servis.
 ///
@@ -56,7 +57,7 @@ class ExerciseService with ChangeNotifier {
         _safeNotify();
       },
       onError: (e) {
-        debugPrint('ExerciseService stream hatası: $e');
+        AppLogger.error('ExerciseService stream hatası: $e', tag: 'ExerciseService');
         _isLoading = false;
         _safeNotify();
       },
@@ -90,7 +91,7 @@ class ExerciseService with ChangeNotifier {
       }, SetOptions(merge: true));
       // Stream otomatik günceller, notifyListeners gerekmez
     } catch (e) {
-      debugPrint('ExerciseService toggleExercise hatası: $e');
+      AppLogger.error('ExerciseService toggleExercise hatası: $e', tag: 'ExerciseService', error: e);
     }
   }
 

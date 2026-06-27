@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart' as fb_auth; // Alias ekledik
 import 'package:flutter/widgets.dart';
+import 'package:herbaformix/core/logger.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../models/user_profile_model.dart'; // UserProfileModel'i import et
@@ -21,6 +22,7 @@ enum AuthStatus {
 class AuthProvider with ChangeNotifier {
   final AuthService _authService;
   final FirestoreService _firestoreService; // FirestoreService'i ekle
+  final FcmService _fcmService;
 
   fb_auth.User? _firebaseUser; // Firebase User objesi
   UserProfileModel? _userProfile; // Kendi UserProfileModel'imiz
@@ -29,6 +31,7 @@ class AuthProvider with ChangeNotifier {
   bool _notifyScheduled = false;
   bool _isProcessingAuth = false; // Aktif bir giriş/kayıt işlemi var mı?
   bool _isDeletingAccount = false; // Hesap silme işlemi devam ediyor mu?
+  StreamSubscription<fb_auth.User?>? _authStateSubscription;
 
   bool get isProcessingAuth => _isProcessingAuth;
   bool get isDeletingAccount => _isDeletingAccount;
@@ -55,7 +58,8 @@ class AuthProvider with ChangeNotifier {
     });
   }
 
-  AuthProvider(this._authService, this._firestoreService) {
+  AuthProvider(this._authService, this._firestoreService, {FcmService? fcmService})
+      : _fcmService = fcmService ?? FcmService() {
     _firebaseUser = _authService.getCurrentUser();
     if (_firebaseUser != null) {
       _status = AuthStatus.authenticating;
@@ -66,16 +70,24 @@ class AuthProvider with ChangeNotifier {
     } else {
       _status = AuthStatus.unauthenticated;
     }
-    _authService.authStateChanges.listen(_onAuthStateChanged);
+    _authStateSubscription =
+        _authService.authStateChanges.listen(_onAuthStateChanged);
 
     // FCM token yenilendiğinde aktif kullanıcının profiline yaz.
-    FcmService().onTokenRefresh = (token) {
+    _fcmService.onTokenRefresh = (token) {
       final uid = _firebaseUser?.uid;
       if (uid == null) return;
       _firestoreService.userProfile.setFcmToken(uid, token).catchError((e) {
-        debugPrint('FCM token yenileme yazma hatası: $e');
+        AppLogger.error('FCM token yenileme yazma hatası', tag: 'AuthProvider', error: e);
       });
     };
+  }
+
+  @override
+  void dispose() {
+    _authStateSubscription?.cancel();
+    _fcmService.onTokenRefresh = null;
+    super.dispose();
   }
 
   /// İzin verildikten sonra çağrılır: mevcut uid için FCM token'ını senkronlar.
@@ -91,9 +103,9 @@ class AuthProvider with ChangeNotifier {
   /// İzin yoksa sessizce no-op — onboarding adımı kullanıcıyı yönlendirir.
   Future<void> _syncFcmTokenIfPermitted(String uid) async {
     try {
-      final token = await FcmService().getToken();
+      final token = await _fcmService.getToken();
       if (token == null || token.isEmpty) {
-        debugPrint('FCM token yok (izin verilmemiş olabilir) — skip.');
+        AppLogger.warning('FCM token yok (izin verilmemiş olabilir) — skip', tag: 'AuthProvider');
         return;
       }
       if (_userProfile?.fcmToken == token) return; // değişmediyse yazma
@@ -103,7 +115,7 @@ class AuthProvider with ChangeNotifier {
         fcmTokenUpdatedAt: DateTime.now(),
       );
     } catch (e) {
-      debugPrint('FCM token senkron hatası: $e');
+      AppLogger.error('FCM token senkron hatası', tag: 'AuthProvider', error: e);
     }
   }
 
@@ -150,9 +162,9 @@ class AuthProvider with ChangeNotifier {
         } else {
           // Firestore'da profil bulunamadı! (Silinmiş veya tutarsız hesap)
           if (_isProcessingAuth) {
-            debugPrint("Firestore'da profil henüz oluşturulmamış olabilir (signIn/signUp aktif). Oturum kapatılması iptal edildi.");
+            AppLogger.debug('Firestore\'da profil henüz oluşturulmamış olabilir (signIn/signUp aktif). Oturum kapatılması iptal edildi', tag: 'AuthProvider');
           } else {
-            debugPrint("Firestore'da profil bulunamadı: ${firebaseUser.uid}. Oturum kapatılıyor...");
+            AppLogger.warning('Firestore\'da profil bulunamadı, oturum kapatılıyor', tag: 'AuthProvider');
             _userProfile = null;
             _status = AuthStatus.unauthenticated;
             unawaited(_authService.signOut());
@@ -160,14 +172,12 @@ class AuthProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint("AuthProvider Error (_onAuthStateChanged): $e");
+      AppLogger.error('_onAuthStateChanged hatası', tag: 'AuthProvider', error: e);
       _userProfile = null;
       _status = AuthStatus.unauthenticated;
       _errorMessage = "Profil yükleme hatası: $e";
     } finally {
-      debugPrint(
-        "AuthProvider: Durum değişti -> $_status, Firebase Kullanıcı: ${_firebaseUser?.uid}, Profil: ${_userProfile?.name}",
-      );
+      AppLogger.debug('Durum değişti -> $_status', tag: 'AuthProvider');
       notifyListeners();
     }
   }
@@ -194,7 +204,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("AuthProvider Error (signIn): $e");
+      AppLogger.error('signIn hatası', tag: 'AuthProvider', error: e);
       _status = AuthStatus.unauthenticated;
       _errorMessage = "Giriş sırasında bir hata oluştu: $e";
       notifyListeners();
@@ -263,10 +273,10 @@ class AuthProvider with ChangeNotifier {
           }
           _userProfile = newProfile;
           notifyListeners();
-          debugPrint("Google ile giriş sonrası yeni profil oluşturuldu: ${userCredential.user!.uid}");
+          AppLogger.info('Google ile giriş sonrası yeni profil oluşturuldu', tag: 'AuthProvider');
         } else {
           _userProfile = existingProfile;
-          debugPrint("Google ile giriş sonrası mevcut profil yüklendi: ${userCredential.user!.uid}");
+          AppLogger.debug('Google ile giriş sonrası mevcut profil yüklendi', tag: 'AuthProvider');
         }
         notifyListeners();
       }
@@ -275,7 +285,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("AuthProvider Error (signInWithGoogle): $e");
+      AppLogger.error('signInWithGoogle hatası', tag: 'AuthProvider', error: e);
       _status = AuthStatus.unauthenticated;
       _errorMessage = "Google ile giriş sırasında bir hata oluştu: $e";
       notifyListeners();
@@ -311,10 +321,10 @@ class AuthProvider with ChangeNotifier {
           
           await _firestoreService.setUserProfile(newProfile);
           _userProfile = newProfile;
-          debugPrint("Anonim giriş sonrası yeni profil oluşturuldu: ${userCredential.user!.uid}");
+          AppLogger.info('Anonim giriş sonrası yeni profil oluşturuldu', tag: 'AuthProvider');
         } else {
           _userProfile = existingProfile;
-          debugPrint("Anonim giriş sonrası mevcut profil yüklendi: ${userCredential.user!.uid}");
+          AppLogger.debug('Anonim giriş sonrası mevcut profil yüklendi', tag: 'AuthProvider');
         }
       }
 
@@ -322,7 +332,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("AuthProvider Error (signInAnonymously): $e");
+      AppLogger.error('signInAnonymously hatası', tag: 'AuthProvider', error: e);
       _status = AuthStatus.unauthenticated;
       _errorMessage = "Misafir girişi sırasında bir hata oluştu: $e";
       notifyListeners();
@@ -352,7 +362,7 @@ class AuthProvider with ChangeNotifier {
         );
         await _firestoreService.setUserProfile(newProfile);
         _userProfile = newProfile;
-        debugPrint("Kayıt sonrası yeni profil oluşturuldu: ${newUser.uid}");
+        AppLogger.info('Kayıt sonrası yeni profil oluşturuldu', tag: 'AuthProvider');
         notifyListeners();
         _status = AuthStatus.authenticated;
         notifyListeners();
@@ -363,7 +373,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
-      debugPrint("AuthProvider Error (signUp): $e");
+      AppLogger.error('signUp hatası', tag: 'AuthProvider', error: e);
       _status = AuthStatus.unauthenticated;
       _errorMessage = "Kayıt sırasında bir hata oluştu: $e";
       notifyListeners();
@@ -380,11 +390,26 @@ class AuthProvider with ChangeNotifier {
       try {
         await _firestoreService.userProfile.setFcmToken(uid, null);
       } catch (e) {
-        debugPrint('FCM token silme hatası (signOut): $e');
+        AppLogger.error('FCM token silme hatası (signOut)', tag: 'AuthProvider', error: e);
       }
     }
-    await FcmService().deleteToken();
-    await _authService.signOut();
+    
+    final isAnonymous = _firebaseUser?.isAnonymous ?? false;
+    if (isAnonymous && uid != null) {
+      // Anonim (misafir) çıkış yaparsa verileri temizleyelim.
+      try {
+        await _firestoreService.userProfile.deleteUserProfile(uid);
+        await _firebaseUser?.delete();
+        AppLogger.info('Anonim hesap ve profil başarıyla silindi', tag: 'AuthProvider');
+      } catch (e) {
+        AppLogger.error('Anonim hesap silinirken hata', tag: 'AuthProvider', error: e);
+      }
+    }
+
+    await _fcmService.deleteToken();
+    if (!isAnonymous) {
+      await _authService.signOut();
+    }
     // _onAuthStateChanged durumu ve profili temizleyecek
   }
 
@@ -398,7 +423,7 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("Profil güncelleme hatası (AuthProvider): $e");
+      AppLogger.error('Profil güncelleme hatası', tag: 'AuthProvider', error: e);
       _errorMessage = "Profil güncellenemedi: $e";
       notifyListeners();
       return false;
@@ -415,7 +440,7 @@ class AuthProvider with ChangeNotifier {
       _userProfile = await _firestoreService.getUserProfile(_firebaseUser!.uid);
       notifyListeners();
     } catch (e) {
-      debugPrint("Profil yenileme hatası (AuthProvider): $e");
+      AppLogger.error('Profil yenileme hatası', tag: 'AuthProvider', error: e);
     }
   }
 
@@ -532,9 +557,9 @@ class AuthProvider with ChangeNotifier {
 
       // 2) FCM token'ı cihazdan sil
       try {
-        await FcmService().deleteToken();
+        await _fcmService.deleteToken();
       } catch (e) {
-        debugPrint('FcmService token silme hatası (deleteAccount): $e');
+        AppLogger.error('FcmService token silme hatası (deleteAccount)', tag: 'AuthProvider', error: e);
       }
 
       // Hesap siliniyor flag'ini aç, böylece providerlar listenerları durdurur.
@@ -549,7 +574,7 @@ class AuthProvider with ChangeNotifier {
         try {
           await _authService.signOutGoogleOnly();
         } catch (e) {
-          debugPrint('Google Sign-Out hatası (deleteAccount): $e');
+          AppLogger.error('Google Sign-Out hatası (deleteAccount)', tag: 'AuthProvider', error: e);
         }
       }
 
@@ -591,7 +616,7 @@ class AuthProvider with ChangeNotifier {
       final appDir = await getApplicationDocumentsDirectory();
       final destPath = '${appDir.path}/profile_$uid.jpg';
       final destFile = await imageFile.copy(destPath);
-      debugPrint('Profil fotoğrafı local kaydedildi: ${destFile.path}');
+      AppLogger.debug('Profil fotoğrafı local kaydedildi', tag: 'AuthProvider');
 
       // Fotoğraf güncelleme tarihini profile kaydet (immutable copyWith)
       if (_userProfile != null) {
@@ -602,7 +627,7 @@ class AuthProvider with ChangeNotifier {
 
       return destFile.path;
     } catch (e) {
-      debugPrint('Profil fotoğrafı kaydetme hatası: $e');
+      AppLogger.error('Profil fotoğrafı kaydetme hatası', tag: 'AuthProvider', error: e);
       return null;
     }
   }
@@ -672,21 +697,19 @@ class AuthProvider with ChangeNotifier {
       );
 
       _userProfile = newProfile;
-      debugPrint(
-        'Davet koduyla kayıt başarılı: ${newUser.uid}, distribütör: ${inviteCodeModel.distributorId}',
-      );
+      AppLogger.info('Davet koduyla kayıt başarılı', tag: 'AuthProvider');
       notifyListeners();
 
       // _onAuthStateChanged durumu güncelleyecek
       return true;
     } on fb_auth.FirebaseAuthException catch (e) {
-      debugPrint('AuthProvider signUpWithInviteCode FirebaseAuthException: $e');
+      AppLogger.error('signUpWithInviteCode FirebaseAuthException', tag: 'AuthProvider', error: e);
       _status = AuthStatus.unauthenticated;
       _errorMessage = 'Kayıt sırasında bir hata oluştu: ${e.message}';
       notifyListeners();
       return false;
     } catch (e) {
-      debugPrint('AuthProvider signUpWithInviteCode hatası: $e');
+      AppLogger.error('signUpWithInviteCode hatası', tag: 'AuthProvider', error: e);
       _status = AuthStatus.unauthenticated;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();

@@ -1,8 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../models/water_log_model.dart';
 import '../../models/water_summary_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// `/users/{uid}/waterLogs/{logId}` ve `/users/{uid}/waterSummaries/{date}` —
 /// su tüketim kayıtları ve günlük özetler.
@@ -72,7 +72,7 @@ class WaterRepository {
       }
       return null;
     } catch (e) {
-      debugPrint('getWaterSummary hatası: $e');
+      AppLogger.error('getWaterSummary hatası: $e', tag: 'WaterRepository', error: e);
       return null;
     }
   }
@@ -93,7 +93,7 @@ class WaterRepository {
     try {
       await _summariesRef(userId).doc(summary.id).set(summary.toMap());
     } catch (e) {
-      debugPrint('setWaterSummary hatası: $e');
+      AppLogger.error('setWaterSummary hatası: $e', tag: 'WaterRepository', error: e);
     }
   }
 }

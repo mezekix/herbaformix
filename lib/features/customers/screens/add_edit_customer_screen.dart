@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/utils/email_validator.dart';
 import '../../../models/customer_model.dart';
 import '../../auth/providers/auth_provider.dart'; // userId için
 import '../providers/customer_provider.dart';
@@ -279,13 +280,10 @@ class _AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                         prefixIcon: Icon(Icons.email_outlined),
                       ),
                       keyboardType: TextInputType.emailAddress,
+                      // E-posta zorunlu değil; girilmişse tam format kontrolü
                       validator: (value) {
-                        if (value != null &&
-                            value.trim().isNotEmpty &&
-                            !value.contains('@')) {
-                          return 'Geçerli bir e-posta adresi girin.';
-                        }
-                        return null;
+                        if (value == null || value.trim().isEmpty) return null;
+                        return EmailValidator.validate(value);
                       },
                     ),
                     const SizedBox(height: 16),

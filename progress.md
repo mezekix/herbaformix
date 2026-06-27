@@ -1,6 +1,6 @@
 # HERBAFORMIX — Proje İlerleme Takibi (Progress)
 
-> **Son Güncelleme:** 2026-06-18
+> **Son Güncelleme:** 2026-06-27
 > **Mevcut Sürüm:** v1.2.0
 > **Genel İlerleme:** ~%88 (Production seviyesi)
 > **Bir sonraki kilometre taşı:** v2.0 AI Premium (Faz 26–28)
@@ -10,6 +10,30 @@
 ## 🎯 Proje Vizyonu
 
 Danışanların kişisel sağlık hedeflerine ulaşırken eğlenceli ve oyunlaştırılmış bir arayüzle rutinlerini takip edebildiği; yaşam koçlarının ise tüm müşteri portföyünü tek bir CRM panelinden yönetebildiği **hepsi bir arada** platform.
+
+---
+
+## 🩺 KOD SAĞLIĞI (2026-06-27 snapshot)
+
+> Kod tabanının sayısal durumu — sprint başında gözden geçirilir.
+
+| Metrik | Değer | Not |
+|---|---|---|
+| Toplam Dart dosyası (`lib/`) | 138 | |
+| Toplam Dart kodu | ~470 KB | (dosya toplamı) |
+| En büyük dosya | `home_screen.dart` ~123 KB / ~3200 satır | 🚨 Bölünmeli (P6) |
+| Ortalama dosya boyutu | ~3.4 KB | sağlıklı |
+| Test dosyası sayısı | 14 | models + repositories + providers + utils + widgets |
+| Passing test | **187** | `flutter test --no-pub` ✅ 10 sn |
+| `debugPrint` çağrısı | 220 | Tümü release'te basılıyor → merkezi logger (P4) |
+| Hardcoded `Colors.grey.shade*` | 193 yerde | Design system ihlali → `AppColors.textMuted*` (P5) |
+| `TODO/FIXME/XXX/HACK` | 1 (`customer_profile_menu.dart` NetworkImage TODO) | |
+| Firebase API anahtarı (client'ta) | 4 platform (web/android/ios/windows) | App Check / SHA-1 pinning ile korunmalı (Faz 22) |
+| `analysis_options.yaml` özel kurallar | 0 | Sıkılaştırılmalı (P10) |
+| `pubspec.yaml` description | "A new Flutter project." | Placeholder, değiştir |
+| CI/CD pipeline | ❌ | PR lint+test gating yok (Faz 15.4) |
+| `FirestoreService` facade | 472 satır / ~100 delegate | `@Deprecated` ile sunset (P12) |
+| Anonim giriş throttle | ❌ | Sınırsız hesap açılabilir (P7) |
 
 ---
 
@@ -478,27 +502,60 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ---
 
-## FAZ 13 — TEST ALTYAPISI ❌ (Başlanmadı)
+## FAZ 13 — TEST ALTYAPISI 🔄 (Devam Ediyor)
 
 > **Hedef Sürüm:** v1.0
 > **Bağımlılıklar:** Repository refactor (✅ tamamlandı) — artık mock'lanabilir
-> **İlerleme:** %0
+> **İlerleme:** ~%55 (14 test dosyası, 187 passing test, `flutter test` 10 sn'de koşar)
 
-- [ ] Test stratejisi belirleme (Glados zaten dev_dependency'de)
+### 13.1 — Mevcut test kapsamı ✅
+
+> Dev dependency'ler: `flutter_test`, `mocktail: ^1.0.4`, `fake_cloud_firestore: ^4.0.1`, `glados: ^1.1.7`.
+
+**Model testleri (`test/models/`):**
+- [x] `UserProfileModel` — copyWith sentinel, fromMap/toMap, round-trip, opsiyonel alanlar, DateTime, earnedBadges
+- [x] `ProgressEntryModel` — fromMap/toMap, valueFor(MeasurementType)
+- [x] `RecipeModel` — RecipeIngredient, RecipeNutrition, full round-trip
+- [x] `OrderModel` + `OrderItemModel`
+- [x] `ProgramModel` (slot/meal yapıları)
+- [x] `InviteCodeModel`
+- [x] `DistributorCustomerInsights`
+
+**Repository testleri (`test/repositories/`) — fake_cloud_firestore ile:**
+- [x] `UserProfileRepository` — set/get/watch, müşteri-distribütör izolasyonu, FCM token yaz/sil, disconnect
+- [x] `WaterRepository` — logs/summaries CRUD, kullanıcı izolasyonu, watch akışı
+- [x] `ProgressRepository` — add/update/delete, sıralama, izolasyon
+- [x] `MotivationRepository` — günlük mesaj merge, skorlar, başkasının verisini döndürmeme
+
+**Provider testleri (`test/providers/`):**
+- [x] `WaterProvider` — fold pattern, progress clamp formülü, defaultGoal sabiti (constructor Firebase bağımlılığı nedeniyle saf mantık testleri)
+
+**Util testleri (`test/utils/`):**
+- [x] `WaterCalculationEngine` — 8 senaryo: temel/kadın/emzirme/egzersiz/sıcaklık/diyabet/sınırlar/distribütör limitleri
+
+**Widget testleri (`test/widgets/`):**
+- [x] `DailySuccessRing` — hasProgram=false boş render, hasProgram=true etiket, legend yüzdeleri, prop güncellemesi
+
+### 13.2 — Eksik test alanları ❌
+
 - [ ] **Firestore Emulator + `firebase_rules_test`** ile güvenlik kuralı testleri
-- [ ] Model testleri
-  - [ ] `UserProfileModel`, `ProgressEntryModel`, `InviteCodeModel`, `ProgramModel`, `OrderModel`, `RecipeModel`
-- [ ] Provider testleri (repository mock'larıyla)
-  - [ ] `AuthProvider`, `WaterProvider`, `ProgressProvider`, `ProgramProvider`, `CustomerProvider`
-- [ ] Repository testleri (fake Firestore ile)
-  - [ ] `UserProfileRepository`, `WaterRepository`, `ProgressRepository`, `MotivationRepository`
-- [ ] Servis testleri
-  - [ ] `WaterCalculationEngine` (saf fonksiyon — kolay), `CustomerInsightsService`, `NotificationService`
-- [ ] Widget testleri
-  - [ ] `WeightChartWidget`, `AddMeasurementSheet`, `DailySuccessRing`
-- [ ] Integration testleri
-  - [ ] Onboarding akışı, Program oluşturma, Su ekleme, Ölçüm girişi
+- [ ] `AuthProvider`, `CustomerProvider`, `ProgramProvider`, `ProgressProvider`, `CalorieProvider` (Firebase init bağımlılığı kırılmalı)
+- [ ] `AuthService` / `FcmService` (mock'lanabilir hale getirilmeli)
+- [ ] `FoodEstimationService` (mock Gemini client)
+- [ ] Widget testleri: `WeightChartWidget`, `AddMeasurementSheet`, `login_screen.dart`, `customer_onboarding_screen.dart`, `progress_dashboard_screen.dart`
+- [ ] Integration testleri: Onboarding akışı, Program oluşturma, Su ekleme, Ölçüm girişi
+- [ ] Yeni eklenen extension'lar: `user_profile_bmi.dart` (P13)
 - [ ] CI pipeline (GitHub Actions ile otomatik test koşturma)
+
+### 13.3 — Çalıştırma
+
+```bash
+flutter test --no-pub                              # tüm testler
+flutter test test/utils/                          # sadece util testleri
+flutter test --coverage                           # coverage raporu
+```
+
+Mevcut durum: **187/187 passing**, ~10 sn.
 
 ---
 
@@ -980,7 +1037,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | 10 | Güvenlik Kuralları | — | ✅ | %95 |
 | **11** | **Performans Optimizasyonu** | **v1.0** | ✅ | %90 |
 | **12** | **Erişilebilirlik** | **v1.0** | ✅ | %95 |
-| **13** | **Test Altyapısı** | **v1.0** | ❌ | %0 |
+| **13** | **Test Altyapısı** | **v1.0** | 🔄 | %55 |
 | **14** | **Push Bildirimleri (FCM)** | **v1.0** | 🔄 | %60 |
 | **15** | **Üretim Çıkış Hazırlığı** | **v1.0** | ❌ | %0 |
 | **16** | **KVKK Uyumluluğu** | **v1.0** | 🔄 | %40 |
@@ -1016,8 +1073,40 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | 7 | 🟢 Düşük | Recipes — tüm tarifler `formul1_id` ile mock; gerçek `productId` eşleştirmesi yok | `recipe_provider.dart:38` |
 | 8 | 🟢 Düşük | Confetti animasyonu rozet kazanılırken devreye girmiyor (paket hazır) | `progress_provider.dart` |
 | 9 | 🟢 Düşük | Android SHA-1 hash'inin Firebase Console'a kayıtlı olduğu manuel doğrulanmalı (Google Sign-In Android için kritik) | Firebase Console |
+| 10 | 🔴 Yüksek | `inviteCodes` koleksiyonu **anonim olarak** okunabiliyor → müşteri isim/telefon/e-posta sızıntısı | `firestore.rules:76` |
+| 11 | 🔴 Yüksek | `scheduled_follow_ups` create kuralında `customerId` varlığı doğrulanmıyor → distribütör sahte kayıt açabilir | `firestore.rules:179` |
+| 12 | 🟡 Orta | `Settings.CACHE_SIZE_UNLIMITED` → düşük depolamalı cihazlarda SQLite şişme riski | `main.dart:36` |
+| 13 | 🟡 Orta | `home_screen.dart` ~123 KB / ~3200 satır → bölünmeli (her sekme kendi `*_tab.dart`'ında) | `features/home/screens/home_screen.dart` |
+| 14 | 🟡 Orta | `AuthProvider` dispose'da `_authStateChanges` subscription iptal edilmiyor → memory leak | `auth_provider.dart:69` |
+| 15 | 🟡 Orta | Anonim giriş düğmesi sınırsız → aynı kullanıcı 50+ hesap açabilir, Firestore çöp birikir | `login_screen.dart:443`, `auth_provider.dart:288` |
+| 16 | 🟢 Düşük | `ProgressProvider.onBadgeEarned` static singleton → instance property + Stream-based refactor | `progress_provider.dart:24` |
+| 17 | 🟢 Düşük | 220 `debugPrint` → merkezi `lib/core/logger.dart`'a taşı (release'te sustur) | birçok dosya |
+| 18 | 🟢 Düşük | **BMI hesabı `addEntry` + `updateEntry`'de duplicate** → `UserProfileBmi` extension'a çıkar | `progress_provider.dart:213,247` ✅ refactor tamam (P13), test bekliyor |
+| 19 | 🟢 Düşük | Gemini yanıtında retry/backoff yok → 429'da anında patlar | `food_estimation_service.dart:104` |
+| 20 | 🟢 Düşük | Login email validasyonu `@` içerik kontrolünden ibaret (`a@`, `@b` geçer) | `login_screen.dart:261` |
+| 21 | 🟢 Düşük | `AppColors`'a `textMuted*` eklenip 193 `Colors.grey.shade*` çağrısı değiştirilmeli (P5) | birçok dosya |
+| 22 | 🟢 Düşük | `pubspec.yaml` description placeholder ("A new Flutter project.") — 4 yıldır değişmemiş | `pubspec.yaml:2` |
 
 > **Kapanan eski bug'lar:** ~~products koleksiyonu açık~~ (P0 ile düzeltildi), ~~firestore_service.dart 37 KB~~ (P2.10 ile 9 repository'ye bölündü), ~~Google Sign-In uçtan uca test edilmedi~~ (Faz 2.1 ile kapatıldı), ~~CalorieProvider Firestore kaydı yok~~ (Faz 5.2 ile kapatıldı — `/users/{uid}/calorieLogs/` koleksiyonu + auth-aware ProxyProvider), ~~Mango üzeri beyaz yazı kontrast sorunu~~ (Faz 12 ile `mangoDeep` eklenerek kapatıldı).
+
+---
+
+## 🔧 PLANLANAN / ÖNERİLEN KALİTE SERİLERİ
+
+> 2026-06-27 güvenlik/kalite analizi sonucu oluşturulan seriler. Faz yapısına bağlı değil; v1.0 öncesi tamamlanması planlanıyor.
+
+| Seri | Kapsam | Öncelik | Durum |
+|---|---|---|---|
+| **P4 — Centralized logger** | `lib/core/logger.dart` yaz, 220 `debugPrint`'i taşı; release'te sustur, kDebugMode'da bas | 🔴 Yüksek | 📋 Planlandı |
+| **P5 — Design system hardening** | `AppColors.textMuted*` (400/500/700) ekle, 193 `Colors.grey.shade*` → `AppColors.*` | 🔴 Yüksek | 📋 Planlandı |
+| **P6 — `home_screen.dart` böl** | IndexedStack + her sekme ayrı `*_tab.dart`; 123 KB → ~8 × 15 KB | 🔴 Yüksek | 📋 Planlandı |
+| **P7 — Auth lifecycle hardening** | (a) AuthProvider dispose, (b) anonim throttle, (c) login email regex, (d) social butonları çöz | 🔴 Yüksek | 📋 Planlandı |
+| **P8 — Firestore rules audit** | `inviteCodes` read, `scheduled_follow_ups` create, `orders` create alan doğrulama | 🔴 Yüksek | 📋 Planlandı |
+| **P9 — Cache bounded** | `CACHE_SIZE_UNLIMITED` → 50 MB + cache temizleme UI | 🟡 Orta | 📋 Planlandı |
+| **P10 — Lint hardening** | `analysis_options.yaml`'a `prefer_const_constructors`, `unawaited_futures`, `avoid_dynamic_calls` | 🟡 Orta | 📋 Planlandı |
+| **P11 — Gemini retry + rate limit** | Exponential backoff (1s/2s/4s) + UI-side debounce | 🟡 Orta | 📋 Planlandı |
+| **P12 — FirestoreService facade sunset** | `@Deprecated('Use XRepository directly')` işaretle, 6 ay sonra sil | 🟡 Orta | 📋 Planlandı |
+| **P13 — BMI extension + dedup** | `lib/core/extensions/user_profile_bmi.dart` + `progress_provider.dart` 2 yerdeki duplicate blok tek satıra | 🟢 Düşük | ✅ Kod tamam, test bekliyor |
 
 ---
 
@@ -1031,6 +1120,9 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 4. **Yurt dışı genişleme:** Çoklu dil (Faz 30) ne zaman gerek olur? Hangi pazar (DE öncelikli mi)?
 5. **Tarif kaynağı:** Tarifleri kim üretir — distribütör mü, merkezi içerik ekibi mi, kullanıcı katkısı mı?
 6. **Beta tester profili:** v1.0 öncesi kaç distribütör + kaç müşteri ile test edilecek?
+7. **Firebase App Check:** Üretimde zorunlu olacak. `firebase_app_check` entegrasyonu için zaman planı? (Özellikle Gemini API ve FCM token'ı korumak için. SHA-1 pinning ile sınırlama da bir alternatif.)
+8. **Repository pattern konsolidasyonu:** 9 repository + 472 satırlık facade birlikte yaşıyor. Yeni geliştirici için kafa karıştırıcı. Eski facade'ı ne zaman tamamen kaldıracağız? (P12 ile 6 ay sonra sil planlandı)
+9. **Test stratejisi (Faz 13):** Unit test için mock mı, fake_cloud_firestore mı, yoksa Cloud Functions'ı bağımsız contract test mi? Karar verilmeden PR başlamamalı.
 
 ---
 

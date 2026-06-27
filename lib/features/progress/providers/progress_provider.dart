@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/extensions/user_profile_bmi.dart';
 import '../../../models/badge_model.dart';
 import '../../../models/progress_entry_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../../../services/firestore_service.dart';
 import '../models/measurement_type.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:herbaformix/core/logger.dart';
 
 class ProgressProvider with ChangeNotifier {
   final FirestoreService _firestoreService;
@@ -190,7 +192,7 @@ class ProgressProvider with ChangeNotifier {
           onError: (e) {
             _isLoading = false;
             _errorMessage = 'Veriler yüklenemedi: $e';
-            debugPrint('ProgressProvider stream hatası: $e');
+            AppLogger.error('ProgressProvider stream hatası: $e', tag: 'ProgressProvider');
             notifyListeners();
           },
         );
@@ -210,27 +212,23 @@ class ProgressProvider with ChangeNotifier {
     UserProfileModel? userProfile,
   ) async {
     try {
-      double? bmi = entry.bmi;
-      if (bmi == null && userProfile != null && userProfile.height != null && userProfile.height! > 0) {
-        final heightInMeters = userProfile.height! / 100.0;
-        bmi = entry.weight / (heightInMeters * heightInMeters);
-        bmi = double.parse(bmi.toStringAsFixed(2));
-      }
+      // BMI: entry'de açıkça set edilmişse onu kullan; yoksa profil + kilo'dan hesapla.
+      final bmi = entry.bmi ?? userProfile?.bmiFor(entry.weight);
       final finalEntry = entry.copyWith(bmi: bmi);
 
       await _firestoreService.addProgressEntry(userId, finalEntry).timeout(
         const Duration(seconds: 2),
         onTimeout: () {
-          debugPrint('[ProgressProvider] addProgressEntry timeout - offline modda olabilir.');
+          AppLogger.debug('[ProgressProvider] addProgressEntry timeout - offline modda olabilir.', tag: 'ProgressProvider');
           throw TimeoutException('Offline write buffered');
         },
       );
       await _checkAndAwardBadges(userId, userProfile);
     } on TimeoutException catch (_) {
-      debugPrint('[ProgressProvider] addEntry timeout yutuldu - offline modda devam ediliyor.');
+      AppLogger.warning('addEntry timeout — offline modda devam ediliyor', tag: 'ProgressProvider');
     } catch (e) {
       _errorMessage = 'Kayıt eklenemedi: $e';
-      debugPrint('ProgressProvider addEntry hatası: $e');
+      AppLogger.error('ProgressProvider addEntry hatası: $e', tag: 'ProgressProvider', error: e);
       notifyListeners();
       rethrow;
     }
@@ -243,26 +241,22 @@ class ProgressProvider with ChangeNotifier {
     [UserProfileModel? userProfile]
   ) async {
     try {
-      double? bmi = entry.bmi;
-      if (bmi == null && userProfile != null && userProfile.height != null && userProfile.height! > 0) {
-        final heightInMeters = userProfile.height! / 100.0;
-        bmi = entry.weight / (heightInMeters * heightInMeters);
-        bmi = double.parse(bmi.toStringAsFixed(2));
-      }
+      // BMI: entry'de açıkça set edilmişse onu kullan; yoksa profil + kilo'dan hesapla.
+      final bmi = entry.bmi ?? userProfile?.bmiFor(entry.weight);
       final finalEntry = entry.copyWith(bmi: bmi);
 
       await _firestoreService.updateProgressEntry(userId, finalEntry).timeout(
         const Duration(seconds: 2),
         onTimeout: () {
-          debugPrint('[ProgressProvider] updateProgressEntry timeout - offline modda olabilir.');
+          AppLogger.debug('[ProgressProvider] updateProgressEntry timeout - offline modda olabilir.', tag: 'ProgressProvider');
           throw TimeoutException('Offline write buffered');
         },
       );
     } on TimeoutException catch (_) {
-      debugPrint('[ProgressProvider] updateEntry timeout yutuldu - offline modda devam ediliyor.');
+      AppLogger.warning('updateEntry timeout — offline modda devam ediliyor', tag: 'ProgressProvider');
     } catch (e) {
       _errorMessage = 'Kayıt güncellenemedi: $e';
-      debugPrint('ProgressProvider updateEntry hatası: $e');
+      AppLogger.error('ProgressProvider updateEntry hatası: $e', tag: 'ProgressProvider', error: e);
       notifyListeners();
       rethrow;
     }
@@ -274,7 +268,7 @@ class ProgressProvider with ChangeNotifier {
       await _firestoreService.deleteProgressEntry(userId, entryId);
     } catch (e) {
       _errorMessage = 'Kayıt silinemedi: $e';
-      debugPrint('ProgressProvider deleteEntry hatası: $e');
+      AppLogger.error('ProgressProvider deleteEntry hatası: $e', tag: 'ProgressProvider', error: e);
       notifyListeners();
       rethrow;
     }
@@ -338,7 +332,7 @@ class ProgressProvider with ChangeNotifier {
         await _firestoreService.saveEarnedBadges(userId, _earnedBadgeIds).timeout(
           const Duration(seconds: 2),
           onTimeout: () {
-            debugPrint('[ProgressProvider] saveEarnedBadges timeout - offline modda olabilir.');
+            AppLogger.debug('[ProgressProvider] saveEarnedBadges timeout - offline modda olabilir.', tag: 'ProgressProvider');
           },
         );
         // Rozet kazanıldığında callback'i tetikle
@@ -347,7 +341,7 @@ class ProgressProvider with ChangeNotifier {
         }
         notifyListeners();
       } catch (e) {
-        debugPrint('Rozet kaydetme hatası: $e');
+        AppLogger.error('Rozet kaydetme hatası: $e', tag: 'ProgressProvider', error: e);
       }
     }
 
@@ -362,7 +356,7 @@ class ProgressProvider with ChangeNotifier {
         await _firestoreService.saveEarnedBadges(userId, _earnedBadgeIds);
         notifyListeners();
       } catch (e) {
-        debugPrint('Fotoğraf rozeti kaydetme hatası: $e');
+        AppLogger.error('Fotoğraf rozeti kaydetme hatası: $e', tag: 'ProgressProvider', error: e);
       }
     }
   }

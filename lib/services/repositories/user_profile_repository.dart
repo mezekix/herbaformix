@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../models/user_profile_model.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// `/userProfiles/{uid}` koleksiyonu — kullanıcı profili CRUD'u.
 ///
@@ -24,7 +24,7 @@ class UserProfileRepository {
     await ref.doc(userProfile.id).set(userProfile, SetOptions(merge: true)).timeout(
       const Duration(seconds: 2),
       onTimeout: () {
-        debugPrint('[UserProfileRepository] setUserProfile timeout - offline buffered');
+        AppLogger.debug('[UserProfileRepository] setUserProfile timeout - offline buffered', tag: 'UserProfileRepository');
       },
     );
   }
@@ -46,7 +46,7 @@ class UserProfileRepository {
       }
       return d.data();
     } on FirebaseException catch (e) {
-      debugPrint('[UserProfileRepository] getUserProfile Firebase hatası: ${e.code} - ${e.message}');
+      AppLogger.error('[UserProfileRepository] getUserProfile Firebase hatası: ${e.code} - ${e.message}', tag: 'UserProfileRepository', error: e);
       if (e.code == 'permission-denied') {
         try {
           final cacheDoc = await ref.doc(userId).get(const GetOptions(source: Source.cache));
@@ -54,12 +54,12 @@ class UserProfileRepository {
             return cacheDoc.data();
           }
         } catch (cacheError) {
-          debugPrint('[UserProfileRepository] Önbellekten okuma başarısız: $cacheError');
+          AppLogger.error('[UserProfileRepository] Önbellekten okuma başarısız: $cacheError', tag: 'UserProfileRepository', error: e);
         }
       }
       rethrow;
     } catch (e) {
-      debugPrint('[UserProfileRepository] getUserProfile genel hata: $e');
+      AppLogger.error('[UserProfileRepository] getUserProfile genel hata: $e', tag: 'UserProfileRepository', error: e);
       rethrow;
     }
   }
@@ -74,7 +74,7 @@ class UserProfileRepository {
       final doc = await ref.doc(distributorId).get();
       return doc.exists ? doc.data() : null;
     } catch (e) {
-      debugPrint('getDistributorProfile hatası: $e');
+      AppLogger.error('getDistributorProfile hatası: $e', tag: 'UserProfileRepository', error: e);
       return null;
     }
   }
@@ -103,7 +103,7 @@ class UserProfileRepository {
           .doc(customerUserId)
           .update({'assignedDistributorId': FieldValue.delete()});
     } catch (e) {
-      debugPrint('disconnectDistributor hatası: $e');
+      AppLogger.error('disconnectDistributor hatası: $e', tag: 'UserProfileRepository', error: e);
       throw Exception('Distribütör bağlantısı kesilemedi: $e');
     }
   }
@@ -112,7 +112,7 @@ class UserProfileRepository {
     await ref.doc(userId).update({'earnedBadges': badgeIds}).timeout(
       const Duration(seconds: 2),
       onTimeout: () {
-        debugPrint('[UserProfileRepository] saveEarnedBadges timeout - offline buffered');
+        AppLogger.debug('[UserProfileRepository] saveEarnedBadges timeout - offline buffered', tag: 'UserProfileRepository');
       },
     );
   }
@@ -130,7 +130,7 @@ class UserProfileRepository {
   /// Cihazın güncel FCM token'ını kullanıcı profiline yazar.
   /// Token boş geçilirse alan siler (kullanıcı çıkış yaptığında).
   Future<void> setFcmToken(String userId, String? token) async {
-    if (token == null || token.isEmpty) {
+    if (token == null) {
       await ref.doc(userId).update({
         'fcmToken': FieldValue.delete(),
         'fcmTokenUpdatedAt': FieldValue.delete(),
@@ -138,8 +138,13 @@ class UserProfileRepository {
     } else {
       await ref.doc(userId).update({
         'fcmToken': token,
-        'fcmTokenUpdatedAt': DateTime.now().millisecondsSinceEpoch,
+        'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
       });
     }
+  }
+
+  /// Silinme veya çıkış durumlarında kullanıcı profilini siler (özellikle anonimler için).
+  Future<void> deleteUserProfile(String userId) async {
+    await ref.doc(userId).delete();
   }
 }

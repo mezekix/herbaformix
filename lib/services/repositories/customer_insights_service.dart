@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../models/distributor_customer_insights.dart';
 import '../../models/progress_entry_model.dart';
 import 'progress_repository.dart';
 import 'user_profile_repository.dart';
+import 'package:herbaformix/core/logger.dart';
 
 /// Distribütör panelinde müşteri kartlarını besleyen cross-domain özet servis.
 ///
@@ -162,7 +162,7 @@ class CustomerInsightsService {
         programStartDate: userProfile?.programStartDate,
       );
     } catch (e) {
-      debugPrint('getDistributorCustomerInsights hatası: $e');
+      AppLogger.error('getDistributorCustomerInsights hatası: $e', tag: 'CustomerInsightsService', error: e);
       return const DistributorCustomerInsights(
         latestProgress: null,
         todayWaterMl: 0,
@@ -187,7 +187,7 @@ class CustomerInsightsService {
       );
       return insights.where((i) => i.isAtRisk).length;
     } catch (e) {
-      debugPrint('getAtRiskCustomerCount hatası: $e');
+      AppLogger.error('getAtRiskCustomerCount hatası: $e', tag: 'CustomerInsightsService', error: e);
       return 0;
     }
   }
