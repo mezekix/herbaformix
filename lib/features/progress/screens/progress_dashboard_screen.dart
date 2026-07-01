@@ -150,7 +150,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
               tooltip: isPrivacyMode ? 'Gizlilik Modunu Kapat' : 'Gizlilik Modunu Aç',
               icon: Icon(
                 isPrivacyMode ? Icons.visibility_off : Icons.visibility,
-                color: isPrivacyMode ? AppColors.primary : Colors.grey,
+                color: isPrivacyMode ? AppColors.primary : AppColors.textMuted,
               ),
               onPressed: () => provider.togglePrivacyMode(),
             );
@@ -193,7 +193,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             subtitle: change == 0
                 ? 'Değişim Yok'
                 : '${change > 0 ? '+' : ''}${change.toStringAsFixed(1)} kg',
-            subtitleColor: change == 0 ? Colors.grey : (isGoodChange ? AppColors.primary : Colors.red),
+            subtitleColor: change == 0 ? AppColors.textMuted : (isGoodChange ? AppColors.primary : Colors.red),
             icon: Icons.monitor_weight_outlined,
           ),
         ),
@@ -226,7 +226,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +275,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
         Flexible(
           child: Text(
             label,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, color: AppColors.grey600),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -304,7 +304,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: AppColors.backgroundMutedLight),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -318,11 +318,11 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: Colors.grey.shade400),
+              Icon(icon, size: 20, color: AppColors.textMutedLight),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                style: TextStyle(fontSize: 13, color: AppColors.grey600, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -379,7 +379,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade100),
+            border: Border.all(color: AppColors.backgroundMutedLight),
           ),
           child: Row(
             children: [
@@ -405,13 +405,13 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                       isPrivacy 
                         ? 'BMI: ${entry.bmi?.toStringAsFixed(1) ?? "—"}' 
                         : '${entry.weight.toStringAsFixed(1)} kg',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      style: TextStyle(color: AppColors.grey600, fontSize: 13),
                     ),
                   ],
                 ),
               ),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.grey),
+                icon: const Icon(Icons.more_vert, color: AppColors.textMuted),
                 color: Colors.white,
                 surfaceTintColor: Colors.transparent,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -457,16 +457,16 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.monitor_weight_outlined, size: 64, color: Colors.grey.shade300),
+          Icon(Icons.monitor_weight_outlined, size: 64, color: AppColors.textMutedLighter),
           const SizedBox(height: 16),
           Text(
             'Henüz ölçüm kaydı yok',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMuted),
           ),
           const SizedBox(height: 8),
           Text(
             'İlk ölçümünü ekleyerek başla',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 14, color: AppColors.grey600),
           ),
         ],
       ),
@@ -507,7 +507,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('İptal', style: TextStyle(color: Colors.grey)),
+            child: const Text('İptal', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),

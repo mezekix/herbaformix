@@ -147,7 +147,7 @@ class CalorieTrackerScreen extends StatelessWidget {
                             child: CircularProgressIndicator(
                               value: value,
                               strokeWidth: 10,
-                              backgroundColor: Colors.grey.shade200,
+                              backgroundColor: AppColors.backgroundMuted,
                               valueColor:
                                   AlwaysStoppedAnimation<Color>(color),
                             ),
@@ -169,7 +169,7 @@ class CalorieTrackerScreen extends StatelessWidget {
                             'tamamlandı',
                             style: TextStyle(
                               fontSize: 9,
-                              color: Colors.grey.shade600,
+                              color: AppColors.grey600,
                             ),
                           ),
                         ],
@@ -199,7 +199,7 @@ class CalorieTrackerScreen extends StatelessWidget {
                         overGoal ? 'kcal hedefin üstünde' : 'kcal kaldı',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade700,
+                          color: AppColors.grey700,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -213,7 +213,7 @@ class CalorieTrackerScreen extends StatelessWidget {
             // Alt kısım: linear progress + tüketilen/hedef metrikleri
             LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: AppColors.backgroundMuted,
               valueColor: AlwaysStoppedAnimation<Color>(color),
               minHeight: 8,
               borderRadius: BorderRadius.circular(4),
@@ -226,7 +226,7 @@ class CalorieTrackerScreen extends StatelessWidget {
                 _miniStat(
                   'Hedef',
                   '$goal kcal',
-                  Colors.grey.shade700,
+                  AppColors.grey700,
                 ),
               ],
             ),
@@ -251,7 +251,7 @@ class CalorieTrackerScreen extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 11, color: AppColors.grey600),
         ),
         const SizedBox(height: 2),
         Text(
@@ -276,7 +276,7 @@ class CalorieTrackerScreen extends StatelessWidget {
           child: Text(
             'Bugün hiç öğün eklenmedi.\nSağ alttaki (+) butonuyla başlayın.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            style: TextStyle(fontSize: 16, color: AppColors.textMuted),
           ),
         ),
       );
@@ -472,7 +472,7 @@ class _GoalSourceBadge extends StatelessWidget {
     return _badge(
       icon: Icons.edit_outlined,
       label: 'Manuel hedef',
-      color: Colors.grey.shade700,
+      color: AppColors.grey700,
     );
   }
 
@@ -700,7 +700,7 @@ class _GoalSettingsDialogState extends State<_GoalSettingsDialog> {
           'Profilinden ve bugünkü aktivite seviyenden hesaplanır:',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade700,
+            color: AppColors.grey700,
           ),
         ),
         const SizedBox(height: 12),
@@ -772,7 +772,7 @@ class _GoalSettingsDialogState extends State<_GoalSettingsDialog> {
           'Kendi belirlediğin bir kalori hedefi gir:',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade700,
+            color: AppColors.grey700,
           ),
         ),
         const SizedBox(height: 12),
@@ -803,7 +803,7 @@ class _GoalSettingsDialogState extends State<_GoalSettingsDialog> {
                 label,
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey.shade700,
+                  color: AppColors.grey700,
                 ),
               ),
               Text(
@@ -821,7 +821,7 @@ class _GoalSettingsDialogState extends State<_GoalSettingsDialog> {
               subtitle,
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.grey.shade500,
+                color: AppColors.textMuted,
               ),
             ),
           ],

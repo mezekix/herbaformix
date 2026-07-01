@@ -378,7 +378,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [Colors.grey.shade100, Colors.white],
+                colors: [AppColors.backgroundMutedLight, Colors.white],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -421,7 +421,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 );
               },
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
           ],
         ),
         onTap: () {
@@ -478,7 +478,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.grey.shade100, Colors.white],
+                      colors: [AppColors.backgroundMutedLight, Colors.white],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                     ),

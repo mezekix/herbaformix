@@ -28,7 +28,7 @@ class GoalSelectionStep extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Hedefine göre sana özel bir program oluşturacağız.',
-            style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 15, color: AppColors.grey600),
           ),
           const SizedBox(height: 32),
 
@@ -77,7 +77,7 @@ class GoalSelectionStep extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              disabledBackgroundColor: Colors.grey.shade300,
+              disabledBackgroundColor: AppColors.textMutedLighter,
             ),
             child: const Text(
               'Devam Et',
@@ -120,7 +120,7 @@ class _GoalCard extends StatelessWidget {
           color: selected ? color.withValues(alpha: 0.08) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? color : Colors.grey.shade200,
+            color: selected ? color : AppColors.backgroundMuted,
             width: selected ? 2 : 1,
           ),
           boxShadow: selected
@@ -170,7 +170,7 @@ class _GoalCard extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey.shade600,
+                      color: AppColors.grey600,
                     ),
                   ),
                 ],

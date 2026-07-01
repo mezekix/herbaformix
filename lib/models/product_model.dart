@@ -34,8 +34,8 @@ class ProductModel {
     return ProductModel(
       id: documentId,
       name: map['name'] ?? 'İsim Yok',
-      vp: (map['vp'] ?? 0.0).toDouble(),
-      price: (map['price'] as num?)?.toDouble(),
+      vp: map['vp'] != null ? double.tryParse(map['vp'].toString()) ?? 0.0 : 0.0,
+      price: map['price'] != null ? double.tryParse(map['price'].toString()) : null,
       stockNo: map['stockNo'] as String?, // Changed from sku
       category: map['category'] as String?,
       imageUrl: map['imageUrl'] as String?,

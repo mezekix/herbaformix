@@ -328,7 +328,7 @@ class _EditProgramTemplateScreenState extends State<EditProgramTemplateScreen> {
             Text(
               'Müşteriye uygularken bu yapı kopyalanır. Her slot için '
               'saat ve ürünleri ayarla.',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 12, color: AppColors.grey600),
             ),
             const SizedBox(height: 14),
 
@@ -445,7 +445,7 @@ class _TemplateSlotCard extends StatelessWidget {
                 height: 4,
                 margin: const EdgeInsets.only(top: 8, bottom: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: AppColors.textMutedLighter,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -511,7 +511,7 @@ class _TemplateSlotCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: slot.isNormalMeal
-              ? Colors.grey.shade200
+              ? AppColors.backgroundMuted
               : _accent.withValues(alpha: 0.3),
         ),
       ),
@@ -565,7 +565,7 @@ class _TemplateSlotCard extends StatelessWidget {
                   IconButton(
                     tooltip: 'Öğünü sil',
                     icon: const Icon(Icons.close,
-                        size: 18, color: Colors.grey),
+                        size: 18, color: AppColors.textMuted),
                     onPressed: onDelete,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -592,7 +592,7 @@ class _TemplateSlotCard extends StatelessWidget {
                   child: _TypeBtn(
                     label: '🍽️ Normal Yemek',
                     selected: slot.isNormalMeal,
-                    color: Colors.grey.shade600,
+                    color: AppColors.grey600,
                     onTap: () => onToggleNormalMeal(true),
                   ),
                 ),
@@ -677,10 +677,10 @@ class _TypeBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+          color: selected ? color.withValues(alpha: 0.1) : AppColors.backgroundMutedLighter,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? color : Colors.grey.shade200,
+            color: selected ? color : AppColors.backgroundMuted,
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -690,7 +690,7 @@ class _TypeBtn extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            color: selected ? color : Colors.grey.shade600,
+            color: selected ? color : AppColors.grey600,
           ),
         ),
       ),

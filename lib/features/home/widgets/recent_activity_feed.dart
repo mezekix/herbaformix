@@ -48,7 +48,7 @@ class RecentActivityFeed extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.0,
-                color: Colors.grey.shade500,
+                color: AppColors.textMuted,
               ),
             ),
           ),
@@ -59,7 +59,7 @@ class RecentActivityFeed extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: AppColors.backgroundMuted),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.02),
@@ -77,7 +77,7 @@ class RecentActivityFeed extends StatelessWidget {
                         height: 1,
                         thickness: 1,
                         indent: 56,
-                        color: Colors.grey.shade100,
+                        color: AppColors.backgroundMutedLight,
                       ),
                   ],
                 ],
@@ -222,7 +222,7 @@ class _ActivityRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade500,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
@@ -286,7 +286,7 @@ class _EmptyActivityState extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: Row(
         children: [
@@ -294,12 +294,12 @@ class _EmptyActivityState extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: AppColors.backgroundMutedLight,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               Icons.timeline_outlined,
-              color: Colors.grey.shade500,
+              color: AppColors.textMuted,
               size: 22,
             ),
           ),
@@ -321,7 +321,7 @@ class _EmptyActivityState extends StatelessWidget {
                   'Son $windowHours saatte sipariş, kayıt veya aktivasyon yok.',
                   style: TextStyle(
                     fontSize: 11.5,
-                    color: Colors.grey.shade500,
+                    color: AppColors.textMuted,
                     height: 1.3,
                   ),
                 ),

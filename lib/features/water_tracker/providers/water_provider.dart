@@ -258,14 +258,24 @@ class WaterProvider with ChangeNotifier {
 
   Future<void> addWater(int amount) async {
     if (_userId == null) return;
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
     final log = WaterLogModel(
-      id: '',
+      id: tempId,
       time: DateTime.now(),
       amount: amount,
     );
+
+    // Optimistik güncelleme: UI'ı hemen yansıt, Firestore'u beklemeden
+    _todayLogs = [..._todayLogs, log];
+    safeNotifyListeners();
+
     try {
       await _firestoreService.addWaterLog(_userId!, log);
+      // Stream gelince _todayLogs zaten doğru ID ile replace edilecek
     } catch (e) {
+      // Hata halinde optimistik değişikliği geri al
+      _todayLogs = _todayLogs.where((l) => l.id != tempId).toList();
+      safeNotifyListeners();
       AppLogger.error('WaterProvider addWater hatası: $e', tag: 'WaterProvider', error: e);
     }
   }
@@ -317,12 +327,20 @@ class WaterProvider with ChangeNotifier {
         remaining -= _todayLogs[i].amount;
         toDelete.add(_todayLogs[i].id);
       } else {
-        break; // Kısmi silme desteklenmiyor, dur
+        break;
       }
     }
 
+    // Optimistik güncelleme: UI'ı hemen yansıt
+    _todayLogs = _todayLogs.where((l) => !toDelete.contains(l.id)).toList();
+    safeNotifyListeners();
+
     for (final id in toDelete) {
-      await _firestoreService.deleteWaterLog(_userId!, id);
+      try {
+        await _firestoreService.deleteWaterLog(_userId!, id);
+      } catch (e) {
+        AppLogger.error('WaterProvider removeWater silme hatası: $e', tag: 'WaterProvider', error: e);
+      }
     }
   }
 

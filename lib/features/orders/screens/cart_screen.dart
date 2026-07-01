@@ -273,7 +273,7 @@ class _CartScreenState extends State<CartScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: AppColors.backgroundMuted),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -293,11 +293,11 @@ class _CartScreenState extends State<CartScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: AppColors.textMutedLighter),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+                  borderSide: BorderSide(color: AppColors.textMutedLighter),
                 ),
               ),
               items: customerProvider.customers.map((c) {
@@ -322,7 +322,7 @@ class _CartScreenState extends State<CartScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: AppColors.backgroundMuted),
       ),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -353,7 +353,7 @@ class _CartScreenState extends State<CartScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '${item.unitPrice.toStringAsFixed(2)} TL  •  ${item.unitVp.toStringAsFixed(0)} VP',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(fontSize: 12, color: AppColors.grey600),
                   ),
                 ],
               ),
@@ -392,7 +392,7 @@ class _CartScreenState extends State<CartScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: AppColors.backgroundMuted),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -435,7 +435,7 @@ class _CartScreenState extends State<CartScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

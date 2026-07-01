@@ -179,7 +179,7 @@ class VpPulseCard extends StatelessWidget {
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.2,
-                              color: Colors.grey.shade500,
+                              color: AppColors.textMuted,
                             ),
                           ),
                         ],
@@ -237,7 +237,7 @@ class VpPulseCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade500,
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
@@ -253,7 +253,7 @@ class VpPulseCard extends StatelessWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100.withValues(alpha: 0.6),
+                          color: AppColors.backgroundMutedLight.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.8),
@@ -507,7 +507,7 @@ class _MetaRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 13, color: Colors.grey.shade500),
+        Icon(icon, size: 13, color: AppColors.textMuted),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
@@ -515,7 +515,7 @@ class _MetaRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade700,
+              color: AppColors.grey700,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

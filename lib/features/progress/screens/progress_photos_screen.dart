@@ -222,7 +222,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
             Container(
               width: 40, height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppColors.textMutedLighter,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -365,7 +365,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
                 Text(
                   '${photos.length} fotoğraf',
                   style: TextStyle(
-                      fontSize: 13, color: Colors.grey.shade500),
+                      fontSize: 13, color: AppColors.textMuted),
                 ),
               ],
             ),
@@ -390,8 +390,8 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
                 icon: const Icon(Icons.add_photo_alternate_outlined),
                 label: const Text('Önce Fotoğrafı Ekle'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.grey.shade600,
-                  side: BorderSide(color: Colors.grey.shade300),
+                  foregroundColor: AppColors.grey600,
+                  side: BorderSide(color: AppColors.textMutedLighter),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -441,7 +441,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
                 photo.isBefore
                     ? ColorFiltered(
                         colorFilter: const ColorFilter.mode(
-                            Colors.grey, BlendMode.saturation),
+                            AppColors.textMuted, BlendMode.saturation),
                         child: Image.file(File(photo.path), fit: BoxFit.cover),
                       )
                     : Image.file(File(photo.path), fit: BoxFit.cover),
@@ -532,7 +532,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
               decoration: BoxDecoration(
                 color: isActive
                     ? AppColors.primary
-                    : Colors.grey.shade300,
+                    : AppColors.textMutedLighter,
                 borderRadius: BorderRadius.circular(3),
               ),
             );
@@ -552,7 +552,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: photo.isBefore
-              ? Colors.grey.shade200
+              ? AppColors.backgroundMuted
               : AppColors.primary.withValues(alpha: 0.2),
           width: photo.isBefore ? 1 : 1.5,
         ),
@@ -570,7 +570,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
                       horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: photo.isBefore
-                        ? Colors.grey.shade100
+                        ? AppColors.backgroundMutedLight
                         : AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -580,7 +580,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: photo.isBefore
-                          ? Colors.grey.shade600
+                          ? AppColors.grey600
                           : AppColors.primary,
                     ),
                   ),
@@ -590,12 +590,12 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
                   Text(
                     _formatDate(photo.date),
                     style: TextStyle(
-                        fontSize: 13, color: Colors.grey.shade500),
+                        fontSize: 13, color: AppColors.textMuted),
                   ),
                 const Spacer(),
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert,
-                      color: Colors.grey.shade400, size: 20),
+                      color: AppColors.textMutedLight, size: 20),
                   onSelected: (v) {
                     if (v == 'view') {
                       _openFullScreen(photo.path, photo.label);
@@ -653,7 +653,7 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
               child: photo.isBefore
                   ? ColorFiltered(
                       colorFilter: const ColorFilter.mode(
-                          Colors.grey, BlendMode.saturation),
+                          AppColors.textMuted, BlendMode.saturation),
                       child: Image.file(
                         File(photo.path),
                         height: 280,
@@ -684,21 +684,21 @@ class _ProgressPhotosScreenState extends State<ProgressPhotosScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.add_photo_alternate_outlined,
-                size: 72, color: Colors.grey.shade300),
+                size: 72, color: AppColors.textMutedLighter),
             const SizedBox(height: 20),
             Text(
               'Henüz fotoğraf yok',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.grey.shade500,
+                color: AppColors.textMuted,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Başlangıç fotoğrafını ekleyerek\ndönüşüm sürecini belgele',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 14, color: AppColors.grey600),
             ),
             const SizedBox(height: 28),
             ElevatedButton.icon(
@@ -848,7 +848,7 @@ class _CompareScreenState extends State<_CompareScreen> {
                           clipper: _LeftClipper(clipWidth),
                           child: ColorFiltered(
                             colorFilter: const ColorFilter.mode(
-                                Colors.grey, BlendMode.saturation),
+                                AppColors.textMuted, BlendMode.saturation),
                             child: Image.file(
                               File(widget.beforePath),
                               fit: BoxFit.cover,

@@ -27,7 +27,7 @@ class AppSettingsScreen extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey.shade200),
+              side: BorderSide(color: AppColors.backgroundMuted),
             ),
             child: ListTile(
               leading: const Icon(Icons.language, color: AppColors.primary),
@@ -36,7 +36,7 @@ class AppSettingsScreen extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               subtitle: Text(_currentLanguageLabel(context, l)),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
               onTap: () => _showLanguagePicker(context),
             ),
           ),
@@ -48,7 +48,7 @@ class AppSettingsScreen extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey.shade200),
+              side: BorderSide(color: AppColors.backgroundMuted),
             ),
             child: ListTile(
               leading: const Icon(Icons.lock_outline, color: AppColors.primary),
@@ -56,7 +56,7 @@ class AppSettingsScreen extends StatelessWidget {
                 l.appSettingsChangePassword,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
               onTap: () => ChangePasswordDialog.show(context),
             ),
           ),
@@ -68,7 +68,7 @@ class AppSettingsScreen extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey.shade200),
+              side: BorderSide(color: AppColors.backgroundMuted),
             ),
             child: FutureBuilder<bool>(
               future: NotificationService().hasPermission(),
@@ -81,7 +81,7 @@ class AppSettingsScreen extends StatelessWidget {
                     hasPermission
                         ? Icons.notifications_active
                         : Icons.notifications_off_outlined,
-                    color: hasPermission ? AppColors.primary : Colors.grey,
+                    color: hasPermission ? AppColors.primary : AppColors.textMuted,
                   ),
                   title: Text(
                     l.appSettingsNotifications,
@@ -98,7 +98,7 @@ class AppSettingsScreen extends StatelessWidget {
                       fontSize: 12,
                     ),
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
                   onTap: hasPermission
                       ? null
                       : () async {
@@ -124,7 +124,7 @@ class AppSettingsScreen extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey.shade200),
+              side: BorderSide(color: AppColors.backgroundMuted),
             ),
             child: ListTile(
               leading: const Icon(Icons.notifications_active_outlined, color: Colors.green),
@@ -132,7 +132,7 @@ class AppSettingsScreen extends StatelessWidget {
                 l.appSettingsSendTestNotification,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
               onTap: () async {
                 final service = NotificationService();
                 await service.showTestNotification();
@@ -158,7 +158,7 @@ class AppSettingsScreen extends StatelessWidget {
         style: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: Colors.grey,
+          color: AppColors.textMuted,
         ),
       ),
     );
@@ -189,7 +189,7 @@ class AppSettingsScreen extends StatelessWidget {
           return ListTile(
             leading: Icon(
               selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected ? AppColors.primary : Colors.grey,
+              color: selected ? AppColors.primary : AppColors.textMuted,
             ),
             title: Text(label),
             onTap: () async {

@@ -77,7 +77,7 @@ class _MealPlanStepState extends State<MealPlanStep> {
           const SizedBox(height: 6),
           Text(
             'Her öğüne ürün ekle, saatini ayarla.',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 14, color: AppColors.grey600),
           ),
           const SizedBox(height: 8),
           Container(
@@ -238,7 +238,7 @@ class _SlotCardState extends State<_SlotCard> {
                   subtitle: p.category != null
                       ? Text(p.category!,
                           style: TextStyle(
-                              fontSize: 12, color: Colors.grey.shade500))
+                              fontSize: 12, color: AppColors.textMuted))
                       : null,
                   onTap: () {
                     Navigator.pop(ctx);
@@ -275,7 +275,7 @@ class _SlotCardState extends State<_SlotCard> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: slot.isNormalMeal
-              ? Colors.grey.shade200
+              ? AppColors.backgroundMuted
               : accent.withValues(alpha: 0.35),
         ),
         boxShadow: [
@@ -352,7 +352,7 @@ class _SlotCardState extends State<_SlotCard> {
                   IconButton(
                     tooltip: 'Öğünü sil',
                     icon: const Icon(Icons.close,
-                        size: 18, color: Colors.grey),
+                        size: 18, color: AppColors.textMuted),
                     onPressed: widget.onDelete,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -383,7 +383,7 @@ class _SlotCardState extends State<_SlotCard> {
                   child: _TypeBtn(
                     label: '🍽️ Normal Yemek',
                     selected: slot.isNormalMeal,
-                    color: Colors.grey.shade600,
+                    color: AppColors.grey600,
                     onTap: () => widget.onToggleNormalMeal(true),
                   ),
                 ),
@@ -511,10 +511,10 @@ class _TypeBtn extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 9),
         decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.1) : Colors.grey.shade50,
+          color: selected ? color.withValues(alpha: 0.1) : AppColors.backgroundMutedLighter,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-              color: selected ? color : Colors.grey.shade200,
+              color: selected ? color : AppColors.backgroundMuted,
               width: selected ? 1.5 : 1),
         ),
         child: Text(label,
@@ -523,7 +523,7 @@ class _TypeBtn extends StatelessWidget {
                 fontSize: 12,
                 fontWeight:
                     selected ? FontWeight.bold : FontWeight.normal,
-                color: selected ? color : Colors.grey.shade600)),
+                color: selected ? color : AppColors.grey600)),
       ),
     );
   }

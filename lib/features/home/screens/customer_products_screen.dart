@@ -248,8 +248,8 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Ürün ara...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                  hintStyle: TextStyle(color: AppColors.textMutedLight, fontSize: 14),
+                  prefixIcon: Icon(Icons.search, color: AppColors.textMutedLight),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   suffixIcon: _searchQuery.isNotEmpty
@@ -285,7 +285,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                         color: isSelected ? AppColors.primary : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                          color: isSelected ? AppColors.primary : AppColors.backgroundMuted,
                         ),
                         boxShadow: isSelected
                           ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 2))]
@@ -296,7 +296,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : Colors.grey.shade600,
+                          color: isSelected ? Colors.white : AppColors.grey600,
                         ),
                       ),
                     ),
@@ -316,13 +316,13 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey.shade300),
+                      Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.textMutedLighter),
                       const SizedBox(height: 12),
                       Text(
                         products.isEmpty
                           ? 'Henüz ürün eklenmemiş'
                           : 'Ürün bulunamadı',
-                        style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+                        style: TextStyle(fontSize: 15, color: AppColors.grey600),
                       ),
                     ],
                   ),
@@ -452,7 +452,7 @@ class _ProductCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: AppColors.backgroundMutedLighter,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -460,7 +460,7 @@ class _ProductCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade600,
+                      color: AppColors.grey600,
                     ),
                   ),
                 ),
@@ -512,7 +512,7 @@ class _ViewToggleButton extends StatelessWidget {
         child: Icon(
           icon,
           size: 20,
-          color: isActive ? Colors.white : Colors.grey.shade400,
+          color: isActive ? Colors.white : AppColors.textMutedLight,
         ),
       ),
     );
@@ -613,7 +613,7 @@ class _ProductGridCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade500,
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ],

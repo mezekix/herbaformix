@@ -1,4 +1,4 @@
-import 'package:connectivity_plus/connectivity_plus.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -14,10 +14,19 @@ import '../models/program_model.dart';
 import '../providers/program_provider.dart';
 import 'package:herbaformix/core/logger.dart';
 
-class ProgramSummaryStep extends StatelessWidget {
+class ProgramSummaryStep extends StatefulWidget {
   final ProgramEditorArgs? editorArgs;
 
   const ProgramSummaryStep({super.key, this.editorArgs});
+
+  @override
+  State<ProgramSummaryStep> createState() => _ProgramSummaryStepState();
+}
+
+class _ProgramSummaryStepState extends State<ProgramSummaryStep> {
+  // Yerel kaydetme durumu — provider.isLoading'e bağımlı değil,
+  // bu sayede hata/internet yoksa otomatik sıfırlanır.
+  bool _isSaving = false;
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +34,9 @@ class ProgramSummaryStep extends StatelessWidget {
     final authProvider = context.read<AuthProvider>();
     final allProducts = context.read<ProductProvider>().products;
     final authUserId = authProvider.firebaseUser?.uid ?? '';
-    final userId = editorArgs?.targetUserId ?? authUserId;
+    final userId = widget.editorArgs?.targetUserId ?? authUserId;
     final isDistributorMode =
-        editorArgs?.isDistributorMode == true &&
+        widget.editorArgs?.isDistributorMode == true &&
         authProvider.userProfile?.role == UserRole.distributor;
 
     if (userId.isEmpty) {
@@ -67,9 +76,9 @@ class ProgramSummaryStep extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             isDistributorMode
-                ? '${editorArgs?.targetCustomerName ?? 'Müşteri'} için programı kontrol et ve kaydet.'
+                ? '${widget.editorArgs?.targetCustomerName ?? 'Müşteri'} için programı kontrol et ve kaydet.'
                 : 'Detayları kontrol et ve programını başlat.',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 14, color: AppColors.grey600),
           ),
           const SizedBox(height: 20),
           _Card(
@@ -174,7 +183,7 @@ class ProgramSummaryStep extends StatelessWidget {
           ],
           const SizedBox(height: 28),
           ElevatedButton(
-            onPressed: provider.isLoading
+            onPressed: _isSaving
                 ? null
                 : () async {
                     final hasProducts = provider.slots.any(
@@ -190,47 +199,55 @@ class ProgramSummaryStep extends StatelessWidget {
                       return;
                     }
 
-                    final connectivityResult = await Connectivity().checkConnectivity();
-                    if (connectivityResult.contains(ConnectivityResult.none)) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('İnternet bağlantınız yok. Lütfen bağlantınızı kontrol edip tekrar deneyin.'),
-                          backgroundColor: Colors.red,
-                        ),
+                    // context referanslarını async öncesinde al
+                    final messenger = ScaffoldMessenger.of(context);
+                    final router = GoRouter.of(context);
+                    final firestoreService = context.read<FirestoreService>();
+
+                    // NOT: İnternet kontrolü yok — Firestore offline persistence etkin.
+                    // Yazma işlemi önbelleğe alınır, internet gelince otomatik senkronize edilir.
+
+                    // Kaydetme başlıyor
+                    setState(() => _isSaving = true);
+                    try {
+                      final success = await provider.saveProgram(
+                        userId,
+                        allProducts,
+                        scheduleNotifications: !isDistributorMode,
                       );
-                      return;
-                    }
 
-                    final success = await provider.saveProgram(
-                      userId,
-                      allProducts,
-                      scheduleNotifications: !isDistributorMode,
-                    );
+                      if (!mounted) return;
 
-                    if (success && context.mounted) {
-                      final firestoreService = context.read<FirestoreService>();
-                      try {
-                        final profile = await firestoreService.getUserProfile(userId);
-                        if (profile != null) {
-                          final updated = profile.copyWith(
-                            programStartDate: DateTime.now(),
-                            userGoal: provider.selectedGoal,
-                            weight: provider.currentWeight ?? profile.weight,
-                            targetWeight: provider.targetWeight ?? profile.targetWeight,
-                          );
-                          await firestoreService.setUserProfile(updated);
-                          
-                          if (!isDistributorMode && userId == authProvider.firebaseUser?.uid) {
-                            await authProvider.updateUserProfile(updated);
+                      if (success) {
+                        try {
+                          final profile =
+                              await firestoreService.getUserProfile(userId);
+                          if (profile != null) {
+                            final updated = profile.copyWith(
+                              programStartDate: DateTime.now(),
+                              userGoal: provider.selectedGoal,
+                              weight:
+                                  provider.currentWeight ?? profile.weight,
+                              targetWeight: provider.targetWeight ??
+                                  profile.targetWeight,
+                            );
+                            await firestoreService.setUserProfile(updated);
+
+                            if (!isDistributorMode &&
+                                userId == authProvider.firebaseUser?.uid) {
+                              await authProvider.updateUserProfile(updated);
+                            }
                           }
+                        } catch (e) {
+                          AppLogger.error(
+                            'Kullanıcı profili güncellenirken hata: $e',
+                            tag: 'ProgramSummaryStep',
+                            error: e,
+                          );
                         }
-                      } catch (e) {
-                        AppLogger.error('Kullanıcı profili güncellenirken hata: $e', tag: 'ProgramSummaryStep', error: e);
-                      }
 
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        if (!mounted) return;
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text(
                               isDistributorMode
@@ -239,8 +256,11 @@ class ProgramSummaryStep extends StatelessWidget {
                             ),
                           ),
                         );
-                        context.pop();
+                        router.pop();
                       }
+                    } finally {
+                      // Hata veya başarı fark etmeksizin loading'i sıfırla
+                      if (mounted) setState(() => _isSaving = false);
                     }
                   },
             style: ElevatedButton.styleFrom(
@@ -250,9 +270,9 @@ class ProgramSummaryStep extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              disabledBackgroundColor: Colors.grey.shade300,
+              disabledBackgroundColor: AppColors.textMutedLighter,
             ),
-            child: provider.isLoading
+            child: _isSaving
                 ? const SizedBox(
                     height: 20,
                     width: 20,
@@ -270,8 +290,9 @@ class ProgramSummaryStep extends StatelessWidget {
                   ),
           ),
           const SizedBox(height: 10),
+          // Geri butonu kaydetme sırasında bile aktif — wizard adımına döner
           TextButton(
-            onPressed: provider.isLoading ? null : () => provider.previousStep(),
+            onPressed: _isSaving ? null : () => provider.previousStep(),
             child: const Text('← Geri Dön'),
           ),
         ],
@@ -301,7 +322,7 @@ class _SlotSummaryRow extends StatelessWidget {
               children: [
                 Text(
                   slot.label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 ),
                 Text(
                   slot.isNormalMeal ? 'Normal Yemek' : slot.summary,
@@ -309,7 +330,7 @@ class _SlotSummaryRow extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     color: slot.isNormalMeal
-                        ? Colors.grey.shade600
+                        ? AppColors.grey600
                         : AppColors.nightSky,
                   ),
                 ),
@@ -417,7 +438,7 @@ class _Row extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              style: TextStyle(fontSize: 13, color: AppColors.textMuted),
             ),
           ),
           Text(

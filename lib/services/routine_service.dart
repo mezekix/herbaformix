@@ -118,32 +118,82 @@ class RoutineService {
 
   // Rutin durumunu güncelle (Tükettim checkbox için)
   Future<void> updateRoutineStatus(String userId, String routineId, bool isCompleted) async {
+    // timeout: Firestore offline persistence sayesinde cache'e yazılır,
+    // internet gelince otomatik senkronize edilir.
     await _firestore
         .collection('users')
         .doc(userId)
         .collection('dailyRoutines')
         .doc(routineId)
-        .update({'isCompleted': isCompleted});
+        .update({'isCompleted': isCompleted})
+        .timeout(
+          const Duration(seconds: 3),
+          onTimeout: () {
+            AppLogger.debug(
+              '[RoutineService] updateRoutineStatus timeout — offline modda, cache\'e yazıldı.',
+              tag: 'RoutineService',
+            );
+          },
+        );
 
     try {
-      final routineDoc = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('dailyRoutines')
-          .doc(routineId)
-          .get();
+      // Önce cache'den oku, yoksa sunucudan dene
+      DocumentSnapshot<Map<String, dynamic>> routineDoc;
+      try {
+        routineDoc = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('dailyRoutines')
+            .doc(routineId)
+            .get(const GetOptions(source: Source.cache));
+      } catch (_) {
+        routineDoc = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('dailyRoutines')
+            .doc(routineId)
+            .get()
+            .timeout(const Duration(seconds: 3), onTimeout: () async {
+          return _firestore
+              .collection('users')
+              .doc(userId)
+              .collection('dailyRoutines')
+              .doc(routineId)
+              .get(const GetOptions(source: Source.cache));
+        });
+      }
+
       if (!routineDoc.exists) return;
       final data = routineDoc.data()!;
       final productId = data['productId'] as String? ?? '';
-      
       final stepType = data['stepType'] as String? ?? 'product';
-      
+
       String nameToCheck = productId;
       if (stepType == 'product' || stepType == 'RoutineStepType.product') {
-         final productDoc = await _firestore.collection('products').doc(productId).get();
-         if (productDoc.exists) {
+        // Önce cache'den ürün adını al
+        try {
+          final productDoc = await _firestore
+              .collection('products')
+              .doc(productId)
+              .get(const GetOptions(source: Source.cache));
+          if (productDoc.exists) {
             nameToCheck = productDoc.data()?['name'] as String? ?? productId;
-         }
+          }
+        } catch (_) {
+          // Cache'de yoksa sunucudan kısa timeout ile dene
+          try {
+            final productDoc = await _firestore
+                .collection('products')
+                .doc(productId)
+                .get()
+                .timeout(const Duration(seconds: 3));
+            if (productDoc.exists) {
+              nameToCheck = productDoc.data()?['name'] as String? ?? productId;
+            }
+          } catch (_) {
+            // Ürün adı alınamadı, productId ile devam et
+          }
+        }
       }
 
       final lower = nameToCheck.toLowerCase();
@@ -161,21 +211,23 @@ class RoutineService {
       if (isShake) {
         final calorieRepo = CalorieRepository(firestore: _firestore);
         if (isCompleted) {
-           final meal = Meal(
-             id: routineId,
-             name: nameToCheck,
-             calories: 250,
-             timestamp: DateTime.now(),
-           );
-           await calorieRepo.addMealToday(userId, meal);
+          final meal = Meal(
+            id: routineId,
+            name: nameToCheck,
+            calories: 250,
+            timestamp: DateTime.now(),
+          );
+          await calorieRepo.addMealToday(userId, meal);
         } else {
-           await calorieRepo.removeMealToday(userId, routineId);
+          await calorieRepo.removeMealToday(userId, routineId);
         }
       }
     } catch (e) {
-      AppLogger.error('[RoutineService] Auto-calorie error: $e', tag: 'RoutineService', error: e);
+      AppLogger.error('[RoutineService] Auto-calorie error: $e',
+          tag: 'RoutineService', error: e);
     }
   }
+
 
   // Rutin saatini güncelle
   Future<void> updateRoutineTime(String userId, String routineId, DateTime newTime) async {

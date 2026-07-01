@@ -111,7 +111,7 @@ class _WeightInputStepState extends State<WeightInputStep> {
             const SizedBox(height: 8),
             Text(
               'Hedef kilona göre program süren otomatik hesaplanacak.',
-              style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 15, color: AppColors.grey600),
             ),
             const SizedBox(height: 32),
 
@@ -281,7 +281,7 @@ class _DurationCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Minimum $minDuration ay önerilir.',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 13, color: AppColors.grey600),
           ),
           const SizedBox(height: 16),
           Row(
@@ -309,7 +309,7 @@ class _DurationCard extends StatelessWidget {
                   ),
                   const Text(
                     'ay',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                    style: TextStyle(fontSize: 14, color: AppColors.textMuted),
                   ),
                 ],
               ),

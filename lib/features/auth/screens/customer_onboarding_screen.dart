@@ -310,7 +310,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     if (_currentPage < _totalPages - 1)
                       TextButton(
                         onPressed: _nextPage,
-                        child: const Text('Atla', style: TextStyle(color: Colors.grey)),
+                        child: const Text('Atla', style: TextStyle(color: AppColors.textMuted)),
                       ),
                   ],
                 ),
@@ -359,7 +359,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade500,
+                  color: AppColors.textMuted,
                 ),
               ),
               Text(
@@ -367,7 +367,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade500,
+                  color: AppColors.textMuted,
                 ),
               ),
             ],
@@ -376,7 +376,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
           Container(
             height: 8,
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color: AppColors.backgroundMuted,
               borderRadius: BorderRadius.circular(4),
             ),
             child: Row(
@@ -436,7 +436,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 14)),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMuted, fontSize: 14)),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: () => _selectBirthDate(context),
@@ -453,11 +453,11 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                   fillColor: AppColors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
+                    borderSide: BorderSide(color: AppColors.backgroundMuted),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
+                    borderSide: BorderSide(color: AppColors.backgroundMuted),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -494,7 +494,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     const SizedBox(height: 8),
                     const Text(
                       'Sana en iyi programı hazırlayabilmemiz için seni biraz tanıyalım.',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      style: TextStyle(fontSize: 16, color: AppColors.textMuted),
                     ),
                     const SizedBox(height: 32),
                     _buildTextField('Adın Soyadın', _nameController, TextInputType.name, 'Örn: Elif Yılmaz'),
@@ -505,7 +505,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     const SizedBox(height: 8),
                     Text(
                       '* Doğum tarihiniz, BMI (Vücut Kitle Endeksi) hesaplamasında ve yaşa özel ideal kilo aralığınızı belirlemek için kullanılacaktır.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                      style: TextStyle(fontSize: 12, color: AppColors.grey600, fontStyle: FontStyle.italic),
                     ),
 
                   ],
@@ -549,7 +549,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -656,7 +656,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade500,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ],
@@ -979,7 +979,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -992,7 +992,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade500,
+                            color: AppColors.textMuted,
                             letterSpacing: 2,
                           ),
                         ),
@@ -1016,7 +1016,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade500,
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
@@ -1038,7 +1038,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Divider(color: Colors.grey.shade200, height: 1),
+                    Divider(color: AppColors.backgroundMuted, height: 1),
                     const SizedBox(height: 6),
 
                     // Weight Ruler section
@@ -1049,7 +1049,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade500,
+                            color: AppColors.textMuted,
                             letterSpacing: 2,
                           ),
                         ),
@@ -1073,7 +1073,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade500,
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
@@ -1133,7 +1133,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
 
     final bmi = wKg / ((hCm / 100) * (hCm / 100));
     String status = '';
-    Color color = Colors.grey;
+    Color color = AppColors.textMuted;
 
     if (bmi < _underweightBmiLimit) {
       status = 'Zayıf';
@@ -1207,7 +1207,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
               children: [
                 const Text(
                   'HEDEF KİLO',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textMuted),
                 ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -1228,7 +1228,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     ),
                     Text(
                       unitW,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 14, color: AppColors.textMuted, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -1261,7 +1261,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                     const SizedBox(height: 8),
                     RichText(
                       text: const TextSpan(
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                        style: TextStyle(fontSize: 16, color: AppColors.textMuted),
                         children: [
                           TextSpan(text: 'Zaman içindeki değişimi ve gelişimi görmek ister misin? Motivasyon için ilk gün fotoğrafını çek. '),
                           TextSpan(text: '(Zorunlu değil)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
@@ -1324,9 +1324,9 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                           width: 200,
                           height: 260,
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: AppColors.backgroundMutedLight,
                             borderRadius: BorderRadius.circular(32),
-                            border: Border.all(color: Colors.grey.shade300, width: 2, style: BorderStyle.solid),
+                            border: Border.all(color: AppColors.textMutedLighter, width: 2, style: BorderStyle.solid),
                             image: _selfieImage != null
                                 ? DecorationImage(
                                     image: FileImage(File(_selfieImage!.path)),
@@ -1346,7 +1346,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
                                       child: const Icon(Icons.photo_camera, color: AppColors.garden, size: 32),
                                     ),
                                     const SizedBox(height: 16),
-                                    const Text('Fotoğraf Çek', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                    const Text('Fotoğraf Çek', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMuted)),
                                   ],
                                 )
                               : null,
@@ -1395,7 +1395,7 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 14)),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textMuted, fontSize: 14)),
         const SizedBox(height: 8),
         Semantics(
           label: label,
@@ -1409,11 +1409,11 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
               fillColor: AppColors.white,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.grey.shade200),
+                borderSide: BorderSide(color: AppColors.backgroundMuted),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.grey.shade200),
+                borderSide: BorderSide(color: AppColors.backgroundMuted),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -1463,9 +1463,9 @@ class _CustomerOnboardingScreenState extends State<CustomerOnboardingScreen> {
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primary,
-            disabledBackgroundColor: Colors.grey.shade300,
+            disabledBackgroundColor: AppColors.textMutedLighter,
             foregroundColor: Colors.white,
-            disabledForegroundColor: Colors.grey.shade500,
+            disabledForegroundColor: AppColors.textMuted,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
@@ -1628,7 +1628,7 @@ class _RulerPickerState extends State<RulerPicker> {
                             width: isMajor ? 2.0 : 1.0,
                             height: isMajor ? 32.0 : 18.0,
                             decoration: BoxDecoration(
-                              color: isMajor ? Colors.grey.shade400 : Colors.grey.shade300,
+                              color: isMajor ? AppColors.textMutedLight : AppColors.textMutedLighter,
                               borderRadius: BorderRadius.circular(1),
                             ),
                           ),

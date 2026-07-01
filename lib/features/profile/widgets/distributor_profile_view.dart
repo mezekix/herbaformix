@@ -352,7 +352,7 @@ class _DistributorProfileViewState extends State<DistributorProfileView> {
               children: [
                 Container(
                   width: 40, height: 4, margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(color: AppColors.textMutedLighter, borderRadius: BorderRadius.circular(2)),
                 ),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),

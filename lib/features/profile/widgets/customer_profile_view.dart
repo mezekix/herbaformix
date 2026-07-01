@@ -439,7 +439,7 @@ class _CustomerProfileViewState extends State<CustomerProfileView> {
                 fillColor: AppColors.background,
                 disabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
-                    color: Colors.grey.shade300,
+                    color: AppColors.textMutedLighter,
                   ),
                 ),
               ),

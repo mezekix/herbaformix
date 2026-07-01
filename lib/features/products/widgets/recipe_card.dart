@@ -91,18 +91,18 @@ class RecipeCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.timer_outlined, size: 14, color: Colors.grey.shade600),
+                      Icon(Icons.timer_outlined, size: 14, color: AppColors.grey600),
                       const SizedBox(width: 4),
                       Text(
                         '${recipe.prepTimeMin} dk',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(fontSize: 12, color: AppColors.grey600),
                       ),
                       const SizedBox(width: 12),
                       Icon(Icons.local_fire_department_outlined, size: 14, color: Colors.orange.shade400),
                       const SizedBox(width: 4),
                       Text(
                         '${recipe.calories} kcal',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(fontSize: 12, color: AppColors.grey600),
                       ),
                     ],
                   ),
@@ -203,18 +203,18 @@ class RecipeCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.timer_outlined, size: 12, color: Colors.grey.shade600),
+                      Icon(Icons.timer_outlined, size: 12, color: AppColors.grey600),
                       const SizedBox(width: 3),
                       Text(
                         '${recipe.prepTimeMin} dk',
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        style: TextStyle(fontSize: 11, color: AppColors.grey600),
                       ),
                       const SizedBox(width: 8),
                       Icon(Icons.local_fire_department_outlined, size: 12, color: Colors.orange.shade400),
                       const SizedBox(width: 3),
                       Text(
                         '${recipe.calories} kcal',
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        style: TextStyle(fontSize: 11, color: AppColors.grey600),
                       ),
                     ],
                   ),

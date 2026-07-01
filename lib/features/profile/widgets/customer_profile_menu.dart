@@ -58,7 +58,7 @@ class CustomerProfileMenu extends StatelessWidget {
                         userProfile?.email ?? '',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: AppColors.grey600,
                         ),
                       ),
                     ],
@@ -193,7 +193,7 @@ class CustomerProfileMenu extends StatelessWidget {
           color: AppColors.nightSky,
         ),
       ),
-      trailing: trailing ?? const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+      trailing: trailing ?? const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
       onTap: onTap,
     );
   }

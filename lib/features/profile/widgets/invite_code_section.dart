@@ -214,7 +214,7 @@ class _InviteCodeSectionState extends State<InviteCodeSection> {
         border: Border.all(
           color: isActive
               ? AppColors.primary.withValues(alpha: 0.3)
-              : Colors.grey.withValues(alpha: 0.2),
+              : AppColors.textMuted.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -323,7 +323,7 @@ class _InviteCodeSectionState extends State<InviteCodeSection> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: AppColors.textMuted.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Text(
@@ -331,7 +331,7 @@ class _InviteCodeSectionState extends State<InviteCodeSection> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.grey,
+              color: AppColors.textMuted,
             ),
           ),
         );

@@ -118,7 +118,7 @@ class _RangeSelector extends StatelessWidget {
                 border: Border.all(
                   color: selected
                       ? AppColors.primary
-                      : Colors.grey.shade300,
+                      : AppColors.textMutedLighter,
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -162,7 +162,7 @@ class _ChartCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,14 +206,14 @@ class _ChartCard extends StatelessWidget {
                 extraLinesData: ExtraLinesData(horizontalLines: [
                   HorizontalLine(
                     y: goal.toDouble(),
-                    color: Colors.grey,
+                    color: AppColors.textMuted,
                     strokeWidth: 1,
                     dashArray: [4, 4],
                     label: HorizontalLineLabel(
                       show: true,
                       alignment: Alignment.topRight,
                       style: const TextStyle(
-                        color: Colors.grey,
+                        color: AppColors.textMuted,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),
@@ -234,7 +234,7 @@ class _ChartCard extends StatelessWidget {
                         v.toInt().toString(),
                         style: const TextStyle(
                           fontSize: 10,
-                          color: Colors.grey,
+                          color: AppColors.textMuted,
                         ),
                       ),
                     ),
@@ -262,7 +262,7 @@ class _ChartCard extends StatelessWidget {
                             '${parts[2]}.${parts[1]}',
                             style: const TextStyle(
                               fontSize: 9,
-                              color: Colors.grey,
+                              color: AppColors.textMuted,
                             ),
                           ),
                         );
@@ -326,7 +326,7 @@ class _StatsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: Row(
         children: [
@@ -339,7 +339,7 @@ class _StatsCard extends StatelessWidget {
             ),
           ),
           Container(
-            width: 1, height: 36, color: Colors.grey.shade200,
+            width: 1, height: 36, color: AppColors.backgroundMuted,
           ),
           Expanded(
             child: _StatBox(
@@ -350,7 +350,7 @@ class _StatsCard extends StatelessWidget {
             ),
           ),
           Container(
-            width: 1, height: 36, color: Colors.grey.shade200,
+            width: 1, height: 36, color: AppColors.backgroundMuted,
           ),
           Expanded(
             child: _StatBox(
@@ -384,7 +384,7 @@ class _StatBox extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label,
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+            style: TextStyle(fontSize: 11, color: AppColors.grey600)),
         const SizedBox(height: 4),
         Text(value,
             style: TextStyle(
@@ -393,7 +393,7 @@ class _StatBox extends StatelessWidget {
               color: color,
             )),
         Text(unit,
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+            style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
       ],
     );
   }
@@ -423,7 +423,7 @@ class _DayCard extends StatelessWidget {
     final over = log.totalCalories > log.dailyGoal;
     final empty = log.totalCalories == 0;
     final color = empty
-        ? Colors.grey
+        ? AppColors.textMuted
         : over
             ? Colors.orange
             : Colors.green;
@@ -434,7 +434,7 @@ class _DayCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: Row(
         children: [
@@ -465,7 +465,7 @@ class _DayCard extends StatelessWidget {
                       : '${log.meals.length} öğün',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey.shade600,
+                    color: AppColors.grey600,
                   ),
                 ),
               ],
@@ -485,7 +485,7 @@ class _DayCard extends StatelessWidget {
                 'Hedef: ${log.dailyGoal}',
                 style: TextStyle(
                   fontSize: 10,
-                  color: Colors.grey.shade500,
+                  color: AppColors.textMuted,
                 ),
               ),
             ],
@@ -507,7 +507,7 @@ class _EmptyState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.history_toggle_off,
-              size: 56, color: Colors.grey.shade400),
+              size: 56, color: AppColors.textMutedLight),
           const SizedBox(height: 12),
           const Text(
             'Henüz Geçmiş Yok',
@@ -520,7 +520,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Öğün eklemeye başla, geçmişin burada birikecek.',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, color: AppColors.grey600),
           ),
         ],
       ),

@@ -467,7 +467,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                           const SizedBox(height: 4),
                           Text(
                             'Hedeflerine ulaşmak için programını oluştur.',
-                            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                            style: TextStyle(fontSize: 13, color: AppColors.textMuted),
                           ),
                         ],
                       ),
@@ -635,7 +635,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                                   : 'Tamamlamak için dokunun',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade500,
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
@@ -650,7 +650,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                           key: ValueKey(isCompleted),
                           color: isCompleted
                               ? const Color(0xFFF97316)
-                              : Colors.grey.shade300,
+                              : AppColors.textMutedLighter,
                           size: 28,
                         ),
                       ),
@@ -712,7 +712,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                   offset: const Offset(0, 4),
                 ),
               ],
-              border: Border.all(color: Colors.grey.shade100),
+              border: Border.all(color: AppColors.backgroundMutedLight),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -833,7 +833,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
           const SizedBox(height: 4),
           Text(
             'Bugünkü $totalCount öğünün hepsini başarıyla tamamladın. Harika bir gün!',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            style: TextStyle(color: AppColors.grey600, fontSize: 13),
             textAlign: TextAlign.center,
           ),
         ],
@@ -846,11 +846,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
     return Column(
       children: [
         const SizedBox(height: 8),
-        Icon(Icons.event_note_outlined, size: 48, color: Colors.grey.shade300),
+        Icon(Icons.event_note_outlined, size: 48, color: AppColors.textMutedLighter),
         const SizedBox(height: 12),
         const Text(
           'Bugün için program yok.',
-          style: TextStyle(color: Colors.grey, fontSize: 15),
+          style: TextStyle(color: AppColors.textMuted, fontSize: 15),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -1006,7 +1006,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                           height: 4,
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
+                            color: AppColors.textMutedLighter,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -1581,7 +1581,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
     if (totalCount == 0) {
       items.add(const _NotificationItem(
         icon: Icons.event_note_outlined,
-        color: Colors.grey,
+        color: AppColors.textMuted,
         title: 'Bugün için program yok',
         subtitle: 'Danışmanın henüz program oluşturmadı.',
         actionType: NotificationActionType.info,
@@ -1627,7 +1627,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
         if (dueIncompleteRoutines.length > 3) {
           items.add(_NotificationItem(
             icon: Icons.more_horiz,
-            color: Colors.grey,
+            color: AppColors.textMuted,
             title: '+${dueIncompleteRoutines.length - 3} görev daha bekliyor',
             subtitle: 'Programını görüntülemek için tıkla',
             actionType: NotificationActionType.info,
@@ -1680,7 +1680,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                 child: Center(
                   child: Text(
                     'Şu an için bildirim yok. 🎉',
-                    style: TextStyle(color: Colors.grey, fontSize: 15),
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 15),
                   ),
                 ),
               )
@@ -1705,12 +1705,12 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
       decoration: BoxDecoration(
         color: item.isAlert
             ? item.color.withValues(alpha: 0.06)
-            : Colors.grey.shade50,
+            : AppColors.backgroundMutedLighter,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: item.isAlert
               ? item.color.withValues(alpha: 0.2)
-              : Colors.grey.shade100,
+              : AppColors.backgroundMutedLight,
         ),
       ),
       child: Column(
@@ -1736,7 +1736,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: item.isAlert ? AppColors.nightSky : Colors.grey.shade700,
+                        color: item.isAlert ? AppColors.nightSky : AppColors.grey700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -1744,7 +1744,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                       item.subtitle,
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                   ],
@@ -2084,7 +2084,7 @@ class _CalorieProgressRing extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade600,
+                  color: AppColors.grey600,
                 ),
               ),
             ],

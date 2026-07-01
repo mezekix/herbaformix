@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:herbaformix/core/app_colors.dart';
 
 /// Günlük Başarı Halkası — 3 dilimli dairesel ilerleme göstergesi.
 ///
@@ -197,7 +198,7 @@ class _DailySuccessRingState extends State<DailySuccessRing>
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: Colors.grey.shade700,
+                              color: AppColors.grey700,
                               letterSpacing: 1.5,
                             ),
                           ),
@@ -209,7 +210,7 @@ class _DailySuccessRingState extends State<DailySuccessRing>
                                 vertical: 5,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
+                                color: AppColors.backgroundMutedLight,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Text(
@@ -217,7 +218,7 @@ class _DailySuccessRingState extends State<DailySuccessRing>
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade600,
+                                  color: AppColors.grey600,
                                 ),
                                 textAlign: TextAlign.center,
                                 maxLines: 1,
@@ -271,7 +272,7 @@ class _DailySuccessRingState extends State<DailySuccessRing>
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade600,
+            color: AppColors.grey600,
           ),
         ),
       ],

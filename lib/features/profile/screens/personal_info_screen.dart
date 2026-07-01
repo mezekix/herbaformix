@@ -284,7 +284,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                   filled: true,
                   fillColor: AppColors.background,
                   disabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                    borderSide: BorderSide(color: AppColors.textMutedLighter),
                   ),
                 ),
                 keyboardType: TextInputType.emailAddress,

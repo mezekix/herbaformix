@@ -92,7 +92,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: Row(
         children: [
@@ -139,7 +139,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            style: TextStyle(fontSize: 11, color: AppColors.textMuted),
             textAlign: TextAlign.center,
           ),
         ],
@@ -151,7 +151,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
     return Container(
       width: 1,
       height: 36,
-      color: Colors.grey.shade200,
+      color: AppColors.backgroundMuted,
     );
   }
 
@@ -264,7 +264,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(color: AppColors.backgroundMutedLight),
       ),
       child: Row(
         children: [
@@ -303,7 +303,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
                 fontSize: 13,
                 color: entry.waist != null
                     ? AppColors.nightSky
-                    : Colors.grey.shade400,
+                    : AppColors.textMutedLight,
               ),
             ),
           ),
@@ -316,7 +316,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
                 fontSize: 13,
                 color: entry.belly != null
                     ? AppColors.nightSky
-                    : Colors.grey.shade400,
+                    : AppColors.textMutedLight,
               ),
             ),
           ),
@@ -329,7 +329,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
                 fontSize: 13,
                 color: entry.hip != null
                     ? AppColors.nightSky
-                    : Colors.grey.shade400,
+                    : AppColors.textMutedLight,
               ),
             ),
           ),
@@ -344,7 +344,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
                 fontSize: 13,
                 color: entry.chest != null
                     ? AppColors.nightSky
-                    : Colors.grey.shade400,
+                    : AppColors.textMutedLight,
               ),
             ),
           ),
@@ -359,7 +359,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
                 fontSize: 11,
                 color: entry.arm != null || entry.thigh != null
                     ? AppColors.nightSky
-                    : Colors.grey.shade400,
+                    : AppColors.textMutedLight,
               ),
             ),
           ),
@@ -367,7 +367,7 @@ class MeasurementsHistoryScreen extends StatelessWidget {
           SizedBox(
             width: 48,
             child: PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.grey.shade400, size: 20),
+              icon: Icon(Icons.more_vert, color: AppColors.textMutedLight, size: 20),
               onSelected: (value) {
                 if (value == 'edit') {
                   _openEditSheet(context, entry, provider);
@@ -412,20 +412,20 @@ class MeasurementsHistoryScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.monitor_weight_outlined,
-              size: 64, color: Colors.grey.shade300),
+              size: 64, color: AppColors.textMutedLighter),
           const SizedBox(height: 16),
           Text(
             'Henüz ölçüm kaydı yok',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.grey.shade500,
+              color: AppColors.textMuted,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'İlk ölçümünü ekleyerek başla',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 14, color: AppColors.grey600),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -651,7 +651,7 @@ class _AddEditMeasurementSheetState extends State<_AddEditMeasurementSheet> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppColors.textMutedLighter,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -671,7 +671,7 @@ class _AddEditMeasurementSheetState extends State<_AddEditMeasurementSheet> {
                   DateFormat('d MMMM yyyy', 'tr_TR')
                       .format(widget.entry!.date),
                   style:
-                      TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                      TextStyle(fontSize: 13, color: AppColors.textMuted),
                 ),
               ],
               const SizedBox(height: 24),
@@ -807,18 +807,18 @@ class _AddEditMeasurementSheetState extends State<_AddEditMeasurementSheet> {
         prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppColors.textMutedLighter),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppColors.textMutedLighter),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: AppColors.backgroundMutedLighter,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),

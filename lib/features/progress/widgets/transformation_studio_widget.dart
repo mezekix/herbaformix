@@ -70,7 +70,7 @@ class _TransformationStudioWidgetState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: _isLoading
           ? const SizedBox(
@@ -111,7 +111,7 @@ class _TransformationStudioWidgetState
                   Text(
                     '${_afterPhotos.length} sonra fotoğrafı',
                     style: TextStyle(
-                        fontSize: 12, color: Colors.grey.shade500),
+                        fontSize: 12, color: AppColors.textMuted),
                   ),
                 ],
               ),
@@ -198,7 +198,7 @@ class _TransformationStudioWidgetState
             isGray
                 ? ColorFiltered(
                     colorFilter: const ColorFilter.mode(
-                        Colors.grey, BlendMode.saturation),
+                        AppColors.textMuted, BlendMode.saturation),
                     child: Image.file(File(path), fit: BoxFit.cover),
                   )
                 : Image.file(File(path), fit: BoxFit.cover),
@@ -255,19 +255,19 @@ class _TransformationStudioWidgetState
           Container(
             height: 100,
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: AppColors.backgroundMutedLighter,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.add_photo_alternate_outlined,
-                    size: 36, color: Colors.grey.shade300),
+                    size: 36, color: AppColors.textMutedLighter),
                 const SizedBox(height: 8),
                 Text(
                   'Önce/Sonra fotoğrafı ekle',
                   style: TextStyle(
-                      fontSize: 13, color: Colors.grey.shade700),
+                      fontSize: 13, color: AppColors.grey700),
                 ),
               ],
             ),

@@ -66,6 +66,8 @@ class DefaultFirebaseOptions {
     messagingSenderId: '433193562880',
     projectId: 'herbaformix',
     storageBucket: 'herbaformix.firebasestorage.app',
+    androidClientId: '433193562880-b2k472cc1pimpld0aaos5tcg7b41672j.apps.googleusercontent.com',
+    iosClientId: '433193562880-s67693761fpgtc7s1d6npnvuvgri644m.apps.googleusercontent.com',
     iosBundleId: 'com.mze.herbaformix',
   );
 

@@ -207,7 +207,7 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: AppColors.textMutedLighter,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -228,7 +228,7 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
               _isEditing 
                 ? 'Ölçüm bilgilerini güncelle' 
                 : 'Bugünkü ölçümlerini gir',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+              style: TextStyle(fontSize: 13, color: AppColors.textMuted),
             ),
             const SizedBox(height: 24),
 
@@ -239,9 +239,9 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: AppColors.backgroundMuted),
                     borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey.shade50,
+                    color: AppColors.backgroundMutedLighter,
                   ),
                   child: Row(
                     children: [
@@ -292,7 +292,7 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
               const SizedBox(height: 16),
               Text(
                 'BMI hesaplanabilmesi için boy bilgisine ihtiyacımız var. Bu bilgi profiline kaydedilecektir.',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(fontSize: 12, color: AppColors.grey600),
               ),
               const SizedBox(height: 16),
             ],
@@ -447,18 +447,18 @@ class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
         prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppColors.textMutedLighter),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: AppColors.textMutedLighter),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: AppColors.backgroundMutedLighter,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,

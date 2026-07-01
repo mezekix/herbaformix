@@ -74,7 +74,7 @@ class _NoProgramView extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Hedefine göre kişisel bir program oluştur.',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+              style: TextStyle(fontSize: 14, color: AppColors.textMuted),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -264,11 +264,11 @@ class _ActiveView extends StatelessWidget {
                   child: Column(
                     children: [
                       Icon(Icons.check_circle_outline,
-                          size: 48, color: Colors.grey.shade300),
+                          size: 48, color: AppColors.textMutedLighter),
                       const SizedBox(height: 12),
                       Text('Bugün için rutin bulunamadı.',
                           style:
-                              TextStyle(color: Colors.grey.shade500)),
+                              TextStyle(color: AppColors.textMuted)),
                     ],
                   ),
                 ),
@@ -422,7 +422,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: AppColors.textMutedLighter,
                   borderRadius: BorderRadius.circular(2)),
             ),
           ),
@@ -464,7 +464,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
               padding: const EdgeInsets.symmetric(
                   horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: AppColors.textMutedLighter),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -505,7 +505,7 @@ class _AddSlotSheetState extends State<_AddSlotSheet> {
               _isPermanent
                   ? 'Her gün tekrarlanır.'
                   : 'Sadece bugünün rutinlerine eklenir.',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              style: TextStyle(fontSize: 12, color: AppColors.grey600),
             ),
             value: _isPermanent,
             activeTrackColor: AppColors.primary,
@@ -697,7 +697,7 @@ class _ProductTile extends StatelessWidget {
                     border: Border.all(
                       color: routine.isCompleted
                           ? accent
-                          : Colors.grey.shade300,
+                          : AppColors.textMutedLighter,
                       width: 2,
                     ),
                     boxShadow: routine.isCompleted
@@ -714,7 +714,7 @@ class _ProductTile extends StatelessWidget {
                     size: 16,
                     color: routine.isCompleted
                         ? Colors.white
-                        : Colors.grey.shade400,
+                        : AppColors.textMutedLight,
                   ),
                 ),
                 if (!isLast)
@@ -722,7 +722,7 @@ class _ProductTile extends StatelessWidget {
                     child: Container(
                       width: 2,
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      color: Colors.grey.shade200,
+                      color: AppColors.backgroundMuted,
                     ),
                   ),
               ],
@@ -743,7 +743,7 @@ class _ProductTile extends StatelessWidget {
                   border: Border.all(
                     color: routine.isCompleted
                         ? const Color(0xFF86EFAC)
-                        : Colors.grey.shade200,
+                        : AppColors.backgroundMuted,
                   ),
                 ),
                 child: Row(
@@ -770,22 +770,22 @@ class _ProductTile extends StatelessWidget {
                             children: [
                               Icon(Icons.access_time,
                                   size: 12,
-                                  color: Colors.grey.shade400),
+                                  color: AppColors.textMutedLight),
                               const SizedBox(width: 4),
                               Text(
                                 timeFormat.format(routine.scheduledTime),
                                 style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.grey.shade500),
+                                    color: AppColors.textMuted),
                               ),
                               const SizedBox(width: 8),
                               const Icon(Icons.touch_app_outlined,
-                                  size: 12, color: Colors.grey),
+                                  size: 12, color: AppColors.textMuted),
                               const SizedBox(width: 2),
                               Text('Nasıl Kullanılır?',
                                   style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey.shade700)),
+                                      color: AppColors.grey700)),
                             ],
                           ),
                         ],
@@ -846,7 +846,7 @@ class _ProductTile extends StatelessWidget {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppColors.textMutedLighter,
                     borderRadius: BorderRadius.circular(2)),
               ),
             ),

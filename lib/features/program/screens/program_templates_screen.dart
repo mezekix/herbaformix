@@ -148,7 +148,7 @@ class _TemplateCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -197,7 +197,7 @@ class _TemplateCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: AppColors.grey600,
                           ),
                         ),
                       ],
@@ -221,7 +221,7 @@ class _TemplateCard extends StatelessWidget {
                   ),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.grey),
+                  icon: const Icon(Icons.more_vert, color: AppColors.textMuted),
                   onSelected: (v) {
                     if (v == 'delete') onDelete();
                   },
@@ -307,7 +307,7 @@ class _EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.assignment_outlined,
-                size: 64, color: Colors.grey.shade400),
+                size: 64, color: AppColors.textMutedLight),
             const SizedBox(height: 16),
             const Text(
               'Henüz Şablon Yok',
@@ -324,7 +324,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: Colors.grey.shade600,
+                color: AppColors.grey600,
               ),
             ),
           ],

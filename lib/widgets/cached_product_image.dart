@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/image_utils.dart';
 import 'package:herbaformix/core/logger.dart';
+import 'package:herbaformix/core/app_colors.dart';
 
 class CachedProductImage extends StatelessWidget {
   final String? imageUrl;
@@ -60,8 +61,8 @@ class CachedProductImage extends StatelessWidget {
         return Container(
           width: width,
           height: height,
-          color: Colors.grey[200],
-          child: Icon(Icons.image_not_supported_outlined, color: Colors.grey[400]),
+          color: AppColors.backgroundMuted,
+          child: Icon(Icons.image_not_supported_outlined, color: AppColors.textMutedLight),
         );
       },
     );

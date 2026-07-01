@@ -99,7 +99,7 @@ class _SkeletonCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border(
-          left: BorderSide(color: Colors.grey.shade300, width: 4),
+          left: BorderSide(color: AppColors.textMutedLighter, width: 4),
         ),
       ),
       child: Column(
@@ -184,8 +184,8 @@ class _PulseBoxState extends State<_PulseBox>
           height: widget.height,
           decoration: BoxDecoration(
             color: Color.lerp(
-              Colors.grey.shade100,
-              Colors.grey.shade300,
+              AppColors.backgroundMutedLight,
+              AppColors.textMutedLighter,
               t,
             ),
             borderRadius: BorderRadius.circular(widget.radius),

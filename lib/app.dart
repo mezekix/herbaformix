@@ -177,7 +177,7 @@ class _AppState extends State<App> {
           enabledBorder: OutlineInputBorder(
             // Odaklanılmamış durum
             borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: AppColors.textMutedLighter),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
@@ -186,7 +186,7 @@ class _AppState extends State<App> {
           labelStyle: const TextStyle(
             color: AppColors.textSecondary,
           ), // Label rengi
-          hintStyle: TextStyle(color: Colors.grey.shade500),
+          hintStyle: TextStyle(color: AppColors.textMuted),
           prefixIconColor: AppColors.primary.withAlpha(
             179,
           ), // withOpacity(0.7) yerine

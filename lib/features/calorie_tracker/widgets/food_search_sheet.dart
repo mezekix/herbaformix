@@ -134,7 +134,7 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
       height: 4,
       margin: const EdgeInsets.only(top: 10, bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.grey.shade300,
+        color: AppColors.textMutedLighter,
         borderRadius: BorderRadius.circular(2),
       ),
     );
@@ -180,11 +180,11 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: AppColors.textMutedLighter),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: AppColors.textMutedLighter),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -216,16 +216,16 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.search_off, size: 40, color: Colors.grey.shade400),
+              Icon(Icons.search_off, size: 40, color: AppColors.textMutedLight),
               const SizedBox(height: 8),
               Text(
                 'Yemek bulunamadı.',
-                style: TextStyle(color: Colors.grey.shade600),
+                style: TextStyle(color: AppColors.grey600),
               ),
               const SizedBox(height: 4),
               Text(
                 'Aşağıdaki "Elle ekle" ile manuel girebilirsin.',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -264,7 +264,7 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
       ),
       subtitle: Text(
         '${food.servingLabel(1)} • ${food.caloriesPerServing} kcal',
-        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+        style: TextStyle(fontSize: 12, color: AppColors.grey600),
       ),
       trailing: const Icon(Icons.add_circle_outline,
           color: AppColors.primary, size: 22),
@@ -280,18 +280,18 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(top: BorderSide(color: Colors.grey.shade200)),
+          border: Border(top: BorderSide(color: AppColors.backgroundMuted)),
         ),
         child: Row(
           children: [
-            Icon(Icons.help_outline, size: 18, color: Colors.grey.shade600),
+            Icon(Icons.help_outline, size: 18, color: AppColors.grey600),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Listede yok mu?',
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey.shade700,
+                  color: AppColors.grey700,
                 ),
               ),
             ),
@@ -369,7 +369,7 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
       case 'fast_food':
         return Colors.deepOrange.shade400;
       default:
-        return Colors.grey.shade600;
+        return AppColors.grey600;
     }
   }
 }
@@ -447,7 +447,7 @@ class _PortionSheetState extends State<_PortionSheet> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: AppColors.textMutedLighter,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -462,7 +462,7 @@ class _PortionSheetState extends State<_PortionSheet> {
                 Text(
                   'Varsayılan: ${food.servingLabel(1)} = ${food.caloriesPerServing} kcal',
                   style:
-                      TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      TextStyle(fontSize: 12, color: AppColors.grey600),
                 ),
                 const SizedBox(height: 20),
                 Text(
@@ -470,7 +470,7 @@ class _PortionSheetState extends State<_PortionSheet> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
+                    color: AppColors.grey700,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -515,7 +515,7 @@ class _PortionSheetState extends State<_PortionSheet> {
                               food.servingLabel(_multiplier),
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade700,
+                                color: AppColors.grey700,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -584,7 +584,7 @@ class _PortionSheetState extends State<_PortionSheet> {
       onSelected: (_) => _setMultiplier(mult),
       selectedColor: AppColors.primary.withValues(alpha: 0.18),
       side: BorderSide(
-        color: selected ? AppColors.primary : Colors.grey.shade300,
+        color: selected ? AppColors.primary : AppColors.textMutedLighter,
       ),
     );
   }
@@ -644,7 +644,7 @@ class _ManualMealSheetState extends State<_ManualMealSheet> {
                       height: 4,
                       margin: const EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: AppColors.textMutedLighter,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -659,7 +659,7 @@ class _ManualMealSheetState extends State<_ManualMealSheet> {
                   Text(
                     'Listede bulamadığın yemekleri kendi yazabilirsin.',
                     style:
-                        TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        TextStyle(fontSize: 12, color: AppColors.grey600),
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -835,7 +835,7 @@ class _AiEstimateSheetState extends State<_AiEstimateSheet> {
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: AppColors.textMutedLighter,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -856,7 +856,7 @@ class _AiEstimateSheetState extends State<_AiEstimateSheet> {
                 const SizedBox(height: 4),
                 Text(
                   'Yemek adını ve porsiyonunu yaz, kalori tahminini alalım.',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 12, color: AppColors.grey600),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -1035,7 +1035,7 @@ class _AiEstimateSheetState extends State<_AiEstimateSheet> {
     final color = switch (confidence) {
       'high' => Colors.green.shade700,
       'low' => Colors.orange.shade700,
-      _ => Colors.grey.shade700,
+      _ => AppColors.grey700,
     };
     final label = switch (confidence) {
       'high' => 'yüksek güven',

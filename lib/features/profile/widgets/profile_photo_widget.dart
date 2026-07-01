@@ -264,7 +264,7 @@ class ProfilePhotoWidget extends StatelessWidget {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppColors.textMutedLighter,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),

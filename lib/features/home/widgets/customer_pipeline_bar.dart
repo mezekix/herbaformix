@@ -46,7 +46,7 @@ class CustomerPipelineBar extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.0,
-                color: Colors.grey.shade500,
+                color: AppColors.textMuted,
               ),
             ),
           ),
@@ -84,7 +84,7 @@ class CustomerPipelineBar extends StatelessWidget {
                 child: _PipelineSegment(
                   label: 'Pasif',
                   count: passiveCount,
-                  color: Colors.grey.shade500,
+                  color: AppColors.textMuted,
                   onTap: onPassiveTap,
                 ),
               ),
@@ -130,7 +130,7 @@ class _PipelineSegment extends StatelessWidget {
             border: Border.all(
               color: emphasized
                   ? color.withValues(alpha: 0.4)
-                  : Colors.grey.shade200,
+                  : AppColors.backgroundMuted,
               width: emphasized ? 1.2 : 1.0,
             ),
             boxShadow: [
@@ -177,7 +177,7 @@ class _PipelineSegment extends StatelessWidget {
                         fontWeight: FontWeight.w800,
                         height: 1.0,
                         color: isEmpty
-                            ? Colors.grey.shade400
+                            ? AppColors.textMutedLight
                             : AppColors.nightSky,
                       ),
                     ),
@@ -187,7 +187,7 @@ class _PipelineSegment extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: emphasized ? color : Colors.grey.shade600,
+                  color: emphasized ? color : AppColors.grey600,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

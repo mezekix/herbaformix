@@ -199,7 +199,7 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
               decoration: InputDecoration(
                 hintText: 'ABCD1234',
                 hintStyle: TextStyle(
-                  color: Colors.grey.shade400,
+                  color: AppColors.textMutedLight,
                   fontFamily: 'monospace',
                   letterSpacing: 4,
                   fontSize: 20,
@@ -551,7 +551,7 @@ class _ReadOnlyField extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
+                    color: AppColors.grey600,
                   ),
             ),
             const SizedBox(height: 2),

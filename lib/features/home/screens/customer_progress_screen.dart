@@ -296,7 +296,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -348,7 +348,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                     CircularProgressIndicator(
                       value: progress,
                       strokeWidth: 8,
-                      backgroundColor: Colors.grey.shade200,
+                      backgroundColor: AppColors.backgroundMuted,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         progress >= 1.0 ? Colors.green : AppColors.primary,
                       ),
@@ -400,7 +400,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
           label,
           style: TextStyle(
             fontSize: 13,
-            color: Colors.grey.shade600,
+            color: AppColors.grey600,
           ),
         ),
         Text(
@@ -430,7 +430,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
       decoration: BoxDecoration(
         color: isHighlight ? AppColors.primary : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: isHighlight ? null : Border.all(color: Colors.grey.shade200),
+        border: isHighlight ? null : Border.all(color: AppColors.backgroundMuted),
         boxShadow: [
           if (isHighlight)
             BoxShadow(
@@ -471,7 +471,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: labelColor ?? Colors.grey.shade500,
+              color: labelColor ?? AppColors.textMuted,
               letterSpacing: 0.5,
             ),
           ),
@@ -560,8 +560,8 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
           const SizedBox(height: 8),
           _buildMeasureItem(
             icon: Icons.straighten,
-            iconBg: Colors.grey.shade200,
-            iconColor: Colors.grey.shade600,
+            iconBg: AppColors.backgroundMuted,
+            iconColor: AppColors.grey600,
             title: 'Kalça',
             latestValue: provider.latestFor(MeasurementType.hip),
             change: provider.changeFor(MeasurementType.hip),
@@ -596,7 +596,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: Row(
         children: [
@@ -628,7 +628,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                       : 'Henüz ölçüm yok',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey.shade500,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
@@ -742,7 +742,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: isEarned ? badge.bgColor : Colors.grey.shade100,
+              color: isEarned ? badge.bgColor : AppColors.backgroundMutedLight,
               shape: BoxShape.circle,
               boxShadow: [
                 if (isEarned)
@@ -755,7 +755,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             ),
             child: Icon(
               badge.icon,
-              color: isEarned ? badge.iconColor : Colors.grey.shade400,
+              color: isEarned ? badge.iconColor : AppColors.textMutedLight,
               size: 36,
             ),
           ),
@@ -766,7 +766,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.bold,
-              color: isEarned ? AppColors.nightSky : Colors.grey.shade400,
+              color: isEarned ? AppColors.nightSky : AppColors.textMutedLight,
               height: 1.2,
             ),
           ),
@@ -783,7 +783,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
       ),
       child: const Center(
         child: CircularProgressIndicator(

@@ -35,7 +35,7 @@ class CustomerSupportScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey.shade500,
+                  color: AppColors.textMuted,
                 ),
               ),
               const SizedBox(height: 24),
@@ -92,7 +92,7 @@ class CustomerSupportScreen extends StatelessWidget {
                           distPhone,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade500,
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ],
@@ -101,7 +101,7 @@ class CustomerSupportScreen extends StatelessWidget {
                         'Sorularınız için iletişime geçebilirsiniz',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.grey.shade500,
+                          color: AppColors.textMuted,
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -320,7 +320,7 @@ class _FaqItemState extends State<_FaqItem> {
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
                       Icons.keyboard_arrow_down,
-                      color: Colors.grey.shade400,
+                      color: AppColors.textMutedLight,
                     ),
                   ),
                 ],
@@ -333,7 +333,7 @@ class _FaqItemState extends State<_FaqItem> {
                     widget.answer,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey.shade600,
+                      color: AppColors.grey600,
                       height: 1.5,
                     ),
                   ),

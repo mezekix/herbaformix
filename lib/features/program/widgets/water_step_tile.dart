@@ -44,7 +44,7 @@ class WaterStepTile extends StatelessWidget {
                     border: Border.all(
                       color: routine.isCompleted
                           ? accentColor
-                          : Colors.grey.shade300,
+                          : AppColors.textMutedLighter,
                       width: 2,
                     ),
                     boxShadow: routine.isCompleted
@@ -68,7 +68,7 @@ class WaterStepTile extends StatelessWidget {
                     child: Container(
                       width: 2,
                       margin: const EdgeInsets.symmetric(vertical: 4),
-                      color: Colors.grey.shade200,
+                      color: AppColors.backgroundMuted,
                     ),
                   ),
               ],
@@ -87,7 +87,7 @@ class WaterStepTile extends StatelessWidget {
                 border: Border.all(
                   color: routine.isCompleted
                       ? Colors.cyan.shade200
-                      : Colors.grey.shade200,
+                      : AppColors.backgroundMuted,
                 ),
               ),
               child: Row(
@@ -128,14 +128,14 @@ class WaterStepTile extends StatelessWidget {
                             Icon(
                               Icons.access_time,
                               size: 12,
-                              color: Colors.grey.shade400,
+                              color: AppColors.textMutedLight,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               timeFormat.format(routine.scheduledTime),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade500,
+                                color: AppColors.textMuted,
                               ),
                             ),
                             const SizedBox(width: 8),

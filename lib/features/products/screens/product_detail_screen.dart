@@ -383,7 +383,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
           children: [
             Container(
               height: 150,
-              color: Colors.grey[200],
+              color: AppColors.backgroundMuted,
               child: CachedProductImage(
                 imageUrl: product.imageUrl,
                 fit: BoxFit.cover,

@@ -39,7 +39,7 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
   Future<void> _loadProfileAndInitWizard() async {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      
+
       final provider = context.read<ProgramProvider>();
       final authProvider = context.read<AuthProvider>();
       final firestoreService = context.read<FirestoreService>();
@@ -58,7 +58,8 @@ class _CreateProgramScreenState extends State<CreateProgramScreen> {
             provider.initializeWizardWithProfile(profile);
           }
         } catch (e) {
-          AppLogger.error('Profil yüklenirken hata: $e', tag: 'CreateProgramScreen', error: e);
+          AppLogger.error('Profil yüklenirken hata: $e',
+              tag: 'CreateProgramScreen', error: e);
           if (mounted) {
             provider.resetWizard();
           }
@@ -103,63 +104,75 @@ class _CreateProgramView extends StatelessWidget {
     final stepIndex = _stepIndex(step, provider.selectedGoal);
     final totalSteps = provider.selectedGoal == 'weight_loss' ? 4 : 3;
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: stepIndex > 0
-            ? IconButton(
-                tooltip: 'Önceki adım',
-                icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.nightSky),
-                onPressed: () => provider.previousStep(),
-              )
-            : IconButton(
-                tooltip: 'Kapat',
-                icon: const Icon(Icons.close, color: AppColors.nightSky),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-        title: Text(
-          _stepTitle(step),
-          style: const TextStyle(
-            color: AppColors.nightSky,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+    return PopScope(
+      // İlk adımdaysa normal pop izin ver (ekrandan çık).
+      // Diğer adımlarda fiziksel geri tuşu wizard'ı bir adım geri götürür.
+      canPop: stepIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && stepIndex > 0) {
+          provider.previousStep();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: stepIndex > 0
+              ? IconButton(
+                  tooltip: 'Önceki adım',
+                  icon: const Icon(Icons.arrow_back_ios_new,
+                      color: AppColors.nightSky),
+                  onPressed: () => provider.previousStep(),
+                )
+              : IconButton(
+                  tooltip: 'Kapat',
+                  icon: const Icon(Icons.close, color: AppColors.nightSky),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+          title: Text(
+            _stepTitle(step),
+            style: const TextStyle(
+              color: AppColors.nightSky,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(6),
+            child: _ProgressBar(current: stepIndex + 1, total: totalSteps),
           ),
         ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(6),
-          child: _ProgressBar(current: stepIndex + 1, total: totalSteps),
-        ),
-      ),
-      body: Column(
-        children: [
-          if (editorArgs?.isDistributorMode == true)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: AppColors.primary.withValues(alpha: 0.08),
-              child: Text(
-                'Program yazılan müşteri: ${editorArgs!.targetCustomerName}',
-                style: const TextStyle(
-                  color: AppColors.nightSky,
-                  fontWeight: FontWeight.w600,
+        body: Column(
+          children: [
+            if (editorArgs?.isDistributorMode == true)
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                color: AppColors.primary.withValues(alpha: 0.08),
+                child: Text(
+                  'Program yazılan müşteri: ${editorArgs!.targetCustomerName}',
+                  style: const TextStyle(
+                    color: AppColors.nightSky,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
+            // Şablondan başla — yalnızca distribütör modunda + ilk adımda göster
+            if (editorArgs?.isDistributorMode == true &&
+                step == ProgramWizardStep.goalSelection)
+              _TemplateStarterBanner(
+                onPick: () => _showTemplatePicker(context, provider),
+              ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _buildStep(context, step, provider),
+              ),
             ),
-          // Şablondan başla — yalnızca distribütör modunda + ilk adımda göster
-          if (editorArgs?.isDistributorMode == true &&
-              step == ProgramWizardStep.goalSelection)
-            _TemplateStarterBanner(
-              onPick: () => _showTemplatePicker(context, provider),
-            ),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: _buildStep(context, step, provider),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -249,7 +262,7 @@ class _ProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LinearProgressIndicator(
       value: current / total,
-      backgroundColor: Colors.grey.shade200,
+      backgroundColor: AppColors.backgroundMuted,
       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
       minHeight: 4,
     );
@@ -315,7 +328,7 @@ class _TemplateStarterBanner extends StatelessWidget {
                         'Kayıtlı şablon kullanarak hedef ve öğünleri otomatik doldur.',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey.shade700,
+                          color: AppColors.grey700,
                         ),
                       ),
                     ],
@@ -350,7 +363,7 @@ class _TemplatePickerSheet extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: AppColors.textMutedLighter,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -391,7 +404,7 @@ class _TemplatePickerSheet extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.inbox_outlined,
-                            size: 48, color: Colors.grey.shade400),
+                            size: 48, color: AppColors.textMutedLight),
                         const SizedBox(height: 10),
                         const Text(
                           'Henüz Şablonun Yok',
@@ -406,7 +419,7 @@ class _TemplatePickerSheet extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey.shade600,
+                            color: AppColors.grey600,
                           ),
                         ),
                       ],

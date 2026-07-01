@@ -88,7 +88,7 @@ class WaterTrackerScreen extends StatelessWidget {
                 CircularProgressIndicator(
                   value: progress,
                   strokeWidth: 9,
-                  backgroundColor: Colors.grey.shade300,
+                  backgroundColor: AppColors.textMutedLighter,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     Color.lerp(AppColors.aqua, AppColors.mango, progress) ??
                         AppColors.aqua,
@@ -343,7 +343,7 @@ class WaterTrackerScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: Icon(Icons.edit_outlined,
-                        size: 18, color: Colors.grey.shade600),
+                        size: 18, color: AppColors.grey600),
                     tooltip: 'Düzenle',
                     onPressed: () {
                       _showEditWaterDialog(context, waterProvider, log);
@@ -351,7 +351,7 @@ class WaterTrackerScreen extends StatelessWidget {
                   ),
                   IconButton(
                     icon: Icon(Icons.delete_outline,
-                        size: 18, color: Colors.grey.shade400),
+                        size: 18, color: AppColors.textMutedLight),
                     tooltip: 'Sil',
                     onPressed: () {
                       waterProvider.removeLog(log.id);

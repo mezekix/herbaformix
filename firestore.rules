@@ -74,7 +74,10 @@ service cloud.firestore {
 
     match /inviteCodes/{codeId} {
       allow get: if true;
-      allow list: if signedIn();
+      allow list: if signedIn() && (
+        resource.data.distributorId == request.auth.uid ||
+        resource.data.usedByUserId == request.auth.uid
+      );
 
       allow create: if isDistributor() &&
         request.resource.data.isUsed == false &&

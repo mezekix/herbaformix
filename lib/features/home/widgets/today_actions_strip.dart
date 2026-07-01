@@ -98,7 +98,7 @@ class _ActionChip extends StatelessWidget {
             border: Border.all(
               color: hasItems
                   ? color.withValues(alpha: 0.35)
-                  : Colors.grey.shade200,
+                  : AppColors.backgroundMuted,
             ),
             boxShadow: [
               BoxShadow(
@@ -116,13 +116,13 @@ class _ActionChip extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: hasItems
                       ? color.withValues(alpha: 0.12)
-                      : Colors.grey.shade100,
+                      : AppColors.backgroundMutedLight,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icon,
                   size: 18,
-                  color: hasItems ? color : Colors.grey.shade400,
+                  color: hasItems ? color : AppColors.textMutedLight,
                 ),
               ),
               const SizedBox(width: 8),
@@ -139,7 +139,7 @@ class _ActionChip extends StatelessWidget {
                         height: 1.0,
                         color: hasItems
                             ? AppColors.nightSky
-                            : Colors.grey.shade400,
+                            : AppColors.textMutedLight,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -148,7 +148,7 @@ class _ActionChip extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

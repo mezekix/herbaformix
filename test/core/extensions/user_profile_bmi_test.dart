@@ -138,6 +138,7 @@ void main() {
         'profile.bmiFor() çağrılmaz (kullanıcı girdisi öncelikli)', () {
       final profile = _profile(height: 170);
       const double entryWeight = 70;
+      final double entryBmi = 99.99;
 
       final result = entryBmi ?? profile.bmiFor(entryWeight);
       expect(result, 99.99); // hesaplanan 24.22 degil, kullanicinin dedigi
@@ -146,7 +147,7 @@ void main() {
     test('userProfile null ise bmi null kalir (profil yokken patlamaz)', () {
       UserProfileModel? profile;
       const double entryWeight = 80;
-      const double? entryBmi = null;
+      double? entryBmi;
 
       final result = entryBmi ?? profile?.bmiFor(entryWeight);
       expect(result, isNull);

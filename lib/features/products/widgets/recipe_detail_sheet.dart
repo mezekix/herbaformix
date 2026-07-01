@@ -340,7 +340,7 @@ class RecipeDetailPage extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                   ],
@@ -378,7 +378,7 @@ class RecipeDetailPage extends StatelessWidget {
                         ing.name,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey.shade600,
+                          color: AppColors.grey600,
                         ),
                       ),
                     ),
@@ -402,7 +402,7 @@ class RecipeDetailPage extends StatelessWidget {
                               ing.note!,
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey.shade400,
+                                color: AppColors.textMutedLight,
                               ),
                             ),
                           ),

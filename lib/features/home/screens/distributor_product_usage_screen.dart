@@ -142,7 +142,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
             const SizedBox(height: 12),
             Text(
               'Kendi hedeflerini belirleyip ürün kullanımını takip ederek müşterilerine ilham verebilirsin. "Ürün ürünün sonucudur" felsefesini bugün başlat!',
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.5),
+              style: TextStyle(fontSize: 14, color: AppColors.grey600, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
@@ -278,7 +278,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
               color: isCompleted ? const Color(0xFFFFF7ED) : Colors.white,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: isCompleted ? const Color(0xFFF97316).withValues(alpha: 0.3) : Colors.grey.shade200,
+                color: isCompleted ? const Color(0xFFF97316).withValues(alpha: 0.3) : AppColors.backgroundMuted,
               ),
               boxShadow: [
                 BoxShadow(
@@ -329,7 +329,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
                               isCompleted ? 'Geri almak için dokun' : 'Tamamlamak için dokun',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade500,
+                                color: AppColors.textMuted,
                               ),
                             ),
                           ],
@@ -393,7 +393,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
                           const SizedBox(width: 4),
                           Text(
                             '/ ${goalL}L',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade500),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textMuted),
                           ),
                         ],
                       ),
@@ -704,7 +704,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
                                     const SizedBox(height: 2),
                                     Text(
                                       'Ürün Hazırlanışı ve Kullanımı',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                                     ),
                                   ],
                                 ),
@@ -717,7 +717,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
                             decoration: BoxDecoration(
                               color: const Color(0xFFF7F8F6),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade200),
+                              border: Border.all(color: AppColors.backgroundMuted),
                             ),
                             child: Text(
                               instruction,
@@ -795,7 +795,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
                   shape: BoxShape.circle,
                   color: isCompleted ? AppColors.primary : Colors.transparent,
                   border: Border.all(
-                    color: isCompleted ? AppColors.primary : Colors.grey.shade300,
+                    color: isCompleted ? AppColors.primary : AppColors.textMutedLighter,
                     width: 2,
                   ),
                 ),
@@ -809,10 +809,10 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: (isCompleted
-                          ? Colors.grey.shade100
+                          ? AppColors.backgroundMutedLight
                           : isNext
                               ? AppColors.primary.withValues(alpha: 0.1)
-                              : Colors.grey.shade100),
+                              : AppColors.backgroundMutedLight),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -821,10 +821,10 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     color: isCompleted
-                        ? Colors.grey.shade400
+                        ? AppColors.textMutedLight
                         : isNext
                             ? AppColors.primary
-                            : Colors.grey.shade600,
+                            : AppColors.grey600,
                   ),
                 ),
               ),
@@ -836,7 +836,7 @@ class _DistributorProductUsageScreenState extends State<DistributorProductUsageS
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: isCompleted ? Colors.grey.shade400 : AppColors.nightSky,
+                  color: isCompleted ? AppColors.textMutedLight : AppColors.nightSky,
                   decoration: isCompleted ? TextDecoration.lineThrough : null,
                 ),
                 maxLines: 1,

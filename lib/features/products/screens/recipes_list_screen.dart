@@ -118,14 +118,14 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Tarif veya malzeme ara...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
+                  hintStyle: TextStyle(color: AppColors.textMutedLight, fontSize: 14),
+                  prefixIcon: Icon(Icons.search, color: AppColors.textMutedLight),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
                           tooltip: 'Aramayı temizle',
-                          icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
+                          icon: const Icon(Icons.clear, size: 20, color: AppColors.textMuted),
                           onPressed: () => _searchController.clear(),
                         )
                       : null,
@@ -160,7 +160,7 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: isSelected ? AppColors.primary : Colors.grey.shade200,
+                        color: isSelected ? AppColors.primary : AppColors.backgroundMuted,
                       ),
                     ),
                     labelStyle: TextStyle(
@@ -184,11 +184,11 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.blender_outlined, size: 64, color: Colors.grey.shade300),
+                            Icon(Icons.blender_outlined, size: 64, color: AppColors.textMutedLighter),
                             const SizedBox(height: 16),
                             Text(
                               'Aradığınız kriterlere uygun tarif bulunamadı.',
-                              style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 15),
                             ),
                           ],
                         ),

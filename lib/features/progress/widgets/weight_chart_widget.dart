@@ -86,7 +86,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -124,7 +124,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: widget.isPrivacyMode ? Colors.grey.shade500 : changeColor,
+                color: widget.isPrivacyMode ? AppColors.textMuted : changeColor,
               ),
             ),
           const SizedBox(height: 16),
@@ -161,7 +161,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
                       'Hedef Kilo',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -184,7 +184,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
                       'Kalan',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -214,7 +214,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
                       'Son Ölçüm',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -237,7 +237,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
                       'Değişim',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: AppColors.textMuted,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -314,7 +314,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
           drawVerticalLine: false,
           horizontalInterval: (maxY - minY) / 3,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.grey.shade100,
+            color: AppColors.backgroundMutedLight,
             strokeWidth: 1,
           ),
         ),
@@ -328,7 +328,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
                 '${value.toStringAsFixed(0)} $unit',
                 style: TextStyle(
                   fontSize: 10,
-                  color: Colors.grey.shade500,
+                  color: AppColors.textMuted,
                 ),
               ),
             ),
@@ -349,7 +349,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
                     DateFormat('d MMM', 'tr_TR').format(entries[idx].date),
                     style: TextStyle(
                       fontSize: 10,
-                      color: Colors.grey.shade500,
+                      color: AppColors.textMuted,
                     ),
                   ),
                 );
@@ -463,21 +463,21 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
           Icon(
             Icons.show_chart,
             size: 40,
-            color: Colors.grey.shade300,
+            color: AppColors.textMutedLighter,
           ),
           const SizedBox(height: 8),
           Text(
             'Henüz yeterli veri yok',
             style: TextStyle(
               fontSize: 13,
-              color: Colors.grey.shade700,
+              color: AppColors.grey700,
             ),
           ),
           Text(
             'En az 2 ölçüm ekle',
             style: TextStyle(
               fontSize: 11,
-              color: Colors.grey.shade700,
+              color: AppColors.grey700,
             ),
           ),
         ],
@@ -489,7 +489,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: AppColors.backgroundMutedLight,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -530,7 +530,7 @@ class _WeightChartWidgetState extends State<WeightChartWidget> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: isActive ? AppColors.primary : Colors.grey.shade500,
+              color: isActive ? AppColors.primary : AppColors.textMuted,
             ),
           ),
         ),

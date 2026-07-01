@@ -167,9 +167,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final bgColor = isDark ? const Color(0xFF181e14) : stitchBackgroundLight;
     final cardColor = isDark ? const Color(0xFF181e14) : Colors.white;
     final inputBg = isDark ? const Color(0xFF1f261b) : Colors.white;
-    final borderColor = isDark ? Colors.grey[700]! : stitchBorder;
+    final borderColor = isDark ? AppColors.grey700 : stitchBorder;
     final textPrimary = isDark ? Colors.white : stitchTextPrimary;
-    final textSecondary = isDark ? Colors.grey[400]! : stitchTextSecondary;
+    final textSecondary = isDark ? AppColors.textMutedLight : stitchTextSecondary;
 
     return Scaffold(
       backgroundColor: bgColor,

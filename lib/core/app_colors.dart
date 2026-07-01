@@ -37,4 +37,16 @@ class AppColors {
   static const Color textSecondary = Color(0xFF575757); // rosemary'nin açığı gibi
   static const Color textOnPrimary = white;
   static const Color textOnSecondary = white;
+
+  // Muted Renkler (Gri tonları)
+  static const Color grey900 = Color(0xFF212121);
+  static const Color grey800 = Color(0xFF424242);
+  static const Color grey700 = Color(0xFF616161);
+  static const Color grey600 = Color(0xFF757575);
+  static const Color textMuted = Color(0xFF9E9E9E); // grey500, genel kullanım
+  static const Color textMutedLight = Color(0xFFBDBDBD); // grey400
+  static const Color textMutedLighter = Color(0xFFE0E0E0); // grey300
+  static const Color backgroundMuted = Color(0xFFEEEEEE); // grey200
+  static const Color backgroundMutedLight = Color(0xFFF5F5F5); // grey100
+  static const Color backgroundMutedLighter = Color(0xFFFAFAFA); // grey50
 }

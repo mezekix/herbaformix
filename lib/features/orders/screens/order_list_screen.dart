@@ -261,7 +261,7 @@ class OrderListScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: AppColors.backgroundMuted),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(10),

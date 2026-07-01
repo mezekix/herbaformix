@@ -212,9 +212,9 @@ class _StatusBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: AppColors.backgroundMutedLighter,
         border: Border(
-          bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+          bottom: BorderSide(color: AppColors.backgroundMuted, width: 1),
         ),
       ),
       child: Row(
@@ -224,7 +224,7 @@ class _StatusBar extends StatelessWidget {
                 ? Icons.check_circle
                 : Icons.cancel_outlined,
             label: customer.isActive ? 'Aktif Müşteri' : 'Pasif Müşteri',
-            color: customer.isActive ? Colors.green : Colors.grey,
+            color: customer.isActive ? Colors.green : AppColors.textMuted,
           ),
           const Spacer(),
           if (!hasLinkedUser)
@@ -249,26 +249,26 @@ class _StatusBar extends StatelessWidget {
   Widget _statusChip({
     required IconData icon,
     required String label,
-    required MaterialColor color,
+    required Color color,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.shade50,
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.shade200),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color.shade700),
+          Icon(icon, size: 14, color: color),
           const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: color.shade900,
+              color: color,
             ),
           ),
         ],
@@ -629,7 +629,7 @@ class _FollowUpTab extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Text(
                     'Henüz ölçüm kaydı yok.',
-                    style: TextStyle(color: Colors.grey.shade500),
+                    style: TextStyle(color: AppColors.textMuted),
                   ),
                 ),
               )
@@ -865,13 +865,13 @@ class _ProfileHealthTab extends StatelessWidget {
   }
 
   Widget _personalTile(BuildContext context, _DataTile tile) {
-    final accent = tile.highlight ? AppColors.primary : Colors.grey.shade700;
+    final accent = tile.highlight ? AppColors.primary : AppColors.grey700;
     final bg = tile.highlight
         ? AppColors.primary.withValues(alpha: 0.06)
-        : Colors.grey.shade50;
+        : AppColors.backgroundMutedLighter;
     final border = tile.highlight
         ? AppColors.primary.withValues(alpha: 0.25)
-        : Colors.grey.shade200;
+        : AppColors.backgroundMuted;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -901,7 +901,7 @@ class _ProfileHealthTab extends StatelessWidget {
                   tile.label,
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey.shade600,
+                    color: AppColors.grey600,
                     letterSpacing: 0.3,
                   ),
                 ),
@@ -969,7 +969,7 @@ class _ProfileHealthTab extends StatelessWidget {
 
   Widget _labeledBlock(String label, String value, IconData icon,
       {Color? color}) {
-    final iconColor = color ?? Colors.grey.shade700;
+    final iconColor = color ?? AppColors.grey700;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -997,7 +997,7 @@ class _ProfileHealthTab extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: Colors.grey.shade600),
+        Icon(icon, size: 18, color: AppColors.grey600),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -1007,7 +1007,7 @@ class _ProfileHealthTab extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey.shade600,
+                  color: AppColors.grey600,
                 ),
               ),
               const SizedBox(height: 2),
@@ -1368,9 +1368,9 @@ Widget _buildMetricCard(
     width: width ?? 150,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: Colors.grey.shade50,
+      color: AppColors.backgroundMutedLighter,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Colors.grey.shade200),
+      border: Border.all(color: AppColors.backgroundMuted),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1378,7 +1378,7 @@ Widget _buildMetricCard(
         Text(
           title,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade700,
+                color: AppColors.grey700,
               ),
         ),
         const SizedBox(height: 6),
@@ -1404,7 +1404,7 @@ Widget _buildChangeChip(String label, double? change, String unit) {
     children: [
       Text(
         label,
-        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+        style: TextStyle(fontSize: 11, color: AppColors.grey600),
       ),
       const SizedBox(height: 4),
       Text(
@@ -1430,7 +1430,7 @@ Widget _buildEntryRow(ProgressEntryModel entry) {
           width: 80,
           child: Text(
             DateFormat('dd.MM.yy').format(entry.date),
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, color: AppColors.grey600),
           ),
         ),
         Expanded(
@@ -1470,9 +1470,9 @@ Widget _entryChip(String text, IconData icon) {
   return Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, size: 12, color: Colors.grey.shade400),
+      Icon(icon, size: 12, color: AppColors.textMutedLight),
       const SizedBox(width: 2),
-      Text(text, style: TextStyle(fontSize: 11, color: Colors.grey.shade700)),
+      Text(text, style: TextStyle(fontSize: 11, color: AppColors.grey700)),
     ],
   );
 }
@@ -1611,7 +1611,7 @@ Widget _buildDistributorRequestCard(
                       '${profile.name ?? 'Müşteri'} distribütör olmak için başvuruda bulundu.',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade700,
+                        color: AppColors.grey700,
                       ),
                     ),
                   ],
@@ -2001,7 +2001,7 @@ class _MotivationMessageSheetState extends State<_MotivationMessageSheet> {
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
-                ?.copyWith(color: Colors.grey.shade700),
+                ?.copyWith(color: AppColors.grey700),
           ),
           const SizedBox(height: 16),
           if (_isLoadingExisting)

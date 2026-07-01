@@ -7,6 +7,7 @@ import '../../../models/customer_model.dart';
 import '../providers/customer_provider.dart';
 import './add_edit_customer_screen.dart';
 import './customer_detail_screen.dart';
+import 'package:herbaformix/core/app_colors.dart';
 
 class CustomerListScreen extends StatefulWidget {
   static const String routeName = '/customers';
@@ -149,7 +150,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                         EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       'Davet koduyla bağlı müşteri bulunmuyor.',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: AppColors.textMuted),
                     ),
                   )
                 else
@@ -174,7 +175,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                         EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     child: Text(
                       'Manuel eklenen müşteri bulunmuyor.',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: AppColors.textMuted),
                     ),
                   )
                 else
@@ -485,7 +486,7 @@ class _ConnectionBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: isInvite ? Colors.green.shade100 : Colors.grey.shade200,
+        color: isInvite ? Colors.green.shade100 : AppColors.backgroundMuted,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -493,7 +494,7 @@ class _ConnectionBadge extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: isInvite ? Colors.green.shade800 : Colors.grey.shade700,
+          color: isInvite ? Colors.green.shade800 : AppColors.grey700,
         ),
       ),
     );
