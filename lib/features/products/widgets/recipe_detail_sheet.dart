@@ -7,197 +7,320 @@ import '../../../../models/recipe_model.dart';
 
 /// Stitch tasarımına uygun tam ekran tarif detay sayfası.
 /// SliverAppBar ile parallax efektli hero görsel ve pinned başlık sunar.
-class RecipeDetailPage extends StatelessWidget {
+class RecipeDetailPage extends StatefulWidget {
   final RecipeModel recipe;
 
   const RecipeDetailPage({super.key, required this.recipe});
 
-  /// Hedef badge renk ve etiketini belirler.
-  static const _goalLabels = {
-    'weight_loss': 'Kilo Ver',
-    'weight_gain': 'Kilo Al',
-  };
+  @override
+  State<RecipeDetailPage> createState() => _RecipeDetailPageState();
+}
 
-  String get _goalLabel {
-    for (final entry in _goalLabels.entries) {
-      if (recipe.goals.contains(entry.key)) return entry.value;
-    }
-    return 'Sağlıklı Yaşam';
+class _RecipeDetailPageState extends State<RecipeDetailPage> {
+  late final ScrollController _scrollController;
+
+  RecipeModel get recipe => widget.recipe;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
   }
 
-  Color get _goalColor {
-    if (recipe.goals.contains('weight_loss')) return AppColors.grass;
-    if (recipe.goals.contains('weight_gain')) return Colors.blue;
-    return AppColors.primary;
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    const expandedHeight = 340.0;
+    final imageUrl = CloudinaryHelper.optimizeImage(recipe.imageUrl);
+    final hasVideo = recipe.videoUrl != null && recipe.videoUrl!.isNotEmpty;
+
     return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(context),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 20),
-                  // Süre, Kalori ve Hedef Badge
-                  _buildBadgeRow(),
-                  const SizedBox(height: 16),
-                  // Açıklama
-                  Text(
-                    recipe.description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                      height: 1.5,
-                    ),
+      backgroundColor: const Color(0xFFC4C4C4), // Gri arkaplan
+      body: Stack(
+        children: [
+          // 1. Arkaplan Resmi (Hero Görsel) - Scroll ile birlikte hareket eder (Parallax)
+          AnimatedBuilder(
+            animation: _scrollController,
+            builder: (context, child) {
+              final offset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+              return Positioned(
+                top: offset > 0 ? -offset : 0, // Parallax yerine normal hızda yukarı kaysın ve kaybolsun
+                left: 0,
+                right: 0,
+                height: expandedHeight + (offset < 0 ? -offset : 0), // Yukarı çekerken stretch efekti
+                child: child!,
+              );
+            },
+            child: _buildHeroBackground(hasVideo, imageUrl),
+          ),
+          
+          // 2. Kaydırılabilir İçerik
+          CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              _buildSliverAppBar(context),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.of(context).padding.bottom),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // İçerik ve alt dekorasyon
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Beyaz Kart
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(13),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24), // Altta 24px padding bıraktık
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Açıklama
+                                  Text(
+                                    recipe.description,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textSecondary,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 28),
+                                  // Besin Değerleri
+                                  if (recipe.nutritionInfo != null) ...[
+                                    _buildSectionTitle('💊', 'Besin Değerleri'),
+                                    const SizedBox(height: 12),
+                                    _buildNutritionGrid(),
+                                    const SizedBox(height: 28),
+                                  ],
+                                  // Malzemeler
+                                  _buildSectionTitle('🛒', 'Malzemeler'),
+                                  const SizedBox(height: 16),
+                                  _buildIngredientsList(),
+                                  const SizedBox(height: 28),
+                                  // Hazırlanış
+                                  _buildSectionTitle('📝', 'Hazırlanışı'),
+                                  const SizedBox(height: 16),
+                                  _buildStepsList(),
+                                  // İpucu
+                                  if (recipe.tips != null) ...[
+                                    const SizedBox(height: 24),
+                                    _buildTipBox(),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Alt Dekorasyon Barı (Beyaz kart bittikten hemen sonra, altında)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 24), // İçeriğe hizalı
+                            child: Container(
+                              width: 120,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary, // Primary color yapıldı
+                                borderRadius: BorderRadius.only(
+                                  bottomLeft: Radius.circular(4),
+                                  bottomRight: Radius.circular(4),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Sağ üstte beyaz karta yapışık sekme (tab)
+                      Positioned(
+                        right: 32, // Köşeden biraz içeride olsun (radius'a denk gelmesin)
+                        top: -22, // Kendi boyu kadar yukarıda olsun ki altı karta yapışsın
+                        child: Container(
+                          height: 22,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(8),
+                              topRight: Radius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            '${recipe.calories} kalori (${recipe.prepTimeMin} dk)',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 28),
-                  // Besin Değerleri
-                  if (recipe.nutritionInfo != null) ...[
-                    _buildSectionTitle('💊', 'Besin Değerleri'),
-                    const SizedBox(height: 12),
-                    _buildNutritionGrid(),
-                    const SizedBox(height: 28),
-                  ],
-                  // Malzemeler
-                  _buildSectionTitle('🛒', 'Malzemeler'),
-                  const SizedBox(height: 16),
-                  _buildIngredientsList(),
-                  const SizedBox(height: 28),
-                  // Hazırlanış
-                  _buildSectionTitle('📝', 'Hazırlanışı'),
-                  const SizedBox(height: 16),
-                  _buildStepsList(),
-                  const SizedBox(height: 20),
-                  // İpucu
-                  if (recipe.tips != null) ...[
-                    _buildTipBox(),
-                    const SizedBox(height: 24),
-                  ],
-                  // Alt boşluk (safe area)
-                  SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  /// SliverAppBar: Parallax efektli hero görsel, scroll ile daralan başlık.
-  Widget _buildSliverAppBar(BuildContext context) {
-    const expandedHeight = 340.0;
-    final imageUrl = CloudinaryHelper.optimizeImage(recipe.imageUrl);
-    final hasVideo = recipe.videoUrl != null && recipe.videoUrl!.isNotEmpty;
+  Widget _buildHeroBackground(bool hasVideo, String? imageUrl) {
+    if (hasVideo) {
+      return _RecipeVideoPlayer(
+        videoUrl: CloudinaryHelper.optimizeVideo(recipe.videoUrl!) ?? recipe.videoUrl!,
+        posterUrl: CloudinaryHelper.videoPoster(recipe.videoUrl!) ?? imageUrl,
+      );
+    } else if (imageUrl != null && imageUrl.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => Container(
+          color: AppColors.primary.withAlpha(25),
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+        errorWidget: (_, _, _) => Container(
+          color: AppColors.primary.withAlpha(25),
+          child: const Center(
+            child: Icon(Icons.blender, size: 64, color: AppColors.primary),
+          ),
+        ),
+      );
+    } else {
+      return Container(
+        color: AppColors.primary.withAlpha(25),
+        child: const Center(
+          child: Icon(Icons.blender, size: 64, color: AppColors.primary),
+        ),
+      );
+    }
+  }
 
+  /// SliverAppBar: Sadece başlık ve kavisli çizgiyi içerir. Arkaplan resmini Stack altından alır.
+  Widget _buildSliverAppBar(BuildContext context) {
+    const expandedHeight = 260.0; // Overlap'i artırmak için yüksekliği daha da kıstık (340 - 260 = 80px overlap)
+    
     return SliverAppBar(
       expandedHeight: expandedHeight,
       pinned: true,
       stretch: true,
-      backgroundColor: AppColors.primary,
+      backgroundColor: Colors.transparent, // Altındaki resmi göstermek için şeffaf
       foregroundColor: Colors.white,
       elevation: 0,
       leading: _buildCircularBackButton(context),
       title: null,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          // Daraltma oranı: 1.0 = tamamen açık, 0.0 = tamamen kapalı
           final top = constraints.biggest.height;
           final statusBarHeight = MediaQuery.of(context).padding.top;
           final minExtent = kToolbarHeight + statusBarHeight;
           final maxExtent = expandedHeight + statusBarHeight;
           final shrinkRatio = ((top - minExtent) / (maxExtent - minExtent)).clamp(0.0, 1.0);
           final isCollapsed = shrinkRatio < 0.15;
+          
+          // Kaydırdıkça Appbar'ın yeşil olmasını sağlayan opacity
+          final colorOpacity = (1.0 - shrinkRatio * 1.5).clamp(0.0, 1.0);
 
-          return FlexibleSpaceBar(
-            centerTitle: false,
-            titlePadding: const EdgeInsets.only(left: 56, bottom: 16, right: 16),
-            title: AnimatedOpacity(
-              opacity: isCollapsed ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: Text(
-                recipe.title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            background: Stack(
+          return Container(
+            color: AppColors.primary.withAlpha((colorOpacity * 255).toInt()),
+            child: Stack(
               fit: StackFit.expand,
               children: [
-                // Hero Görsel
-                if (hasVideo)
-                  _RecipeVideoPlayer(
-                    videoUrl: CloudinaryHelper.optimizeVideo(recipe.videoUrl!) ?? recipe.videoUrl!,
-                    posterUrl: CloudinaryHelper.videoPoster(recipe.videoUrl!) ?? imageUrl,
-                  )
-                else if (imageUrl != null && imageUrl.isNotEmpty)
-                  CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, _) => Container(
-                      color: AppColors.primary.withAlpha(25),
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-                    errorWidget: (_, _, _) => Container(
-                      color: AppColors.primary.withAlpha(25),
-                      child: const Center(
-                        child: Icon(Icons.blender, size: 64, color: AppColors.primary),
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    color: AppColors.primary.withAlpha(25),
-                    child: const Center(
-                      child: Icon(Icons.blender, size: 64, color: AppColors.primary),
-                    ),
-                  ),
-
-                // Resmin altında shake ismi (expanded durumda) - Ortalanmış
+                // Collapsed durumdaki küçük başlık
                 Positioned(
-                  left: 20,
-                  right: 20,
-                  bottom: 20,
+                  left: 56,
+                  bottom: 16,
+                  right: 16,
                   child: AnimatedOpacity(
-                    opacity: isCollapsed ? 0.0 : 1.0,
+                    opacity: isCollapsed ? 1.0 : 0.0,
                     duration: const Duration(milliseconds: 200),
                     child: Text(
                       recipe.title,
-                      textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 12,
-                            color: Colors.black54,
-                            offset: Offset(0, 2),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+
+                // Resmin altında shake ismi (expanded durumda) - Ortalanmış ve Kavisli Çizgili
+                Positioned(
+                  left: 32,
+                  right: 32,
+                  bottom: 32, // Yazıyı biraz daha yukarı aldık (kartla arasındaki mesafeyi korumak için)
+                  child: AnimatedOpacity(
+                    opacity: isCollapsed ? 0.0 : 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Center(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
+                          // Curved Line (Kavisli çizgi)
+                          Positioned(
+                            bottom: -4, // Yazıya yaklaştırıldı (eski değer -10)
+                            left: -12, // Dışarı taşması azaltıldı (eski değer -20)
+                            right: -12,
+                            child: Container(
+                              height: 16,
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(color: Colors.white, width: 2.5),
+                                  left: BorderSide(color: Colors.white, width: 2.5),
+                                  right: BorderSide(color: Colors.white, width: 2.5),
+                                ),
+                                borderRadius: BorderRadius.only(
+                                  bottomLeft: Radius.circular(16),
+                                  bottomRight: Radius.circular(16),
+                                ),
+                              ),
+                            ),
                           ),
-                          Shadow(
-                            blurRadius: 36,
-                            color: Colors.black45,
-                          ),
-                          Shadow(
-                            blurRadius: 60,
-                            color: Colors.black38,
+                          // Başlık Metni
+                          Text(
+                            recipe.title,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 16, // Font boyutu 16 yapıldı
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 0.5, // Harf aralığı daraltıldı
+                              shadows: [
+                                Shadow(
+                                  blurRadius: 8,
+                                  color: Colors.black87,
+                                  offset: Offset(0, 2),
+                                ),
+                                Shadow(
+                                  blurRadius: 24,
+                                  color: Colors.black45,
+                                ),
+                              ],
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -229,63 +352,7 @@ class RecipeDetailPage extends StatelessWidget {
     );
   }
 
-  /// Süre, kalori ve hedef badge satırı.
-  Widget _buildBadgeRow() {
-    return Row(
-      children: [
-        _buildInfoPill(Icons.timer_outlined, '${recipe.prepTimeMin} dk'),
-        const SizedBox(width: 8),
-        _buildInfoPill(Icons.local_fire_department_outlined, '${recipe.calories} kcal'),
-        const Spacer(),
-        _buildGoalBadge(_goalLabel, _goalColor),
-      ],
-    );
-  }
 
-  /// Yuvarlak köşeli bilgi pill badge.
-  Widget _buildInfoPill(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: AppColors.textSecondary),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Hedef badge (Kilo Al / Kilo Ver / Sağlıklı Yaşam).
-  Widget _buildGoalBadge(String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(128), width: 1.5),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
-      ),
-    );
-  }
 
   /// Bölüm başlığı (emoji + metin).
   Widget _buildSectionTitle(String emoji, String title) {
@@ -309,41 +376,45 @@ class RecipeDetailPage extends StatelessWidget {
   Widget _buildNutritionGrid() {
     final nutrition = recipe.nutritionInfo!;
     final items = [
-      _NutritionData('Protein', '${nutrition.protein}g'),
-      _NutritionData('Karb', '${nutrition.carbs}g'),
-      _NutritionData('Yağ', '${nutrition.fat}g'),
-      _NutritionData('Lif', '${nutrition.fiber}g'),
+      _NutritionData('PROTEİN', '${nutrition.protein}g'),
+      _NutritionData('KARB', '${nutrition.carbs}g'),
+      _NutritionData('YAĞ', '${nutrition.fat}g'),
+      _NutritionData('LİF', '${nutrition.fiber}g'),
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
+        color: const Color(0xFFF9F9F9), // bg-gray-50
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEEEEEE), width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: items
-            .map((item) => Column(
-                  children: [
-                    Text(
-                      item.value,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+            .map((item) => Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        item.value,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5CB85C), // label-green
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted,
+                      const SizedBox(height: 4),
+                      Text(
+                        item.label,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF9E9E9E), // text-gray-400
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ))
             .toList(),
       ),
@@ -357,18 +428,15 @@ class RecipeDetailPage extends StatelessWidget {
           .map((ing) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Yeşil bullet
-                    const Padding(
-                      padding: EdgeInsets.only(top: 2),
-                      child: Text(
-                        '•',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF5CB85C), // green-500
+                        shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -376,9 +444,9 @@ class RecipeDetailPage extends StatelessWidget {
                     Expanded(
                       child: Text(
                         ing.name,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 14,
-                          color: AppColors.grey600,
+                          color: Color(0xFF424242), // text-gray-700
                         ),
                       ),
                     ),
@@ -386,6 +454,7 @@ class RecipeDetailPage extends StatelessWidget {
                     // Miktar + not
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           ing.amount,
@@ -395,15 +464,12 @@ class RecipeDetailPage extends StatelessWidget {
                             color: AppColors.textPrimary,
                           ),
                         ),
-                        if (ing.note != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              ing.note!,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: AppColors.textMutedLight,
-                              ),
+                        if (ing.note != null && ing.note!.isNotEmpty)
+                          Text(
+                            ing.note!,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textMuted,
                             ),
                           ),
                       ],
@@ -425,10 +491,10 @@ class RecipeDetailPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 22,
-                height: 22,
+                width: 24,
+                height: 24,
                 decoration: const BoxDecoration(
-                  color: AppColors.primary,
+                  color: Color(0xFF5CB85C), // label-green
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -436,7 +502,7 @@ class RecipeDetailPage extends StatelessWidget {
                   '${entry.key + 1}',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -449,7 +515,7 @@ class RecipeDetailPage extends StatelessWidget {
                     entry.value,
                     style: const TextStyle(
                       fontSize: 14,
-                      color: AppColors.textSecondary,
+                      color: Color(0xFF575757), // text-gray-600
                       height: 1.4,
                     ),
                   ),
@@ -467,9 +533,9 @@ class RecipeDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
+        color: const Color(0xFFFFFDF9), // Çok hafif turuncu
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.shade200),
+        border: Border.all(color: const Color(0xFFFFE0B2)), // border-orange-100
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,21 +546,21 @@ class RecipeDetailPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'İpucu',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    color: Colors.orange.shade400,
+                    color: Color(0xFFF57C00), // orange-600/500
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   recipe.tips!,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
-                    color: Colors.orange.shade400,
-                    height: 1.5,
+                    color: Color(0xFFE65100),
+                    height: 1.4,
                   ),
                 ),
               ],

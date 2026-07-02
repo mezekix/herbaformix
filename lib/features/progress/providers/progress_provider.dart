@@ -21,6 +21,10 @@ class ProgressProvider with ChangeNotifier {
   String? _errorMessage;
   StreamSubscription<List<ProgressEntryModel>>? _entriesSubscription;
   bool _isPrivacyMode = false;
+  
+  // İlk veri geldiğinde rozet kontrolü yapıldı mı?
+  // startListening her çağrıldığında reset edilir.
+  bool _initialBadgeCheckDone = false;
 
   // Yeni kazanılan rozetler için callback
   static Function(String badgeId)? onBadgeEarned;
@@ -174,20 +178,32 @@ class ProgressProvider with ChangeNotifier {
   // ── Veri yükleme ──────────────────────────────────────────────────────────
 
   /// Kullanıcının ilerleme kayıtlarını Firestore'dan dinlemeye başlar.
+  /// 
+  /// İlk veri geldiğinde mevcut duruma göre rozet kontrolü yapılır.
+  /// Bu sayede kullanıcı "Gelişim" sekmesini açtığında kazanılmış ama
+  /// henüz bildirilmemiş rozetler tespit edilip bildirim gösterilir.
   void startListening(String userId, UserProfileModel? userProfile) {
     _earnedBadgeIds = List<String>.from(userProfile?.earnedBadges ?? []);
     _isLoading = true;
+    _initialBadgeCheckDone = false; // Her yeni dinlemede rozet kontrolünü sıfırla
     notifyListeners();
 
     _entriesSubscription?.cancel();
     _entriesSubscription = _firestoreService
         .getProgressEntries(userId, limitDays: 90)
         .listen(
-          (entries) {
+          (entries) async {
             _entries = entries;
             _isLoading = false;
             _errorMessage = null;
             notifyListeners();
+            
+            // İlk veri geldiğinde mevcut duruma göre rozet kontrolü yap
+            // Bu, kullanıcının daha önce kazandığı ama bildirilmemiş rozetleri tespit eder
+            if (!_initialBadgeCheckDone && entries.isNotEmpty) {
+              _initialBadgeCheckDone = true;
+              await _checkAndAwardBadges(userId, userProfile);
+            }
           },
           onError: (e) {
             _isLoading = false;
@@ -201,6 +217,7 @@ class ProgressProvider with ChangeNotifier {
   void stopListening() {
     _entriesSubscription?.cancel();
     _entriesSubscription = null;
+    _initialBadgeCheckDone = false;
   }
 
   // ── CRUD ──────────────────────────────────────────────────────────────────

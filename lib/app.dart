@@ -259,6 +259,11 @@ class _AppState extends State<App> {
           ),
         ),
 
+        cardTheme: const CardThemeData(
+          color: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+        ),
+
         dialogTheme: const DialogThemeData(
           backgroundColor: AppColors.background,
           surfaceTintColor: Colors.transparent,

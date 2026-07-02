@@ -99,38 +99,51 @@ class FoodEstimationService {
       throw const FoodEstimationException('Lütfen bir yemek adı yaz.');
     }
 
-    try {
-      final model = _ensureModel();
-      final response = await model
-          .generateContent([Content.text(query)])
-          .timeout(const Duration(seconds: 20));
+    int attempt = 0;
+    const maxRetries = 3;
+    final model = _ensureModel();
 
-      final text = response.text;
-      if (text == null || text.trim().isEmpty) {
-        throw const FoodEstimationException(
-          'Yapay zekadan boş yanıt geldi. Tekrar dene.',
-        );
+    while (attempt < maxRetries) {
+      try {
+        final response = await model
+            .generateContent([Content.text(query)])
+            .timeout(const Duration(seconds: 20));
+
+        final text = response.text;
+        if (text == null || text.trim().isEmpty) {
+          throw const FoodEstimationException(
+            'Yapay zekadan boş yanıt geldi. Tekrar dene.',
+          );
+        }
+
+        final json = jsonDecode(text) as Map<String, dynamic>;
+        final estimate = FoodEstimate.fromJson(json);
+
+        if (estimate.calories <= 0 ||
+            estimate.name.toLowerCase().contains('bilinmiyor')) {
+          throw const FoodEstimationException(
+            'Bu yemek tanınamadı. Yemeği farklı ifade etmeyi dene veya elle ekle.',
+          );
+        }
+
+        return estimate;
+      } on FoodEstimationException {
+        // Beklenen/iş mantığı hatalarını (Yemek tanınmadı vb.) tekrar denemeye gerek yok.
+        rethrow;
+      } catch (e) {
+        attempt++;
+        if (attempt >= maxRetries) {
+          AppLogger.error('[FoodEstimationService] hata (retry failed): $e', tag: 'FoodEstimationService', error: e);
+          throw FoodEstimationException(
+            'Tahmin başarısız (Ağ veya sunucu hatası olabilir). Lütfen tekrar deneyin.',
+          );
+        }
+        AppLogger.warning('[FoodEstimationService] hata: $e, retry $attempt/$maxRetries', tag: 'FoodEstimationService');
+        await Future.delayed(Duration(seconds: 2 * attempt)); // Exponential-ish backoff
       }
-
-      final json = jsonDecode(text) as Map<String, dynamic>;
-      final estimate = FoodEstimate.fromJson(json);
-
-      if (estimate.calories <= 0 ||
-          estimate.name.toLowerCase().contains('bilinmiyor')) {
-        throw const FoodEstimationException(
-          'Bu yemek tanınamadı. Yemeği farklı ifade etmeyi dene veya elle ekle.',
-        );
-      }
-
-      return estimate;
-    } on FoodEstimationException {
-      rethrow;
-    } catch (e) {
-      AppLogger.error('[FoodEstimationService] hata: $e', tag: 'FoodEstimationService', error: e);
-      throw FoodEstimationException(
-        'Tahmin başarısız: ${e.toString().replaceFirst('Exception: ', '')}',
-      );
     }
+    
+    throw const FoodEstimationException('Beklenmeyen hata oluştu.');
   }
 }
 

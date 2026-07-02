@@ -130,7 +130,7 @@ class UserProfileRepository {
   /// Cihazın güncel FCM token'ını kullanıcı profiline yazar.
   /// Token boş geçilirse alan siler (kullanıcı çıkış yaptığında).
   Future<void> setFcmToken(String userId, String? token) async {
-    if (token == null) {
+    if (token == null || token.isEmpty) {
       await ref.doc(userId).update({
         'fcmToken': FieldValue.delete(),
         'fcmTokenUpdatedAt': FieldValue.delete(),

@@ -8,10 +8,8 @@ import 'package:provider/provider.dart';
 
 import '../../../../core/app_colors.dart';
 import '../../../../core/avatar_color_helper.dart';
-import '../../../../models/customer_model.dart';
 import '../../../../models/user_profile_model.dart';
 import '../../../auth/providers/auth_provider.dart';
-import '../../../customers/providers/customer_provider.dart';
 
 import '../../../products/providers/product_provider.dart';
 import '../../../products/providers/recipe_provider.dart';
@@ -1494,22 +1492,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
 
   /// Follow-up'ı tamamlanmış olarak işaretler.
 
-  /// Follow-up customerId'sine karşılık gelen CustomerModel'i provider
-  /// listesinden çözer. Bulunmazsa null döner (silinmiş müşteri).
-  CustomerModel? _resolveFollowUpCustomer(
-    CustomerProvider provider,
-    String customerId,
-  ) {
-    try {
-      return provider.customers.firstWhere(
-        (c) =>
-            c.id == customerId ||
-            (c.linkedUserId != null && c.linkedUserId == customerId),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
+
 
 
   /// Tek bir kritik aksiyon satırı: üstte avatar + müşteri + görev,

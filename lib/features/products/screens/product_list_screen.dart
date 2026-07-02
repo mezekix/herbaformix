@@ -307,13 +307,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
                               _filterProducts();
                             });
                           },
-                          selectedColor: Theme.of(
-                            context,
-                          ).primaryColor.withAlpha(204),
+                          selectedColor: AppColors.primary.withAlpha(204),
                           labelStyle: TextStyle(
                             color: _selectedCategory == category
                                 ? Colors.white
-                                : Theme.of(context).textTheme.bodyLarge?.color,
+                                : AppColors.textSecondary,
                             fontWeight: FontWeight.w600,
                           ),
                           checkmarkColor: Colors.white,
@@ -395,14 +393,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ),
         title: Text(
           product.name,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
+            color: AppColors.textPrimary,
           ),
         ),
         subtitle: Text(
           'Fiyat: ${(product.price ?? 0).toStringAsFixed(2)} ₺',
-          style: TextStyle(color: Theme.of(context).primaryColor),
+          style: const TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -497,10 +498,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 children: [
                   Text(
                     '${product.name}\n',
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: AppColors.textPrimary,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -511,8 +512,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     children: [
                       Text(
                         '${(product.price ?? 0).toStringAsFixed(2)} ₺',
-                        style: TextStyle(
-                          color: Theme.of(context).primaryColor,
+                        style: const TextStyle(
+                          color: AppColors.primary,
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),

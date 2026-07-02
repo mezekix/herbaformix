@@ -1,5 +1,6 @@
 // UserProfileRepository — fake_cloud_firestore ile CRUD testleri
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herbaformix/models/user_profile_model.dart';
@@ -158,7 +159,7 @@ void main() {
 
         final doc = await fake.collection('userProfiles').doc('cust_1').get();
         expect(doc.data()?['fcmToken'], 'token_abc');
-        expect(doc.data()?['fcmTokenUpdatedAt'], isA<int>());
+        expect(doc.data()?['fcmTokenUpdatedAt'], isA<Timestamp>());
       });
 
       test('null geçilirse alanları siler', () async {

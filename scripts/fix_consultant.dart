@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:io';
 
 void main() {
@@ -12,9 +13,7 @@ void main() {
     // Let me just replace the whole method!
   );
 
-  final originalString = "final message = '\$greeting\\nMüsait olduğunda kısaca konuşabilir miyiz?';";
-  final fixedString = "final message = '\$greeting\\nMüsait olduğunda kısaca konuşabilir miyiz?';"; // Wait, in dart if it's on two lines, it's syntax error.
-  
+
   content = content.replaceAll(
     "final message = '\$greeting\\n", 
     "final message = '\$greeting\\\\n"

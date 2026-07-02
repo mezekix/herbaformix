@@ -394,9 +394,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
             const SizedBox(height: 8),
             Text(
               product.name,
-              style: TextStyle(
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+                color: AppColors.textPrimary,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

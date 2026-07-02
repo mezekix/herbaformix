@@ -21,7 +21,7 @@ Danışanların kişisel sağlık hedeflerine ulaşırken eğlenceli ve oyunlaş
 |---|---|---|
 | Toplam Dart dosyası (`lib/`) | 138 | |
 | Toplam Dart kodu | ~470 KB | (dosya toplamı) |
-| En büyük dosya | `home_screen.dart` ~123 KB / ~3200 satır | 🚨 Bölünmeli (P6) |
+| En büyük dosya | `customer_dashboard_view.dart` ~81 KB / ~2100 satır | 🚨 Kısmen bölündü ama hala büyük (P6.1) |
 | Ortalama dosya boyutu | ~3.4 KB | sağlıklı |
 | Test dosyası sayısı | 14 | models + repositories + providers + utils + widgets |
 | Passing test | **187** | `flutter test --no-pub` ✅ 10 sn |
@@ -64,6 +64,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | **P3.14 — AI & Gemini Entegrasyonu** | `49631c0` | `FoodEstimationService` ile Gemini Flash tabanlı yemek & kalori tahmini entegre edildi. |
 | **P3.15 — Medya & Cloudinary** | `49631c0` | `CloudinaryHelper` ile görsel/video optimizasyonları ve Stitch formatlı yemek tarifleri UI bitti. |
 | **P3.16 — GDPR Hesap Silme** | `654726a` | Firestore'da hesabı silinen kullanıcının tüm alt koleksiyonlarının temizlenme mantığı yazıldı. |
+| **P3.17 — Güvenlik ve Temizlik** | `YENI` | Firestore yetki yükseltme (privilege escalation) açığı kapatıldı. Kullanılmayan fonksiyonlar (`_resolveFollowUpCustomer` vb.) ve ölü test blokları temizlendi. Testler onarıldı. |
 
 ---
 

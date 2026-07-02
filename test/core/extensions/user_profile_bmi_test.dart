@@ -6,6 +6,7 @@
 //   - bmiFor(w) → verilen kilo ile hesaplar
 //   - Sonuç 2 ondalık basamağa yuvarlanır (kg/m² tipik klinik kesinlik)
 
+// ignore_for_file: dead_null_aware_expression, dead_code
 import 'package:flutter_test/flutter_test.dart';
 import 'package:herbaformix/core/extensions/user_profile_bmi.dart';
 import 'package:herbaformix/models/user_profile_model.dart';
@@ -138,18 +139,16 @@ void main() {
         'profile.bmiFor() çağrılmaz (kullanıcı girdisi öncelikli)', () {
       final profile = _profile(height: 170);
       const double entryWeight = 70;
-      final double entryBmi = 99.99;
-
+      double? entryBmi = [99.99].first;
       final result = entryBmi ?? profile.bmiFor(entryWeight);
       expect(result, 99.99); // hesaplanan 24.22 degil, kullanicinin dedigi
     });
 
     test('userProfile null ise bmi null kalir (profil yokken patlamaz)', () {
-      UserProfileModel? profile;
+      UserProfileModel? profile = [null].cast<UserProfileModel?>().first;
       const double entryWeight = 80;
-      double? entryBmi;
 
-      final result = entryBmi ?? profile?.bmiFor(entryWeight);
+      final result = profile?.bmiFor(entryWeight);
       expect(result, isNull);
     });
   });

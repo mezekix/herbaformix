@@ -109,7 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  DateTime? _lastAnonymousLoginAttempt;
+
   Future<void> _submitAnonymousSignIn() async {
+    if (_isLoading) return;
+
+    final now = DateTime.now();
+    if (_lastAnonymousLoginAttempt != null && now.difference(_lastAnonymousLoginAttempt!).inSeconds < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Çok fazla istek. Lütfen biraz bekleyin.')),
+      );
+      return;
+    }
+    _lastAnonymousLoginAttempt = now;
+
     setState(() {
       _isLoading = true;
     });
