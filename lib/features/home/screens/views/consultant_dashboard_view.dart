@@ -1,38 +1,31 @@
-
-import '../../../orders/screens/order_list_screen.dart';
-import '../../../profile/screens/profile_screen.dart';
-import '../../../customers/screens/customer_detail_screen.dart';
-
-import '../../../../models/customer_model.dart';
-
-import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../core/app_colors.dart';
 import '../../../../core/avatar_color_helper.dart';
+import '../../../../core/utils/whatsapp_helper.dart';
+import '../../../../models/customer_model.dart';
+import '../../../../models/scheduled_follow_up_model.dart';
 import '../../../../models/user_profile_model.dart';
+import '../../../../services/firestore_service.dart';
 import '../../../auth/providers/auth_provider.dart';
-import '../../../orders/providers/order_provider.dart';
 import '../../../customers/providers/customer_provider.dart';
-import '../../../products/providers/product_provider.dart';
-import '../../providers/home_provider.dart';
-
-
-
-import '../../../orders/screens/add_edit_order_screen.dart';
 import '../../../customers/screens/add_edit_customer_screen.dart';
-
-
-import '../../widgets/vp_pulse_card.dart';
-import '../../widgets/today_actions_strip.dart';
+import '../../../customers/screens/customer_detail_screen.dart';
+import '../../../customers/screens/customer_list_screen.dart';
+import '../../../orders/providers/order_provider.dart';
+import '../../../orders/screens/add_edit_order_screen.dart';
+import '../../../orders/screens/order_list_screen.dart';
+import '../../../products/providers/product_provider.dart';
+import '../../../profile/screens/profile_screen.dart';
+import '../../providers/home_provider.dart';
+import '../../widgets/critical_actions_states.dart';
 import '../../widgets/customer_pipeline_bar.dart';
 import '../../widgets/recent_activity_feed.dart';
-import '../../../../models/scheduled_follow_up_model.dart';
-import '../../../../services/firestore_service.dart';
-import '../../../../core/utils/whatsapp_helper.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../widgets/critical_actions_states.dart';
-import '../../../customers/screens/customer_list_screen.dart';
+import '../../widgets/today_actions_strip.dart';
+import '../../widgets/vp_pulse_card.dart';
 
 class ConsultantDashboardView extends StatefulWidget {
   final UserProfileModel? userProfile;
@@ -49,14 +42,14 @@ class ConsultantDashboardView extends StatefulWidget {
   });
 
   @override
-  State<ConsultantDashboardView> createState() => _ConsultantDashboardViewState();
+  State<ConsultantDashboardView> createState() =>
+      _ConsultantDashboardViewState();
 }
 
 class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
   // We can just paste the extracted methods here, but we need to remove the method signature of _buildConsultantDashboard
   // and put its body inside the build() method!
 
-  
   Future<int>? _riskCountFuture;
 
   @override
@@ -80,7 +73,15 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
 
     // Paste original _buildConsultantDashboard body here
     // Wait, the original _buildConsultantDashboard has its own parameters. Let's just create a dummy method for it and call it from build.
-    return _buildConsultantDashboard(context, userProfile, authProvider, orderProvider, customerProvider, productProvider, homeProvider);
+    return _buildConsultantDashboard(
+      context,
+      userProfile,
+      authProvider,
+      orderProvider,
+      customerProvider,
+      productProvider,
+      homeProvider,
+    );
   }
 
   Widget _buildConsultantDashboard(
@@ -101,91 +102,99 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const SizedBox(height: 16),
-          VpPulseCard(
-            vpEarned: vpEarnedThisMonth,
-            vpTarget: monthlyVPTarget,
-            onTap: () => context.goNamed(OrderListScreen.routeName.substring(1)),
-            onSetTarget: () => context.goNamed(ProfileScreen.routeName),
-          ),
-          const SizedBox(height: 16),
-          TodayActionsStrip(
-            dueTodayCount: homeProvider.dueTodayCount,
-            overdueCount: homeProvider.overdueCount,
-            pendingOrdersCount: orderProvider.pendingOrdersCount,
-            onDueTodayTap: () =>
-                homeProvider.setFilter(ActionFilter.all),
-            onOverdueTap: () =>
-                homeProvider.setFilter(ActionFilter.overdue),
-            onPendingOrdersTap: () =>
-                context.goNamed(OrderListScreen.routeName.substring(1)),
-          ),
-          const SizedBox(height: 16),
-          FutureBuilder<int>(
-            future: _riskCountFuture,
-            builder: (context, snapshot) {
-              return CustomerPipelineBar(
-                newCount: customerProvider.newCustomersCount,
-                activeCount: customerProvider.activeCustomersCount,
-                riskCount: snapshot.connectionState == ConnectionState.waiting
-                    ? null
-                    : (snapshot.data ?? 0),
-                passiveCount: customerProvider.passiveCustomersCount,
-                onNewTap: () => widget.onShowRecentActivations(),
-                onActiveTap: () =>
-                    context.goNamed(CustomerListScreen.routeName.substring(1)),
-                onRiskTap: () =>
-                    context.goNamed(CustomerListScreen.routeName.substring(1)),
-                onPassiveTap: () =>
-                    context.goNamed(CustomerListScreen.routeName.substring(1)),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              'Kritik Aksiyonlar',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.nightSky,
-                  ),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const SizedBox(height: 16),
+            VpPulseCard(
+              vpEarned: vpEarnedThisMonth,
+              vpTarget: monthlyVPTarget,
+              onTap: () =>
+                  context.goNamed(OrderListScreen.routeName.substring(1)),
+              onSetTarget: () => context.goNamed(ProfileScreen.routeName),
             ),
-          ),
-          const SizedBox(height: 8),
-          _buildActionFilters(context),
-          const SizedBox(height: 12),
-          _buildStitchKritikAksiyonlarList(context, homeProvider, customerProvider),
-          const SizedBox(height: 24),
-          RecentActivityFeed(
-            orders: orderProvider.orders,
-            customers: customerProvider.customers,
-          ),
-          const SizedBox(height: 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              'Hızlı İşlemler',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.nightSky,
-                  ),
+            const SizedBox(height: 16),
+            TodayActionsStrip(
+              dueTodayCount: homeProvider.dueTodayCount,
+              overdueCount: homeProvider.overdueCount,
+              pendingOrdersCount: orderProvider.pendingOrdersCount,
+              onDueTodayTap: () => homeProvider.setFilter(ActionFilter.all),
+              onOverdueTap: () => homeProvider.setFilter(ActionFilter.overdue),
+              onPendingOrdersTap: () =>
+                  context.goNamed(OrderListScreen.routeName.substring(1)),
             ),
-          ),
-          const SizedBox(height: 12),
-          _buildStitchQuickActions(context),
-          const SizedBox(height: 80), // Fab için alt boşluk
-        ],
-      ),
+            const SizedBox(height: 16),
+            FutureBuilder<int>(
+              future: _riskCountFuture,
+              builder: (context, snapshot) {
+                return CustomerPipelineBar(
+                  newCount: customerProvider.newCustomersCount,
+                  activeCount: customerProvider.activeCustomersCount,
+                  riskCount: snapshot.connectionState == ConnectionState.waiting
+                      ? null
+                      : (snapshot.data ?? 0),
+                  passiveCount: customerProvider.passiveCustomersCount,
+                  onNewTap: () => widget.onShowRecentActivations(),
+                  onActiveTap: () => context.goNamed(
+                    CustomerListScreen.routeName.substring(1),
+                  ),
+                  onRiskTap: () => context.goNamed(
+                    CustomerListScreen.routeName.substring(1),
+                  ),
+                  onPassiveTap: () => context.goNamed(
+                    CustomerListScreen.routeName.substring(1),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Kritik Aksiyonlar',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.nightSky,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildActionFilters(context),
+            const SizedBox(height: 12),
+            _buildStitchKritikAksiyonlarList(
+              context,
+              homeProvider,
+              customerProvider,
+            ),
+            const SizedBox(height: 24),
+            RecentActivityFeed(
+              orders: orderProvider.orders,
+              customers: customerProvider.customers,
+            ),
+            const SizedBox(height: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'Hızlı İşlemler',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.nightSky,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildStitchQuickActions(context),
+            const SizedBox(height: 80), // Fab için alt boşluk
+          ],
+        ),
       ),
     );
   }
 
   /// Pull-to-refresh: müşterileri, siparişleri ve risk sayımını yeniden
   /// çeker. Follow-up'lar zaten stream tabanlı, otomatik güncel.
-  Future<void> _refreshConsultantDashboard(UserProfileModel? userProfile) async {
+  Future<void> _refreshConsultantDashboard(
+    UserProfileModel? userProfile,
+  ) async {
     final userId = userProfile?.id;
     if (userId == null || userId.isEmpty) return;
 
@@ -194,17 +203,16 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
     context.read<OrderProvider>().fetchOrders(userId);
 
     setState(() {
-      _riskCountFuture =
-          context.read<FirestoreService>().getAtRiskCustomerCount(userId);
+      _riskCountFuture = context
+          .read<FirestoreService>()
+          .getAtRiskCustomerCount(userId);
     });
 
     // Kısa bir gecikme — kullanıcı yenilemenin gerçekleştiğini hissetsin.
     await Future<void>.delayed(const Duration(milliseconds: 400));
   }
 
-
   /// Egzersiz tamamla/geri al toggle kartı
-
 
   /// Tüm öğünler tamamlandığında gösterilen tebrik içeriği
 
@@ -284,7 +292,9 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
         child: Container(
           margin: const EdgeInsets.all(3),
           decoration: BoxDecoration(
-            color: isActive ? activeColor.withValues(alpha: 0.1) : Colors.transparent,
+            color: isActive
+                ? activeColor.withValues(alpha: 0.1)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
           alignment: Alignment.center,
@@ -329,11 +339,7 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
   }
 
   Widget _buildFilterDivider() {
-    return Container(
-      width: 1,
-      height: 20,
-      color: AppColors.backgroundMuted,
-    );
+    return Container(width: 1, height: 20, color: AppColors.backgroundMuted);
   }
 
   // ───── Kritik Aksiyon satır eylemleri ─────────────────────────────────
@@ -357,15 +363,15 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
     try {
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Arama başlatılamadı.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Arama başlatılamadı.')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Arama hatası: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Arama hatası: $e')));
       }
     }
   }
@@ -400,15 +406,15 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
     try {
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('WhatsApp açılamadı.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('WhatsApp açılamadı.')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('WhatsApp hatası: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('WhatsApp hatası: $e')));
       }
     }
   }
@@ -432,16 +438,18 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
             onPressed: () async {
               try {
                 await firestore.snoozeScheduledFollowUp(task.id, originalDate);
-              } catch (_) {/* sessiz */}
+              } catch (_) {
+                /* sessiz */
+              }
             },
           ),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erteleme hatası: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erteleme hatası: $e')));
     }
   }
 
@@ -451,27 +459,39 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
     ScheduledFollowUpModel task,
   ) async {
     final firestore = context.read<FirestoreService>();
+    // ScaffoldMessenger'ı önceden al (async işlem sonrası context değişebilir)
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
+      // Önceki SnackBar'ları temizle (birikmesini önle)
+      scaffoldMessenger.clearSnackBars();
       await firestore.markScheduledFollowUpAsCompleted(task.id);
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: const Text('Takip tamamlandı.'),
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 3),
           action: SnackBarAction(
             label: 'Geri al',
             onPressed: () async {
               try {
-                await firestore.scheduledFollowUpsRef().doc(task.id).update({'isCompleted': false});
-              } catch (_) {/* sessiz */}
+                await firestore.scheduledFollowUpsRef().doc(task.id).update({
+                  'isCompleted': false,
+                });
+              } catch (_) {
+                /* sessiz */
+              }
             },
           ),
         ),
       );
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tamamlama hatası: $e')),
+      scaffoldMessenger.clearSnackBars();
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Tamamlama hatası: $e'),
+          duration: const Duration(seconds: 3),
+        ),
       );
     }
   }
@@ -493,7 +513,11 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
     }
   }
 
-  Widget _buildStitchKritikAksiyonlarList(BuildContext context, HomeProvider provider, CustomerProvider customerProvider) {
+  Widget _buildStitchKritikAksiyonlarList(
+    BuildContext context,
+    HomeProvider provider,
+    CustomerProvider customerProvider,
+  ) {
     if (provider.isLoading) return const CriticalActionsSkeleton();
 
     final customerCounts = <String, int>{};
@@ -530,9 +554,11 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
   ) {
     final isOverdue = task.dueDate.toDate().isBefore(DateTime.now());
     final color = isOverdue ? AppColors.papaya : AppColors.laguna;
-    final customer = _resolveFollowUpCustomer(customerProvider, task.customerId);
-    final hasPhone =
-        customer != null && customer.phoneNumber.trim().isNotEmpty;
+    final customer = _resolveFollowUpCustomer(
+      customerProvider,
+      task.customerId,
+    );
+    final hasPhone = customer != null && customer.phoneNumber.trim().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -553,7 +579,8 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: () {
-            final target = customer ??
+            final target =
+                customer ??
                 CustomerModel(
                   id: task.customerId,
                   consultantId: '',
@@ -564,7 +591,7 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
                   isActive: false,
                   notes: 'Bu müşteri kaydı silinmiş veya erişilemiyor.',
                 );
-            context.goNamed(CustomerDetailScreen.routeName, extra: target);
+            context.pushNamed(CustomerDetailScreen.routeName, extra: target);
           },
           child: Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 12, 10),
@@ -597,9 +624,7 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            isOverdue
-                                ? 'Gecikmiş: ${task.title}'
-                                : task.title,
+                            isOverdue ? 'Gecikmiş: ${task.title}' : task.title,
                             style: TextStyle(
                               color: color,
                               fontSize: 12,
@@ -638,8 +663,8 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
                         label: 'WhatsApp',
                         color: AppColors.grass,
                         enabled: hasPhone,
-                        onTap: () => _whatsAppFollowUpCustomer(
-                            context, customer, task),
+                        onTap: () =>
+                            _whatsAppFollowUpCustomer(context, customer, task),
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -692,7 +717,8 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
             icon: Icons.people_alt_outlined,
             label: 'Müşterilerim',
             color: AppColors.lake,
-            onTap: () => context.goNamed(CustomerListScreen.routeName.substring(1)),
+            onTap: () =>
+                context.goNamed(CustomerListScreen.routeName.substring(1)),
           ),
         ],
       ),
@@ -750,7 +776,6 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
     );
   }
 
-
   Widget _buildQuickActionCard(
     BuildContext context, {
     required IconData icon,
@@ -766,7 +791,11 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
@@ -800,8 +829,10 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
     String lastName,
     String customerId,
   ) {
-    final fullName = ' '.trim();
-    final initials = fullName.split(' ').take(2)
+    final fullName = '$firstName $lastName'.trim();
+    final initials = fullName
+        .split(' ')
+        .take(2)
         .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
         .join();
     final bgColor = AvatarColorHelper.forUser(customerId);

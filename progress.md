@@ -1201,6 +1201,8 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 - [ ] Periyodik ölçüm hatırlatması ("Son ölçümünüzün üzerinden 7 gün geçti")
 - [ ] Distribütör randevu sistemi (danışan ile görüşme planla)
 - [ ] Akıllı hatırlatıcı optimizasyonu (kullanıcının aktif olduğu saatlere göre)
+- [ ] Müşteri takip bildirimleri (takip zamanı geldiğinde push bildirim — FCM altyapısı mevcut)
+- [ ] Toplu takip işlemleri (birden fazla takibi seçip toplu silme/tamamlama/erteleme)
 
 ### 🌍 Diğer
 - [ ] Distribütör arası müşteri transferi (koç değişikliği akışı)

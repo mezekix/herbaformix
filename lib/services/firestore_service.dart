@@ -175,6 +175,13 @@ class FirestoreService {
       _customerRepo.snoozeScheduledFollowUp(id, newDueDate);
   Future<void> deleteScheduledFollowUp(String id) =>
       _customerRepo.deleteScheduledFollowUp(id);
+  Future<void> addSingleScheduledFollowUp(ScheduledFollowUpModel f) =>
+      _customerRepo.addSingleScheduledFollowUp(f);
+  Future<void> updateScheduledFollowUp(ScheduledFollowUpModel f) =>
+      _customerRepo.updateScheduledFollowUp(f);
+  Stream<List<ScheduledFollowUpModel>> getAllScheduledFollowUpsForConsultant(
+          String consultantId) =>
+      _customerRepo.getAllScheduledFollowUpsForConsultant(consultantId);
 
   // ── OrderRepository delegate ───────────────────────────────────────────
 

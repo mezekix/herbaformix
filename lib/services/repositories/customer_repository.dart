@@ -324,4 +324,37 @@ class CustomerRepository {
       throw Exception("Planlanmış takip silinemedi: $e");
     }
   }
+
+  /// Tekil bir planlanmış takip ekler (manuel oluşturma için).
+  Future<void> addSingleScheduledFollowUp(ScheduledFollowUpModel followUp) async {
+    try {
+      await scheduledFollowUpsRef().add(followUp);
+    } catch (e) {
+      AppLogger.error('addSingleScheduledFollowUp hatası: $e', tag: 'CustomerRepository', error: e);
+      throw Exception('Planlanmış takip eklenemedi: $e');
+    }
+  }
+
+  /// Planlanmış bir takibin tüm alanlarını günceller.
+  Future<void> updateScheduledFollowUp(ScheduledFollowUpModel followUp) async {
+    try {
+      await scheduledFollowUpsRef().doc(followUp.id).update(followUp.toMap());
+    } catch (e) {
+      AppLogger.error('updateScheduledFollowUp hatası: $e', tag: 'CustomerRepository', error: e);
+      throw Exception('Planlanmış takip güncellenemedi: $e');
+    }
+  }
+
+  Stream<List<ScheduledFollowUpModel>> getAllScheduledFollowUpsForConsultant(
+    String consultantId,
+  ) {
+    return scheduledFollowUpsRef()
+        .where('consultantId', isEqualTo: consultantId)
+        .snapshots()
+        .map((s) {
+          final list = s.docs.map((d) => d.data()).toList();
+          list.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+          return list;
+        });
+  }
 }

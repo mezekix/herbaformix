@@ -37,6 +37,7 @@ import '../features/program/screens/program_templates_screen.dart';
 import '../features/program/models/program_editor_args.dart';
 import '../features/program/models/program_template_model.dart';
 import 'package:herbaformix/core/logger.dart';
+import '../features/follow_ups/screens/follow_up_dashboard_screen.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
@@ -150,6 +151,11 @@ class AppRouter {
             path: MeasurementsHistoryScreen.routeName,
             name: MeasurementsHistoryScreen.routeName,
             builder: (context, state) => const MeasurementsHistoryScreen(),
+          ),
+          GoRoute(
+            path: FollowUpDashboardScreen.routeName, // 'follow-ups'
+            name: FollowUpDashboardScreen.routeName,
+            builder: (context, state) => const FollowUpDashboardScreen(),
           ),
           GoRoute(
             path: 'products', // '/home/products'

@@ -16,6 +16,8 @@ import '../features/orders/screens/order_list_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/water_tracker/screens/water_tracker_screen.dart';
+import '../features/follow_ups/screens/follow_up_dashboard_screen.dart';
+import '../features/follow_ups/providers/follow_up_dashboard_provider.dart';
 import '../models/user_role.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -139,14 +141,26 @@ class AppDrawer extends StatelessWidget {
     required String routeName,
     required String pathSegment,
     Map<String, String>? pathParameters,
+    int badgeCount = 0,
   }) {
     final isSelected = _isActive(context, pathSegment);
 
+    final iconWidget = badgeCount > 0
+        ? Badge(
+            label: Text(badgeCount.toString()),
+            backgroundColor: AppColors.error,
+            child: Icon(
+              icon,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+            ),
+          )
+        : Icon(
+            icon,
+            color: isSelected ? AppColors.primary : AppColors.textSecondary,
+          );
+
     return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? AppColors.primary : AppColors.textSecondary,
-      ),
+      leading: iconWidget,
       title: Text(
         title,
         style: TextStyle(
@@ -214,6 +228,20 @@ class AppDrawer extends StatelessWidget {
               title: l.drawerOrders,
               routeName: OrderListScreen.routeName.substring(1), // 'orders'
               pathSegment: 'orders',
+            ),
+          if (userProfile?.role != UserRole.customer)
+            Consumer<FollowUpDashboardProvider>(
+              builder: (context, followUpProvider, _) {
+                final badgeCount = followUpProvider.overdueCount + followUpProvider.todayCount;
+                return _buildListTile(
+                  context,
+                  icon: Icons.assignment_outlined,
+                  title: l.drawerFollowUps,
+                  routeName: FollowUpDashboardScreen.routeName,
+                  pathSegment: FollowUpDashboardScreen.routeName,
+                  badgeCount: badgeCount,
+                );
+              },
             ),
           if (userProfile?.role != UserRole.customer)
             ListTile(

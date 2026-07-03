@@ -19,6 +19,7 @@ import 'features/program/providers/program_provider.dart';
 import 'features/program/providers/program_template_provider.dart';
 import 'features/program/services/notification_service.dart';
 import 'features/progress/providers/progress_provider.dart';
+import 'features/follow_ups/providers/follow_up_dashboard_provider.dart';
 import 'features/water_tracker/providers/water_provider.dart';
 import 'services/exercise_service.dart';
 import 'services/firestore_service.dart';
@@ -307,6 +308,12 @@ class _AppState extends State<App> {
             ),
             ChangeNotifierProvider<HomeProvider>(
               create: (context) => HomeProvider(
+                context.read<FirestoreService>(),
+                context.read<AuthProvider>(),
+              ),
+            ),
+            ChangeNotifierProvider<FollowUpDashboardProvider>(
+              create: (context) => FollowUpDashboardProvider(
                 context.read<FirestoreService>(),
                 context.read<AuthProvider>(),
               ),
