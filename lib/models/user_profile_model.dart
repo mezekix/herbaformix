@@ -51,6 +51,7 @@ class UserProfileModel {
   // Push bildirimleri (Faz 14)
   final String? fcmToken; // Cihazın güncel FCM token'ı
   final DateTime? fcmTokenUpdatedAt; // Son token güncelleme zamanı
+  final Map<String, bool> notificationSettings; // Bildirim tercihleri (newProgram, dailyMessages, followUps)
 
   const UserProfileModel({
     required this.id,
@@ -85,6 +86,11 @@ class UserProfileModel {
     this.distributorRequestStatus,
     this.fcmToken,
     this.fcmTokenUpdatedAt,
+    this.notificationSettings = const {
+      'newProgram': true,
+      'dailyMessages': true,
+      'followUps': true,
+    },
   });
 
   // ── Sentinel ────────────────────────────────────────────────────────────────
@@ -132,6 +138,7 @@ class UserProfileModel {
     Object? distributorRequestStatus = _unset,
     Object? fcmToken = _unset,
     Object? fcmTokenUpdatedAt = _unset,
+    Map<String, bool>? notificationSettings,
   }) {
     return UserProfileModel(
       id: id ?? this.id,
@@ -210,6 +217,7 @@ class UserProfileModel {
       fcmTokenUpdatedAt: identical(fcmTokenUpdatedAt, _unset)
           ? this.fcmTokenUpdatedAt
           : fcmTokenUpdatedAt as DateTime?,
+      notificationSettings: notificationSettings ?? this.notificationSettings,
     );
   }
 
@@ -257,6 +265,13 @@ class UserProfileModel {
       distributorRequestStatus: map['distributorRequestStatus'] as String?,
       fcmToken: map['fcmToken'] as String?,
       fcmTokenUpdatedAt: _parseDate(map['fcmTokenUpdatedAt']),
+      notificationSettings: map['notificationSettings'] != null
+          ? Map<String, bool>.from(map['notificationSettings'] as Map)
+          : const {
+              'newProgram': true,
+              'dailyMessages': true,
+              'followUps': true,
+            },
     );
   }
 
@@ -327,6 +342,7 @@ class UserProfileModel {
     if (fcmTokenUpdatedAt != null) {
       map['fcmTokenUpdatedAt'] = fcmTokenUpdatedAt!.millisecondsSinceEpoch;
     }
+    map['notificationSettings'] = notificationSettings;
 
     return map;
   }

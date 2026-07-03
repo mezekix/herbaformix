@@ -6,6 +6,8 @@ import '../../../core/locale_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../program/services/notification_service.dart';
 import '../widgets/change_password_dialog.dart';
+import '../../../models/user_role.dart';
+import '../../auth/providers/auth_provider.dart';
 
 class AppSettingsScreen extends StatelessWidget {
   static const String routeName = 'app-settings';
@@ -15,6 +17,8 @@ class AppSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final authProvider = context.watch<AuthProvider>();
+    final profile = authProvider.userProfile;
     return Scaffold(
       appBar: AppBar(
         title: Text(l.appSettingsTitle),
@@ -145,6 +149,61 @@ class AppSettingsScreen extends StatelessWidget {
               },
             ),
           ),
+          if (profile != null) ...[
+            const SizedBox(height: 24),
+            _sectionLabel("Bildirim Tercihleri"),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: AppColors.backgroundMuted),
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text("Yeni Program Bildirimleri"),
+                    subtitle: const Text("Distribütörünüz yeni program atadığında bildirim alın."),
+                    value: profile.notificationSettings['newProgram'] ?? true,
+                    activeThumbColor: AppColors.primary,
+                    onChanged: (val) async {
+                      final updatedSettings = Map<String, bool>.from(profile.notificationSettings);
+                      updatedSettings['newProgram'] = val;
+                      final updatedProfile = profile.copyWith(notificationSettings: updatedSettings);
+                      await authProvider.updateUserProfile(updatedProfile);
+                    },
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  SwitchListTile(
+                    title: const Text("Günlük Motivasyon Mesajları"),
+                    subtitle: const Text("Distribütörünüzden günlük mesaj geldiğinde bildirim alın."),
+                    value: profile.notificationSettings['dailyMessages'] ?? true,
+                    activeThumbColor: AppColors.primary,
+                    onChanged: (val) async {
+                      final updatedSettings = Map<String, bool>.from(profile.notificationSettings);
+                      updatedSettings['dailyMessages'] = val;
+                      final updatedProfile = profile.copyWith(notificationSettings: updatedSettings);
+                      await authProvider.updateUserProfile(updatedProfile);
+                    },
+                  ),
+                  if (profile.role == UserRole.distributor) ...[
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    SwitchListTile(
+                      title: const Text("Müşteri Takip Hatırlatmaları"),
+                      subtitle: const Text("Müşterilerinizin takip zamanı geldiğinde bildirim alın."),
+                      value: profile.notificationSettings['followUps'] ?? true,
+                      activeThumbColor: AppColors.primary,
+                      onChanged: (val) async {
+                        final updatedSettings = Map<String, bool>.from(profile.notificationSettings);
+                        updatedSettings['followUps'] = val;
+                        final updatedProfile = profile.copyWith(notificationSettings: updatedSettings);
+                        await authProvider.updateUserProfile(updatedProfile);
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

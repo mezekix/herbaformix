@@ -56,6 +56,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       context,
       listen: false,
     );
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isCustomer = authProvider.userProfile?.role == UserRole.customer;
+
     try {
       final product = productProvider.products.firstWhere(
         (p) => p.id == widget.productId,
@@ -63,9 +66,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       setState(() {
         _product = product;
         
-        // Benzer ürünleri hazırla (kendisi hariç, karıştırılmış ve ilk 6 ürün)
+        const visibleCategories = {'İç Beslenme', 'Dış Beslenme'};
+        // Benzer ürünleri hazırla (kendisi hariç, müşteri ise sadece izinli kategoriler, karıştırılmış ve ilk 6 ürün)
         _relatedProducts = productProvider.products
             .where((p) => p.id != product.id)
+            .where((p) => !isCustomer || (p.category != null && visibleCategories.contains(p.category)))
             .toList()
           ..shuffle();
         if (_relatedProducts.length > 6) {

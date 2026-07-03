@@ -24,110 +24,24 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  List<ProductModel> _filteredProducts = [];
   String _searchQuery = '';
-  List<String> _categories = ['Tümü'];
   String _selectedCategory = 'Tümü';
   bool _isGridView = false; // Görünüm modunu takip et
 
   @override
   void initState() {
     super.initState();
-    // Başlangıçta tüm ürünleri göster
-    final productProvider = Provider.of<ProductProvider>(
-      context,
-      listen: false,
-    );
-    _filteredProducts = productProvider.products;
 
     // Arama metni değiştikçe listeyi filtrele
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text;
-        _filterProducts();
       });
     });
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _setupCategories();
-    _filterProducts();
-  }
-
   // Müşterilere yalnızca bu kategoriler gösterilir
   static const _customerVisibleCategories = {'İç Beslenme', 'Dış Beslenme'};
-
-  bool _isCustomer() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    return authProvider.userProfile?.role == UserRole.customer;
-  }
-
-  void _setupCategories() {
-    final productProvider = Provider.of<ProductProvider>(
-      context,
-      listen: false,
-    );
-    final allProducts = productProvider.products;
-    final isCustomer = _isCustomer();
-
-    final uniqueCategories = allProducts
-        .map((p) => p.category)
-        .where((c) => c != null && c.isNotEmpty)
-        .cast<String>()
-        // Müşteri ise sadece iç/dış beslenme kategorilerini göster
-        .where((c) => !isCustomer || _customerVisibleCategories.contains(c))
-        .toSet()
-        .toList();
-    uniqueCategories.sort();
-    setState(() {
-      _categories = ['Tümü', ...uniqueCategories];
-    });
-  }
-
-  void _filterProducts() {
-    final productProvider = Provider.of<ProductProvider>(
-      context,
-      listen: false,
-    );
-    final allProducts = productProvider.products;
-    final isCustomer = _isCustomer();
-
-    List<ProductModel> tempProducts = allProducts;
-
-    // Müşteri ise basılı malzeme ve tanıtım ürünlerini gizle
-    if (isCustomer) {
-      tempProducts = tempProducts
-          .where(
-            (product) =>
-                product.category != null &&
-                _customerVisibleCategories.contains(product.category),
-          )
-          .toList();
-    }
-
-    // 1. Kategoriye göre filtrele
-    if (_selectedCategory != 'Tümü') {
-      tempProducts = tempProducts
-          .where((product) => product.category == _selectedCategory)
-          .toList();
-    }
-
-    // 2. Arama metnine göre filtrele
-    if (_searchQuery.isNotEmpty) {
-      tempProducts = tempProducts
-          .where(
-            (product) =>
-                product.name.toLowerCase().contains(_searchQuery.toLowerCase()),
-          )
-          .toList();
-    }
-
-    setState(() {
-      _filteredProducts = tempProducts;
-    });
-  }
 
   @override
   void dispose() {
@@ -138,13 +52,50 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     final productProvider = Provider.of<ProductProvider>(context);
-
-    // build içinde çağırmak, provider güncellendiğinde ekranın da güncellenmesini sağlar.
-    _setupCategories();
-    _filterProducts();
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context);
     final isCustomer = authProvider.userProfile?.role == UserRole.customer;
+    final allProducts = productProvider.products;
+
+    // Kategorileri hesapla
+    final uniqueCategories = allProducts
+        .map((p) => p.category)
+        .where((c) => c != null && c.isNotEmpty)
+        .cast<String>()
+        // Müşteri ise sadece iç/dış beslenme kategorilerini göster
+        .where((c) => !isCustomer || _customerVisibleCategories.contains(c))
+        .toSet()
+        .toList();
+    uniqueCategories.sort();
+    final categories = ['Tümü', ...uniqueCategories];
+
+    // Ürünleri filtrele
+    List<ProductModel> filteredProducts = allProducts;
+    if (isCustomer) {
+      filteredProducts = filteredProducts
+          .where(
+            (product) =>
+                product.category != null &&
+                _customerVisibleCategories.contains(product.category),
+          )
+          .toList();
+    }
+
+    // 1. Kategoriye göre filtrele
+    if (_selectedCategory != 'Tümü') {
+      filteredProducts = filteredProducts
+          .where((product) => product.category == _selectedCategory)
+          .toList();
+    }
+
+    // 2. Arama metnine göre filtrele
+    if (_searchQuery.isNotEmpty) {
+      filteredProducts = filteredProducts
+          .where(
+            (product) =>
+                product.name.toLowerCase().contains(_searchQuery.toLowerCase()),
+          )
+          .toList();
+    }
 
     return Scaffold(
       body: CustomScrollView(
@@ -293,9 +244,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     scrollDirection: Axis.horizontal,
-                    itemCount: _categories.length,
+                    itemCount: categories.length,
                     itemBuilder: (context, index) {
-                      final category = _categories[index];
+                      final category = categories[index];
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4.0),
                         child: FilterChip(
@@ -304,7 +255,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
                           onSelected: (selected) {
                             setState(() {
                               _selectedCategory = category;
-                              _filterProducts();
                             });
                           },
                           selectedColor: AppColors.primary.withAlpha(204),
@@ -323,11 +273,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
               ],
             ),
           ),
-          if (productProvider.isLoading && _filteredProducts.isEmpty)
+          if (productProvider.isLoading && filteredProducts.isEmpty)
             const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
             )
-          else if (_filteredProducts.isEmpty)
+          else if (filteredProducts.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Text(
@@ -339,22 +289,22 @@ class _ProductListScreenState extends State<ProductListScreen> {
               ),
             )
           else if (_isGridView)
-            _buildSliverGridView()
+            _buildSliverGridView(filteredProducts)
           else
-            _buildSliverListView(),
+            _buildSliverListView(filteredProducts),
         ],
       ),
     );
   }
 
-  Widget _buildSliverListView() {
+  Widget _buildSliverListView(List<ProductModel> filteredProducts) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          final product = _filteredProducts[index];
+          final product = filteredProducts[index];
           return _buildListItem(product);
         },
-        childCount: _filteredProducts.length,
+        childCount: filteredProducts.length,
       ),
     );
   }
@@ -435,7 +385,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
     );
   }
 
-  Widget _buildSliverGridView() {
+  Widget _buildSliverGridView(List<ProductModel> filteredProducts) {
     return SliverPadding(
       padding: const EdgeInsets.all(10.0),
       sliver: SliverGrid(
@@ -447,10 +397,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ),
         delegate: SliverChildBuilderDelegate(
           (context, index) {
-            final product = _filteredProducts[index];
+            final product = filteredProducts[index];
             return _buildGridItem(product);
           },
-          childCount: _filteredProducts.length,
+          childCount: filteredProducts.length,
         ),
       ),
     );

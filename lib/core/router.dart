@@ -38,11 +38,34 @@ import '../features/program/models/program_editor_args.dart';
 import '../features/program/models/program_template_model.dart';
 import 'package:herbaformix/core/logger.dart';
 import '../features/follow_ups/screens/follow_up_dashboard_screen.dart';
+import '../services/fcm_service.dart';
 
 class AppRouter {
   final AuthProvider authProvider;
   final Listenable refreshListenable;
-  AppRouter(this.authProvider, {required this.refreshListenable});
+  AppRouter(this.authProvider, {required this.refreshListenable}) {
+    _setupNotificationTapHandler();
+  }
+
+  void _setupNotificationTapHandler() {
+    FcmService().onNotificationTap = (data) {
+      AppLogger.debug('Bildirim tıklandı handler çalıştı: $data', tag: 'AppRouter');
+      final type = data['type'] as String?;
+      if (type == null) return;
+
+      switch (type) {
+        case 'new_program':
+          router.go('/home');
+          break;
+        case 'daily_message':
+          router.go('/home');
+          break;
+        case 'follow_up':
+          router.go('/home/follow-ups');
+          break;
+      }
+    };
+  }
 
   late final GoRouter router = GoRouter(
     debugLogDiagnostics: true,

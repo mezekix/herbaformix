@@ -560,11 +560,11 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 
 ---
 
-## FAZ 14 — PUSH BİLDİRİMLERİ (FCM) 🔄 (Devam Ediyor)
+## FAZ 14 — PUSH BİLDİRİMLERİ (FCM) ✅ (Tamamlandı)
 
 > **Hedef Sürüm:** v1.0
 > **Bağımlılıklar:** —
-> **İlerleme:** %60 (Client altyapısı ve token senkronizasyonu tamam; backend Cloud Functions Blaze planı bekliyor)
+> **İlerleme:** %100 (Client altyapısı, token senkronizasyonu, deep-link yönlendirmeleri ve backend Cloud Functions tamamlandı)
 
 ### 14.1 — Client Altyapısı ✅
 - [x] `firebase_messaging: ^16.0.2` paketi pubspec'e eklendi
@@ -581,16 +581,16 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 - [x] Android: `POST_NOTIFICATIONS` izni zaten vardı; manifest'e FCM varsayılan kanal (`fcm_default_v1`) + varsayılan ikon meta-data eklendi
 - [x] Foreground gelen mesajlar `flutter_local_notifications` ile gösteriliyor (FCM foreground'da OS bildirimi göstermez)
 
-### 14.2 — Cloud Functions Backend ❌ (Başlanmadı)
-- [ ] **Firebase planını Blaze'e yükselt** (Cloud Functions zorunluluğu)
-- [ ] Cloud Function: `programs/{uid}` create → müşteriye "Yeni programın hazır" push
-- [ ] Cloud Function: `motivations/{uid}/daily_messages/*` create → "Distribütöründen bir mesaj var"
-- [ ] Cloud Function: `users/{uid}/scheduled_follow_ups` due-time → distribütöre hatırlatma
-- [ ] Token alıcısı: `userProfiles.{uid}.fcmToken` (client yazıyor — alan hazır)
+### 14.2 — Cloud Functions Backend ✅ (Tamamlandı)
+- [x] **Firebase planını Blaze'e yükselt** (Cloud Functions zorunluluğu)
+- [x] Cloud Function: `programs/{uid}` create → müşteriye "Yeni programın hazır" push
+- [x] Cloud Function: `motivations/{uid}/daily_messages/*` create → "Distribütöründen bir mesaj var"
+- [x] Cloud Function: `users/{uid}/scheduled_follow_ups` due-time → distribütöre hatırlatma
+- [x] Token alıcısı: `userProfiles.{uid}.fcmToken` (client yazıyor — alan hazır)
 
-### 14.3 — Deep-Link & Tercihler ❌ (Başlanmadı)
-- [ ] `FcmService.onNotificationTap` callback'i router'a bağla (data payload'undan `type` + id okuyup `context.goNamed` tetikle)
-- [ ] Bildirim tercihleri UI (`notificationSettings` alanı modelde hazır)
+### 14.3 — Deep-Link & Tercihler ✅ (Tamamlandı)
+- [x] `FcmService.onNotificationTap` callback'i router'a bağla (data payload'undan `type` + id okuyup `context.goNamed` tetikle)
+- [x] Bildirim tercihleri UI (`notificationSettings` alanı modelde hazır)
 
 ### iOS Manuel Adım (kullanıcıya)
 - [ ] Xcode'da Push Notifications + Background Modes (Remote notifications) capability ekle
