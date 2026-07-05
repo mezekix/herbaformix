@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:animated_list_plus/animated_list_plus.dart';
 import 'package:animated_list_plus/transitions.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +32,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/motivation_widget.dart';
 import '../../widgets/daily_compact_success_card.dart';
+import '../../widgets/animated_water_glass.dart';
 import '../../../../services/exercise_service.dart';
 
 class CustomerDashboardView extends StatefulWidget {
@@ -47,13 +49,39 @@ class CustomerDashboardView extends StatefulWidget {
   State<CustomerDashboardView> createState() => _CustomerDashboardViewState();
 }
 
-class _CustomerDashboardViewState extends State<CustomerDashboardView> {
-
+class _CustomerDashboardViewState extends State<CustomerDashboardView>
+    with SingleTickerProviderStateMixin {
+  // ── Su kartı konfeti + pulse animasyonu ────────────────────────────────
+  late final ConfettiController _waterConfettiController;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
+  bool _hasPlayedWaterConfetti = false;
 
   @override
   void initState() {
     super.initState();
     _loadLastSeenActivations();
+
+    // Konfeti controller
+    _waterConfettiController = ConfettiController(
+      duration: const Duration(seconds: 2),
+    );
+
+    // Pulse animasyonu — "+200ml Ekle" butonu için
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.04).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _waterConfettiController.dispose();
+    _pulseController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLastSeenActivations() async {
@@ -691,6 +719,8 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
           final activeRoutine = incompleteRoutines.firstOrNull;
           final activeRoutineTimeStr = activeRoutine != null ? DateFormat('HH:mm').format(activeRoutine.scheduledTime) : null;
 
+          final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
+
           return Container(
             padding: const EdgeInsets.only(top: 20),
             decoration: BoxDecoration(
@@ -699,18 +729,30 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFFDCF2CE), // Belirgin taze fıstık yeşili
+                  Color(0xFFDCF2CE), // Taze fıstık yeşili
+                  Color(0xFFE8F5E9), // Soft mint
                   Color(0xFFFFFFFF), // Beyaz
                 ],
+                stops: [0.0, 0.5, 1.0],
               ),
+              // İlerlemeye göre yoğunlaşan glow
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(8),
-                  blurRadius: 10,
+                  color: AppColors.primary.withValues(alpha: 0.06 + progress * 0.12),
+                  blurRadius: 14 + progress * 8,
+                  spreadRadius: 1,
                   offset: const Offset(0, 4),
                 ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
               ],
-              border: Border.all(color: AppColors.backgroundMutedLight),
+              // Glassmorphism border
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.08 + progress * 0.15),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -719,6 +761,21 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   child: Row(
                     children: [
+                      // Başlık ikonu
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.restaurant_menu_rounded,
+                          color: Color(0xFF1B5E20),
+                          size: 15,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       const Text(
                         'Öğün Takibi',
                         style: TextStyle(
@@ -742,20 +799,27 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                               DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
                             );
                           },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                activeRoutineTimeStr,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.primary,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.access_time_rounded, size: 14, color: AppColors.primary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  activeRoutineTimeStr,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.access_time, size: 16, color: AppColors.primary),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                         const Spacer(),
@@ -768,7 +832,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '$completedCount/$totalCount Tamamlandı',
+                            '$completedCount/$totalCount',
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -779,7 +843,15 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                // Segmented Progress Bar
+                if (totalCount > 0) ...[
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: _buildSegmentedProgressBar(completedCount, totalCount),
+                  ),
+                ],
+                const SizedBox(height: 14),
 
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const SizedBox(
@@ -1048,7 +1120,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
     );
   }
 
-  /// Stitch HTML'ine sadık tek checklist satırı
+  /// Stitch HTML'ine sadık tek checklist satırı — premium glow + pulse ring
   Widget _buildStitchChecklistTile({
     required BuildContext context,
     required String title,
@@ -1064,59 +1136,137 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Checkbox
-                GestureDetector(
-                  onTap: () => onChanged(!isCompleted),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isCompleted
-                          ? AppColors.primary
-                          : (isNext ? AppColors.primary.withAlpha(40) : Colors.transparent),
-                      border: Border.all(
-                        color: isCompleted || isNext
-                            ? AppColors.primary
-                            : AppColors.primary.withAlpha(80),
-                        width: 2,
+          // Aktif öğün için glow arka plan
+          Container(
+            margin: isNext
+                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
+                : EdgeInsets.zero,
+            decoration: isNext
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: AppColors.primary.withValues(alpha: 0.04),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        blurRadius: 12,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  )
+                : null,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isNext ? 12 : 20,
+                vertical: 12,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Checkbox — aktif öğünde pulse ring animasyonu
+                  GestureDetector(
+                    onTap: () => onChanged(!isCompleted),
+                    child: SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Pulse ring — sadece aktif öğünde
+                          if (isNext && !isCompleted)
+                            TweenAnimationBuilder<double>(
+                              tween: Tween(begin: 0.8, end: 1.0),
+                              duration: const Duration(milliseconds: 1500),
+                              curve: Curves.easeInOut,
+                              builder: (context, value, child) {
+                                return Transform.scale(
+                                  scale: value,
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.primary.withValues(alpha: 0.2 * (1.0 - value) * 5),
+                                        width: 2.5,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              onEnd: () {
+                                // Tekrar tetikle (rebuild ile)
+                              },
+                            ),
+                          // Ana checkbox
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutBack,
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isCompleted
+                                  ? AppColors.primary
+                                  : (isNext ? AppColors.primary.withAlpha(30) : Colors.transparent),
+                              border: Border.all(
+                                color: isCompleted || isNext
+                                    ? AppColors.primary
+                                    : AppColors.primary.withAlpha(80),
+                                width: 2,
+                              ),
+                              boxShadow: isCompleted
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.primary.withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: isCompleted
+                                ? const Icon(Icons.check_rounded, color: Colors.white, size: 22)
+                                : null,
+                          ),
+                        ],
                       ),
                     ),
-                    child: isCompleted
-                        ? const Icon(Icons.check, color: Colors.white, size: 22)
-                        : null,
                   ),
-                ),
-                const SizedBox(width: 14),
-                // İçerik
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Öğün adı
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: isCompleted ? const Color(0xFF8CAF8F) : AppColors.primary,
-                          decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  const SizedBox(width: 14),
+                  // İçerik
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Öğün adı
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: isCompleted ? const Color(0xFF8CAF8F) : AppColors.primary,
+                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                          ),
                         ),
-                      ),
-                      if (childBelowTitle != null) ...[
-                        const SizedBox(height: 8),
-                        childBelowTitle,
+                        if (childBelowTitle != null) ...[
+                          const SizedBox(height: 8),
+                          childBelowTitle,
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                  // Aktif öğünde ok ikonu
+                  if (isNext && !isCompleted)
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.primary.withValues(alpha: 0.5),
+                      size: 24,
+                    ),
+                ],
+              ),
             ),
           ),
           if (!isLast)
@@ -1132,6 +1282,59 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
       ),
     );
   }
+
+  /// Segmented Progress Bar — her öğün için bir segment
+  Widget _buildSegmentedProgressBar(int completed, int total) {
+    return Row(
+      children: List.generate(total, (index) {
+        final isFilled = index < completed;
+        final isLast = index == total - 1;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: isLast ? 0 : 3),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: isFilled ? 1.0 : 0.0),
+              duration: Duration(milliseconds: 500 + index * 100),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, _) {
+                return Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(3),
+                    color: const Color(0xFFE0E0E0),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: value,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(3),
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF7AC144),
+                            Color(0xFF22C55E),
+                          ],
+                        ),
+                        boxShadow: value > 0.5
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF22C55E).withValues(alpha: 0.3),
+                                  blurRadius: 4,
+                                  spreadRadius: 0.5,
+                                ),
+                              ]
+                            : null,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }),
+    );
+  }
   Widget _buildCustomerWaterTracker(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -1144,136 +1347,235 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView> {
           final goalL = (goal / 1000).toStringAsFixed(1);
 
           const blueAccent = Color(0xFF26B0EF); // #26b0ef
-          const blueBg = Color(0xFFEBF3FF); // Yumuşak açık mavi zemin
           const blueTextDark = Color(0xFF1E3A8A); // Koyu lacivert başlık/yazı
 
-          return Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: blueBg,
-              borderRadius: BorderRadius.circular(32),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Sol: metin + buton
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Başlık
-                      const Row(
+          // %100 konfeti tetikleme
+          if (progress >= 1.0 && !_hasPlayedWaterConfetti) {
+            _hasPlayedWaterConfetti = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _waterConfettiController.play();
+            });
+          } else if (progress < 1.0) {
+            _hasPlayedWaterConfetti = false;
+          }
+
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Ana kart
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(32),
+                  // Açık tema gradient
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFEBF3FF), // Yumuşak açık mavi
+                      Color(0xFFF0F9FF), // Daha açık mavi
+                      Color(0xFFFFFFFF), // Beyaz
+                    ],
+                    stops: [0.0, 0.5, 1.0],
+                  ),
+                  // Glassmorphism border
+                  border: Border.all(
+                    color: blueAccent.withValues(alpha: 0.12 + progress * 0.15),
+                  ),
+                  // Su seviyesine göre yoğunlaşan glow
+                  boxShadow: [
+                    BoxShadow(
+                      color: blueAccent.withValues(alpha: 0.06 + progress * 0.1),
+                      blurRadius: 16 + progress * 8,
+                      spreadRadius: 1,
+                      offset: const Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Sol: metin + buton
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.water_drop, color: blueAccent, size: 20),
-                          SizedBox(width: 6),
-                          Text(
-                            'Su Tüketimi',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: blueTextDark,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Miktar
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            '${consumedL}L',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: blueTextDark,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '/ ${goalL}L',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: blueTextDark.withAlpha(150),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // "200ml Ekle" butonu
-                      GestureDetector(
-                        onTap: () {
-                          waterProvider.addWater(200);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('200ml su eklendi!'),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: blueAccent,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: blueAccent.withAlpha(50),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
+                          // Başlık
+                          Row(
                             children: [
-                              Icon(Icons.add, color: Colors.white, size: 18),
-                              SizedBox(width: 4),
-                              Text(
-                                '200ml Ekle',
+                              // Animasyonlu su damlası ikonu
+                              TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0.0, end: progress),
+                                duration: const Duration(milliseconds: 800),
+                                builder: (context, value, child) {
+                                  return ShaderMask(
+                                    shaderCallback: (bounds) => LinearGradient(
+                                      begin: Alignment.bottomCenter,
+                                      end: Alignment.topCenter,
+                                      colors: [
+                                        blueAccent,
+                                        blueAccent.withValues(alpha: 0.4),
+                                      ],
+                                      stops: [value, value + 0.01],
+                                    ).createShader(bounds),
+                                    child: const Icon(
+                                      Icons.water_drop,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'Su Tüketimi',
                                 style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
+                                  color: blueTextDark,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      // "Tüm Kayıtlar" text butonu
-                      GestureDetector(
-                        onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Tüm Kayıtlar',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: blueAccent,
+                          const SizedBox(height: 8),
+                          // Miktar
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '${consumedL}L',
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: blueTextDark,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '/ ${goalL}L',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: blueTextDark.withAlpha(150),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          // "200ml Ekle" butonu — pulse animasyonlu
+                          AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: _pulseAnimation.value,
+                                child: child,
+                              );
+                            },
+                            child: GestureDetector(
+                              onTap: () {
+                                waterProvider.addWater(200);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [
+                                      Color(0xFF26B0EF),
+                                      Color(0xFF1A8FD1),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: blueAccent.withValues(alpha: 0.3),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.add, color: Colors.white, size: 18),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      '200ml Ekle',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            SizedBox(width: 2),
-                            Icon(Icons.chevron_right, color: blueAccent, size: 16),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 8),
+                          // "Tüm Kayıtlar" text butonu
+                          GestureDetector(
+                            onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Tüm Kayıtlar',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: blueAccent,
+                                  ),
+                                ),
+                                SizedBox(width: 2),
+                                Icon(Icons.chevron_right, color: blueAccent, size: 16),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Sağ: 3D animasyonlu su bardağı (tıklanabilir)
+                    GestureDetector(
+                      onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
+                      child: AnimatedWaterGlass(progress: progress),
+                    ),
+                  ],
+                ),
+              ),
+              // Konfeti — kart üzerinden patlar
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConfettiWidget(
+                    confettiController: _waterConfettiController,
+                    blastDirectionality: BlastDirectionality.explosive,
+                    shouldLoop: false,
+                    numberOfParticles: 20,
+                    maxBlastForce: 12,
+                    minBlastForce: 4,
+                    emissionFrequency: 0.06,
+                    gravity: 0.12,
+                    colors: const [
+                      Color(0xFF26B0EF), // Cyan
+                      Color(0xFF3B82F6), // Mavi
+                      Color(0xFF7DD3FC), // Açık mavi
+                      Color(0xFF22C55E), // Yeşil
+                      Color(0xFFFBBF24), // Altın
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                // Sağ: animasyonlu su bardağı (tıklanabilir)
-                GestureDetector(
-                  onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
-                  child: _WaterGlassWidget(progress: progress),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),
@@ -1902,114 +2204,8 @@ class _NotificationItem {
 // ─── Water Glass Widget ───────────────────────────────────────────────────────
 
 /// Stitch HTML'indeki animasyonlu su bardağı görseli
-class _WaterGlassWidget extends StatelessWidget {
-  final double progress; // 0.0 - 1.0
-
-  const _WaterGlassWidget({required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    final fillHeight = (progress * 100).clamp(5.0, 100.0);
-
-    return Container(
-      width: 88,
-      height: 120,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Stack(
-        children: [
-          // Su dolum animasyonu
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeInOut,
-              height: 120 * (fillHeight / 100),
-              decoration: BoxDecoration(
-                color: const Color(0xFF26B0EF).withValues(alpha: 0.8),
-              ),
-              child: Stack(
-                children: [
-                  // Üst dalga efekti
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 8,
-                      color: const Color(0xFF26B0EF).withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // Cam yansıması
-          Positioned(
-            top: 0,
-            left: 0,
-            bottom: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [
-                    Colors.white.withValues(alpha: 0.2),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Küçük baloncuklar
-          Positioned(
-            bottom: 120 * (fillHeight / 100) * 0.3,
-            left: 20,
-            child: Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 120 * (fillHeight / 100) * 0.6,
-            right: 22,
-            child: Container(
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-          // Yüzde etiketi
-          Center(
-            child: Text(
-              '${(progress * 100).round()}%',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: progress > 0.5 ? Colors.white : Colors.blue.shade700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// _WaterGlassWidget kaldırıldı — yerine AnimatedWaterGlass kullanılıyor
+// (lib/features/home/widgets/animated_water_glass.dart)
 
 /// Kalori kartının sağında gösterilen dairesel ilerleme halkası.
 /// Su bardağı widget'ının kalori karşılığı.

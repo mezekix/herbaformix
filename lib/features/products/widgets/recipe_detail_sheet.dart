@@ -104,7 +104,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                                   const SizedBox(height: 28),
                                   // Besin Değerleri
                                   if (recipe.nutritionInfo != null) ...[
-                                    _buildSectionTitle('💊', 'Besin Değerleri'),
+                                    _buildSectionTitle('🍎', 'Besin Değerleri'),
                                     const SizedBox(height: 12),
                                     _buildNutritionGrid(),
                                     const SizedBox(height: 28),
@@ -281,7 +281,7 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                             left: -12, // Dışarı taşması azaltıldı (eski değer -20)
                             right: -12,
                             child: Container(
-                              height: 16,
+                              height: 12, // Yükseklik azaltıldı (eski değer 16)
                               decoration: const BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(color: Colors.white, width: 2.5),
@@ -289,35 +289,38 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
                                   right: BorderSide(color: Colors.white, width: 2.5),
                                 ),
                                 borderRadius: BorderRadius.only(
-                                  bottomLeft: Radius.circular(16),
-                                  bottomRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(12), // Kıvrıklık azaltıldı (eski değer 16)
+                                  bottomRight: Radius.circular(12), // Kıvrıklık azaltıldı (eski değer 16)
                                 ),
                               ),
                             ),
                           ),
                           // Başlık Metni
-                          Text(
-                            recipe.title,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 16, // Font boyutu 16 yapıldı
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: 0.5, // Harf aralığı daraltıldı
-                              shadows: [
-                                Shadow(
-                                  blurRadius: 8,
-                                  color: Colors.black87,
-                                  offset: Offset(0, 2),
-                                ),
-                                Shadow(
-                                  blurRadius: 24,
-                                  color: Colors.black45,
-                                ),
-                              ],
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16), // Kısa isimler için yanlardan padding
+                            child: Text(
+                              recipe.title,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 16, // Font boyutu 16 yapıldı
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 0.5, // Harf aralığı daraltıldı
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 8,
+                                    color: Colors.black87,
+                                    offset: Offset(0, 2),
+                                  ),
+                                  Shadow(
+                                    blurRadius: 24,
+                                    color: Colors.black45,
+                                  ),
+                                ],
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),

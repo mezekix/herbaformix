@@ -47,8 +47,8 @@ class InviteCodeRepository {
     const maxAttempts = 5;
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       final code = generateCode();
-      final existing = await ref.where('code', isEqualTo: code).limit(1).get();
-      if (existing.docs.isEmpty) return code;
+      final docSnapshot = await ref.doc(code).get();
+      if (!docSnapshot.exists) return code;
     }
     throw Exception('Benzersiz davet kodu üretilemedi. Lütfen tekrar deneyin.');
   }

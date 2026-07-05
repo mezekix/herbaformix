@@ -1,151 +1,6 @@
 {
   "recipes": [
     {
-      "id": "f1_classic_vanilla",
-      "productId": "formul1_id",
-      "title": "Klasik Vanilyalı Shake",
-      "description": "Günlük en temel tarifiniz. Sabahları hızlıca hazırlayın.",
-      "imageUrl": "",
-      "videoUrl": "",
-      "prepTimeMin": 3,
-      "calories": 220,
-      "goals": [
-        "weight_loss",
-        "healthy_living",
-        "weight_gain"
-      ],
-      "tags": [
-        "kolay",
-        "hızlı",
-        "klasik"
-      ],
-      "ingredients": [
-        {
-          "name": "Formül 1 Vanilyalı",
-          "amount": "2 ölçek",
-          "note": "~50gr"
-        },
-        {
-          "name": "Yarım yağlı süt",
-          "amount": "250ml"
-        },
-        {
-          "name": "Buz",
-          "amount": "4-5 küp"
-        }
-      ],
-      "steps": [
-        "Tüm malzemeleri blender'a koy.",
-        "30 saniye yüksek hızda karıştır.",
-        "Hemen servis et."
-      ],
-      "nutritionInfo": {
-        "protein": 24,
-        "carbs": 18,
-        "fat": 3,
-        "fiber": 5
-      },
-      "tips": "Daha kremsi bir tat için buzları önceden kırın.",
-      "isRecommended": true
-    },
-    {
-      "id": "f1_chocolate_banana",
-      "productId": "formul1_id",
-      "title": "Muzlu Çikolatalı Fit Shake",
-      "description": "Tatlı krizlerini önleyen ve enerji veren harika bir karışım.",
-      "imageUrl": "",
-      "videoUrl": "",
-      "prepTimeMin": 5,
-      "calories": 280,
-      "goals": [
-        "healthy_living",
-        "weight_gain"
-      ],
-      "tags": [
-        "tatlı",
-        "enerji",
-        "meyveli"
-      ],
-      "ingredients": [
-        {
-          "name": "Formül 1 Çikolatalı",
-          "amount": "2 ölçek",
-          "note": "~50gr"
-        },
-        {
-          "name": "Su veya Bitkisel Süt",
-          "amount": "250ml"
-        },
-        {
-          "name": "Muz",
-          "amount": "1/2 adet"
-        },
-        {
-          "name": "Ceviz",
-          "amount": "1 tatlı kaşığı"
-        }
-      ],
-      "steps": [
-        "Sıvıyı blender'a alın.",
-        "Üzerine Formül 1, muz ve cevizi ekleyin.",
-        "Pürüzsüz olana kadar karıştırın."
-      ],
-      "nutritionInfo": {
-        "protein": 26,
-        "carbs": 30,
-        "fat": 8,
-        "fiber": 7
-      },
-      "tips": "Muzu önceden dondurarak daha yoğun bir kıvam elde edebilirsiniz.",
-      "isRecommended": true
-    },
-    {
-      "id": "f1_berry_detox",
-      "productId": "formul1_id",
-      "title": "Orman Meyveli Antioksidan Shake",
-      "description": "Kilo kontrolü döneminde ferahlatıcı ve düşük kalorili bir seçenek.",
-      "imageUrl": "",
-      "videoUrl": "",
-      "prepTimeMin": 4,
-      "calories": 190,
-      "goals": [
-        "weight_loss"
-      ],
-      "tags": [
-        "ferah",
-        "antioksidan",
-        "hafif"
-      ],
-      "ingredients": [
-        {
-          "name": "Formül 1 Ahududulu & Yaban Mersinli",
-          "amount": "2 ölçek",
-          "note": "~50gr"
-        },
-        {
-          "name": "Su",
-          "amount": "250ml"
-        },
-        {
-          "name": "Dondurulmuş meyve mix",
-          "amount": "1 yemek kaşığı"
-        }
-      ],
-      "steps": [
-        "Suyu blender'a ekleyin.",
-        "Formül 1 tozunu ve donmuş meyveleri ekleyip karıştırın.",
-        "Buz ile servis yapın."
-      ],
-      "nutritionInfo": {
-        "protein": 18,
-        "carbs": 15,
-        "fat": 2,
-        "fiber": 6
-      },
-      "tips": "Su yerine şekersiz badem sütü kullanarak lezzetini artırabilirsiniz.",
-      "isRecommended": false
-    },
-    {
       "id": "f1_cinnamon_linden",
       "productId": "formul1_id",
       "title": "Tarçınlı Ihlamur Shake",
@@ -327,7 +182,7 @@
       "productId": "formul1_id",
       "title": "Vişneli Peynirli Shake",
       "description": "Yağsız lor peyniri ve donmuş vişne ile yüksek proteinli, tatlı bir tarif.",
-      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192159/formul1_vanilya_visneli_peynirli_zsmpbp.webp",
+      "imageUrl": "https://res.cloudinary.com/erdplvol/image/upload/visneli_peynirli_formul1_vanillia.webp",
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 329,
@@ -615,7 +470,7 @@
       "productId": "formul1_id",
       "title": "Kırmızı Aşkı",
       "description": "Vişne, böğürtlen, ahududu ve karpuz ile antioksidan dolu, hafif bir kırmızı meyve karışımı.",
-      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192166/formul1_vanilya_kirmizi_aski_zq9q7u.webp",
+      "imageUrl": "https://res.cloudinary.com/erdplvol/image/upload/red_love_formul1_vanillia.webp",
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 299,
@@ -997,7 +852,7 @@
       "productId": "formul1_id",
       "title": "Çilekli Kivili Shake",
       "description": "Donmuş çilek, çok olgun kivi ve portakal ile C vitamini dolu, doyurucu meyve karışımı.",
-      "imageUrl": "https://res.cloudinary.com/daal4ljca/image/upload/q_auto/f_auto/v1781192174/formul1_vanilya_cilekli_kivili_r2scq6.webp",
+      "imageUrl": "https://res.cloudinary.com/erdplvol/image/upload/cilekli_kivili_formul1_vanilya.webp",
       "videoUrl": "",
       "prepTimeMin": 5,
       "calories": 351,
@@ -1469,7 +1324,7 @@
       "productId": "formul1_id",
       "title": "Bol Naneli Shake",
       "description": "Ferahlatıcı nane, taze kayısı ve baharatların Formül 1 Vanilya ile harika buluşması.",
-      "imageUrl": "https://images.unsplash.com/photo-1553530666-ba11a7da3888?q=80&w=600&auto=format&fit=crop",
+      "imageUrl": "https://res.cloudinary.com/erdplvol/image/upload/bon_naneli_formul1_vanillia.webp",
       "videoUrl": "",
       "prepTimeMin": 3,
       "calories": 255,

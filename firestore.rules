@@ -15,7 +15,7 @@ service cloud.firestore {
     }
 
     function isDistributor() {
-      return signedIn() && myProfile().data.role == 'distributor';
+      return signedIn() && myProfile().data.role in ['distributor', 'supervisor', 'successCreator'];
     }
 
     function isAssignedDistributor(customerUserId) {
