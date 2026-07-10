@@ -220,20 +220,6 @@ class AuthProvider with ChangeNotifier {
     _isProcessingAuth = true;
     notifyListeners();
     try {
-      String? distributorId;
-
-      // Davet kodunu doğrula (eğer varsa)
-      if (inviteCode != null && inviteCode.trim().isNotEmpty) {
-        final inviteCodeModel = await _firestoreService.validateInviteCode(inviteCode.trim());
-        if (inviteCodeModel == null) {
-          _status = AuthStatus.unauthenticated;
-          _errorMessage = 'Geçersiz davet kodu.';
-          notifyListeners();
-          return false;
-        }
-        distributorId = inviteCodeModel.distributorId;
-      }
-
       final userCredential = await _authService.signInWithGoogle();
       
       if (userCredential == null) {
@@ -247,27 +233,37 @@ class AuthProvider with ChangeNotifier {
       if (userCredential.user != null) {
         final existingProfile = await _firestoreService.getUserProfile(userCredential.user!.uid);
         if (existingProfile == null) {
+          final trimmedInviteCode = inviteCode?.trim();
+          final hasInviteCode =
+              trimmedInviteCode != null && trimmedInviteCode.isNotEmpty;
+          final inviteCodeModel = hasInviteCode
+              ? await _firestoreService.validateInviteCode(trimmedInviteCode)
+              : null;
+
+          if (hasInviteCode && inviteCodeModel == null) {
+            await _authService.signOut();
+            _status = AuthStatus.unauthenticated;
+            _errorMessage = 'Geçersiz davet kodu.';
+            notifyListeners();
+            return false;
+          }
+
           // If no profile exists, create one with the specified role (or customer by default)
           final newProfile = UserProfileModel(
             id: userCredential.user!.uid,
             email: userCredential.user!.email ?? "E-posta yok",
             name: userCredential.user!.displayName ?? "",
-            role: role,
-            assignedDistributorId: distributorId,
+            role: hasInviteCode ? UserRole.customer : role,
+            assignedDistributorId: inviteCodeModel?.distributorId,
           );
           
-          if (inviteCode != null && inviteCode.trim().isNotEmpty && distributorId != null) {
+          if (hasInviteCode && inviteCodeModel != null) {
             // Atomik batch yazma: profil oluşturma + davet kodu güncelleme
-            final inviteCodeModel = await _firestoreService.validateInviteCode(inviteCode.trim());
-            if (inviteCodeModel != null) {
-              await _firestoreService.signUpWithInviteCodeBatch(
-                userProfile: newProfile,
-                inviteCode: inviteCodeModel,
-                newUserId: userCredential.user!.uid,
-              );
-            } else {
-              await _firestoreService.setUserProfile(newProfile);
-            }
+            await _firestoreService.signUpWithInviteCodeBatch(
+              userProfile: newProfile,
+              inviteCode: inviteCodeModel,
+              newUserId: userCredential.user!.uid,
+            );
           } else {
             await _firestoreService.setUserProfile(newProfile);
           }
@@ -644,28 +640,17 @@ class AuthProvider with ChangeNotifier {
     required UserRole role,
     String? inviteCode,
   }) async {
+    // Davet kodu yoksa normal kayıt akışı
+    if (inviteCode == null || inviteCode.trim().isEmpty) {
+      return await signUp(email, password, role);
+    }
+
     _status = AuthStatus.authenticating;
     _errorMessage = null;
+    _isProcessingAuth = true;
     notifyListeners();
 
     try {
-      // Davet kodu yoksa normal kayıt akışı
-      if (inviteCode == null || inviteCode.trim().isEmpty) {
-        return await signUp(email, password, role);
-      }
-
-      // Davet kodunu doğrula
-      final inviteCodeModel = await _firestoreService.validateInviteCode(
-        inviteCode.trim(),
-      );
-
-      if (inviteCodeModel == null) {
-        _status = AuthStatus.unauthenticated;
-        _errorMessage = 'Geçersiz davet kodu.';
-        notifyListeners();
-        return false;
-      }
-
       // Firebase Auth ile kullanıcı oluştur
       final userCredential = await _authService.createUserWithEmailAndPassword(
         email,
@@ -680,12 +665,31 @@ class AuthProvider with ChangeNotifier {
       }
 
       final newUser = userCredential!.user!;
+      final inviteCodeModel = await _firestoreService.validateInviteCode(
+        inviteCode.trim(),
+      );
+
+      if (inviteCodeModel == null) {
+        try {
+          await newUser.delete();
+        } catch (deleteError) {
+          AppLogger.error(
+            'Geçersiz davet kodu sonrası auth kullanıcı temizlenemedi',
+            tag: 'AuthProvider',
+            error: deleteError,
+          );
+        }
+        _status = AuthStatus.unauthenticated;
+        _errorMessage = 'Geçersiz davet kodu.';
+        notifyListeners();
+        return false;
+      }
 
       // Kullanıcı profilini davet kodu bilgileriyle oluştur
       final newProfile = UserProfileModel(
         id: newUser.uid,
         email: newUser.email ?? email,
-        role: role,
+        role: UserRole.customer,
         assignedDistributorId: inviteCodeModel.distributorId,
       );
 
@@ -714,6 +718,8 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
       return false;
+    } finally {
+      _isProcessingAuth = false;
     }
   }
 

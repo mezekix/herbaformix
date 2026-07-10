@@ -6,6 +6,36 @@ admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+function readTextField(
+  data: admin.firestore.DocumentData,
+  fields: string[],
+): string {
+  for (const field of fields) {
+    const value = data[field];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+function wasAlreadyNotifiedForDueDate(
+  data: admin.firestore.DocumentData,
+): boolean {
+  if (data.notificationSent !== true) return false;
+
+  const sentAt = data.notificationSentAt;
+  const dueDate = data.dueDate;
+  if (
+    sentAt instanceof admin.firestore.Timestamp &&
+    dueDate instanceof admin.firestore.Timestamp
+  ) {
+    return sentAt.toMillis() >= dueDate.toMillis();
+  }
+
+  return true;
+}
+
 // 1. Program Bildirimi (users/{userId}/program/{programId} active olunca tetiklenir)
 export const onProgramCreateOrUpdate = functions.firestore
   .document("users/{userId}/program/{programId}")
@@ -70,11 +100,29 @@ export const onProgramCreateOrUpdate = functions.firestore
 // 2. Motivasyon Mesajı Bildirimi (daily_messages/{messageId} eklenince tetiklenir)
 export const onMotivationMessageCreate = functions.firestore
   .document("motivations/{customerId}/daily_messages/{messageId}")
-  .onCreate(async (snapshot, context) => {
+  .onWrite(async (change, context) => {
     const customerId = context.params.customerId;
-    const messageData = snapshot.data();
+    const messageData = change.after.data();
 
     if (!messageData) return;
+
+    const textContent = readTextField(messageData, [
+      "distributor_mesaji",
+      "message",
+      "content",
+    ]);
+    if (!textContent) return;
+
+    const previousMessageData = change.before.data();
+    const previousTextContent = previousMessageData
+      ? readTextField(previousMessageData, [
+        "distributor_mesaji",
+        "message",
+        "content",
+      ])
+      : "";
+
+    if (previousTextContent === textContent) return;
 
     try {
       // Kullanıcı profilini oku
@@ -92,7 +140,6 @@ export const onMotivationMessageCreate = functions.firestore
       }
 
       if (fcmToken) {
-        const textContent = messageData.message || messageData.content || "Yeni bir mesajınız var.";
 
         const message = {
           token: fcmToken,
@@ -149,7 +196,7 @@ export const checkFollowUpsScheduled = functions.pubsub
         const data = doc.data();
 
         // Eğer bildirim zaten gönderildiyse atla
-        if (data.notificationSent === true) continue;
+        if (wasAlreadyNotifiedForDueDate(data)) continue;
 
         const consultantId = data.consultantId;
         const customerName = `${data.customerFirstName || ""} ${data.customerLastName || ""}`.trim();

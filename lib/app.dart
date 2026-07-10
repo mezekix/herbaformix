@@ -284,8 +284,10 @@ class _AppState extends State<App> {
         return MultiProvider(
           providers: [
             ChangeNotifierProvider<ProductProvider>(
-              create: (context) =>
-                  ProductProvider(context.read<FirestoreService>()),
+              create: (context) => ProductProvider(
+                context.read<FirestoreService>(),
+                authProvider: context.read<AuthProvider>(),
+              ),
             ),
             ChangeNotifierProvider<RecipeProvider>(
               create: (context) => RecipeProvider()..loadRecipes(),

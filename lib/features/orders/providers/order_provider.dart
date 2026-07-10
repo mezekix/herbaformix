@@ -106,14 +106,10 @@ class OrderProvider with ChangeNotifier {
 
     _ordersSubscription?.cancel();
     _ordersSubscription = _firestoreService
-        .getOrders(userId)
+        .getOrders(userId, customerId: filterCustomerId)
         .listen(
           (ordersData) {
-            if (filterCustomerId != null) {
-              _orders = ordersData.where((o) => o.customerId == filterCustomerId).toList();
-            } else {
-              _orders = ordersData;
-            }
+            _orders = ordersData;
             _isLoading = false;
             notifyListeners();
           },

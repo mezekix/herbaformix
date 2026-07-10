@@ -18,8 +18,14 @@ class OrderRepository {
         toFirestore: (m, _) => m.toMap(),
       );
 
-  Stream<List<OrderModel>> getOrders(String userId) {
-    return ref(userId)
+  Stream<List<OrderModel>> getOrders(String userId, {String? customerId}) {
+    Query<OrderModel> query = ref(userId);
+
+    if (customerId != null && customerId.isNotEmpty) {
+      query = query.where('customerId', isEqualTo: customerId);
+    }
+
+    return query
         .orderBy('orderDate', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => d.data()).toList());

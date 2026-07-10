@@ -102,7 +102,8 @@ class FirestoreService {
   // ── ProductRepository delegate ─────────────────────────────────────────
 
   CollectionReference<ProductModel> get productsRef => _productRepo.ref;
-  Stream<List<ProductModel>> getProducts() => _productRepo.getProducts();
+  Stream<List<ProductModel>> getProducts({bool customerVisibleOnly = false}) =>
+      _productRepo.getProducts(customerVisibleOnly: customerVisibleOnly);
   Future<DocumentReference<ProductModel>> addProduct(ProductModel p) =>
       _productRepo.addProduct(p);
   Future<void> updateProduct(ProductModel p) => _productRepo.updateProduct(p);
@@ -187,8 +188,8 @@ class FirestoreService {
 
   CollectionReference<OrderModel> ordersRef(String userId) =>
       _orderRepo.ref(userId);
-  Stream<List<OrderModel>> getOrders(String userId) =>
-      _orderRepo.getOrders(userId);
+  Stream<List<OrderModel>> getOrders(String userId, {String? customerId}) =>
+      _orderRepo.getOrders(userId, customerId: customerId);
   Future<DocumentReference<OrderModel>> addOrder(String userId, OrderModel o) =>
       _orderRepo.addOrder(userId, o);
   Future<void> updateOrder(String userId, OrderModel o) =>
@@ -309,6 +310,8 @@ class FirestoreService {
 
   Future<String?> getDistributorMotivationMessage(String customerId) =>
       _motivationRepo.getDistributorMotivationMessage(customerId);
+  Stream<String?> watchDistributorMotivationMessage(String customerId) =>
+      _motivationRepo.watchDistributorMotivationMessage(customerId);
   Future<void> saveDistributorMotivationMessage(
           String customerId, String message) =>
       _motivationRepo.saveDistributorMotivationMessage(customerId, message);

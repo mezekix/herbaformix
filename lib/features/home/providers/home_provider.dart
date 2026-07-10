@@ -29,48 +29,39 @@ class HomeProvider with ChangeNotifier {
   List<ScheduledFollowUpModel> get upcomingFollowUps {
     switch (_activeFilter) {
       case ActionFilter.all:
-        return _allFollowUps;
+        return _allFollowUps.where(_isDueToday).toList();
       case ActionFilter.overdue:
-        return _allFollowUps
-            .where((f) => f.dueDate.toDate().isBefore(DateTime.now()))
-            .toList();
+        return _allFollowUps.where(_isOverdue).toList();
       case ActionFilter.returnRisk:
         final keywords = ['iade', '3. gün', '7. gün', 'ilk hafta', 'başlangıç'];
         return _allFollowUps.where((f) {
           final title = f.title.toLowerCase();
-          return keywords.any((kw) => title.contains(kw));
+          return _isDueToday(f) && keywords.any((kw) => title.contains(kw));
         }).toList();
       case ActionFilter.measurement:
         final keywords = ['ölçüm', 'kilo', 'tartı', 'beden', 'ölç'];
         return _allFollowUps.where((f) {
           final title = f.title.toLowerCase();
-          return keywords.any((kw) => title.contains(kw));
+          return _isDueToday(f) && keywords.any((kw) => title.contains(kw));
         }).toList();
     }
   }
 
-  int get overdueCount =>
-      _allFollowUps.where((f) => f.dueDate.toDate().isBefore(DateTime.now())).length;
+  int get overdueCount => _allFollowUps.where(_isOverdue).length;
 
-  int get allCount => _allFollowUps.length;
+  int get allCount => dueTodayCount;
 
   /// Bugün (00:00 – 23:59 arası) vadesi olan tüm follow-up sayısı.
   /// Dashboard'daki "Bugün'ün Aksiyonları" çağırıcı chip'i için.
   int get dueTodayCount {
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day);
-    final end = start.add(const Duration(days: 1));
-    return _allFollowUps.where((f) {
-      final d = f.dueDate.toDate();
-      return !d.isBefore(start) && d.isBefore(end);
-    }).length;
+    return _allFollowUps.where(_isDueToday).length;
   }
 
   int get returnRiskCount {
     final keywords = ['iade', '3. gün', '7. gün', 'ilk hafta', 'başlangıç'];
     return _allFollowUps.where((f) {
       final title = f.title.toLowerCase();
-      return keywords.any((kw) => title.contains(kw));
+      return _isDueToday(f) && keywords.any((kw) => title.contains(kw));
     }).length;
   }
 
@@ -78,8 +69,26 @@ class HomeProvider with ChangeNotifier {
     final keywords = ['ölçüm', 'kilo', 'tartı', 'beden', 'ölç'];
     return _allFollowUps.where((f) {
       final title = f.title.toLowerCase();
-      return keywords.any((kw) => title.contains(kw));
+      return _isDueToday(f) && keywords.any((kw) => title.contains(kw));
     }).length;
+  }
+
+  DateTime get _startOfToday {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  bool _isDueToday(ScheduledFollowUpModel followUp) {
+    if (followUp.isCompleted) return false;
+    final start = _startOfToday;
+    final end = start.add(const Duration(days: 1));
+    final dueDate = followUp.dueDate.toDate();
+    return !dueDate.isBefore(start) && dueDate.isBefore(end);
+  }
+
+  bool _isOverdue(ScheduledFollowUpModel followUp) {
+    if (followUp.isCompleted) return false;
+    return followUp.dueDate.toDate().isBefore(_startOfToday);
   }
 
   void setFilter(ActionFilter filter) {

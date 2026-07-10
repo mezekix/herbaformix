@@ -33,6 +33,52 @@
       ]
     },
     {
+      "collectionGroup": "inviteCodes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "customerRecordId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "inviteCodes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "distributorId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "isUsed",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "expiresAt",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "customerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "orderDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "scheduled_follow_ups",
       "queryScope": "COLLECTION",
       "fields": [
@@ -51,6 +97,34 @@
       ]
     },
     {
+      "collectionGroup": "scheduled_follow_ups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isCompleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dueDate",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "scheduled_follow_ups",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "consultantId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "customerId",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "dailyRoutines",
       "queryScope": "COLLECTION",
       "fields": [
@@ -61,6 +135,20 @@
         {
           "fieldPath": "scheduledTime",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "motivation_scores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "musteri_id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tarih",
+          "order": "DESCENDING"
         }
       ]
     },

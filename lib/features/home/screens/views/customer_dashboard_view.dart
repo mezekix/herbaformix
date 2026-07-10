@@ -14,7 +14,8 @@ import '../../../auth/providers/auth_provider.dart';
 
 import '../../../products/providers/product_provider.dart';
 import '../../../products/providers/recipe_provider.dart';
-import '../../../products/widgets/recipe_card.dart';
+import '../../../products/widgets/recipe_detail_sheet.dart';
+import '../../../../models/recipe_model.dart';
 
 import '../../../profile/screens/profile_screen.dart';
 import '../../providers/home_provider.dart';
@@ -34,6 +35,8 @@ import '../../widgets/motivation_widget.dart';
 import '../../widgets/daily_compact_success_card.dart';
 import '../../widgets/animated_water_glass.dart';
 import '../../../../services/exercise_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../core/utils/cloudinary_helper.dart';
 
 class CustomerDashboardView extends StatefulWidget {
   final Stream<List<DailyRoutineModel>>? routinesStream;
@@ -781,11 +784,12 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF1B5E20), // Koyu yeşil
+                          color: Color(0xFF1B5E20),
                         ),
                       ),
                       const Spacer(),
-                      if (activeRoutineTimeStr != null && activeRoutine != null) ...[
+                      // Saat — primary renk, sade rakam, simgesiz
+                      if (activeRoutineTimeStr != null && activeRoutine != null)
                         GestureDetector(
                           onTap: () async {
                             final newTime = await showTimePicker(
@@ -799,43 +803,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                               DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
                             );
                           },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.access_time_rounded, size: 14, color: AppColors.primary),
-                                const SizedBox(width: 4),
-                                Text(
-                                  activeRoutineTimeStr,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                      ],
-                      if (totalCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withAlpha(20),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
                           child: Text(
-                            '$completedCount/$totalCount',
+                            activeRoutineTimeStr,
                             style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
                               color: AppColors.primary,
                             ),
                           ),
@@ -939,7 +911,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     );
   }
 
-  /// Stitch HTML'ine sadık checklist — sade checkbox + zaman etiketi + öğün adı
+  /// Checklist — akıllı başlık + tarif fotoğrafı
   Widget _buildStitchChecklistItems(
     BuildContext context,
     List<DailyRoutineModel> routines,
@@ -952,7 +924,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
       areItemsTheSame: (a, b) => a.id == b.id,
       itemBuilder: (context, animation, routine, i) {
         Widget child;
-        // Su adımı için özel tile
+        // Su adımı
         if (routine.isWaterStep) {
           child = _buildStitchChecklistTile(
             context: context,
@@ -981,12 +953,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
             },
           );
         }
-
-        // Normal Öğün adımı (Sağlıklı Tabak, vs.)
+        // Normal Öğün adımı
         else if (routine.isNormalMealStep) {
           child = _buildStitchChecklistTile(
             context: context,
-            title: routine.productId, // Biz burada "Sağlıklı Tabak" vb. etiketi productId'de saklıyoruz.
+            title: _getMealDisplayTitle(routine.productId),
             isCompleted: routine.isCompleted,
             isNext: !routine.isCompleted && routines
                 .where((r) => !r.isCompleted)
@@ -1001,43 +972,35 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                 );
               }
             },
-            onTap: () {
-              // Opsiyonel olarak, normal öğün için de tavsiyeler vb. gösterilebilir.
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${routine.productId} zamanı!'),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            },
           );
         } else {
-
           // Ürün adımı
           final product = context.read<ProductProvider>().products.firstWhere(
             (p) => p.id == routine.productId,
             orElse: () => ProductModel(id: '', name: 'Silinmiş Ürün', vp: 0),
           );
 
-          Widget? recipeCardWidget;
+          // Tarif fotoğrafı (shake ise)
+          String? recipeImageUrl;
+          RecipeModel? dailyRecipe;
           final isShake = _isShakeMeal(product.name);
           if (isShake) {
-             final dailyRecipe = context.read<RecipeProvider>().getRecipeForRoutine(userProfile.userGoal, routine.id);
-             if (dailyRecipe != null) {
-                recipeCardWidget = RecipeCard(recipe: dailyRecipe, isCompact: true);
-             }
+            dailyRecipe = context.read<RecipeProvider>().getRecipeForRoutine(userProfile.userGoal, routine.id);
+            if (dailyRecipe != null) {
+              recipeImageUrl = dailyRecipe.imageUrl;
+            }
           }
 
           child = _buildStitchChecklistTile(
             context: context,
-            title: product.name,
+            title: _getMealDisplayTitle(product.name),
             isCompleted: routine.isCompleted,
             isNext: !routine.isCompleted && routines
                 .where((r) => !r.isCompleted)
                 .firstOrNull
                 ?.id == routine.id,
             isLast: i == routines.length - 1,
-            childBelowTitle: recipeCardWidget,
+            recipeImageUrl: recipeImageUrl,
             onChanged: (val) async {
               if (val != null) {
                 final routineService = context.read<RoutineService>();
@@ -1046,81 +1009,85 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                 );
               }
             },
-            onTap: () {
-              // Tarif göster
+            onTap: dailyRecipe != null ? () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => RecipeDetailPage(recipe: dailyRecipe!),
+                ),
+              );
+            } : () {
+              // Tarif göster (ürün bilgisi)
               final instruction = product.instructionsByGoal?[userProfile.userGoal ?? '']
                   ?? product.usageInfo
                   ?? 'Kullanım bilgisi bulunamadı.';
               showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              builder: (ctx) => DraggableScrollableSheet(
-                expand: false,
-                initialChildSize: 0.5,
-                minChildSize: 0.3,
-                maxChildSize: 0.85,
-                builder: (_, scrollController) => SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Sürükleme çubuğu
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: AppColors.textMutedLighter,
-                            borderRadius: BorderRadius.circular(2),
+                context: context,
+                isScrollControlled: true,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                builder: (ctx) => DraggableScrollableSheet(
+                  expand: false,
+                  initialChildSize: 0.5,
+                  minChildSize: 0.3,
+                  maxChildSize: 0.85,
+                  builder: (_, scrollController) => SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 40, height: 4,
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: AppColors.textMutedLighter,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                      ),
-                      Text(product.name,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-                          textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(instruction,
-                            style: TextStyle(fontSize: 15, color: Colors.orange.shade900),
+                        Text(product.name,
+                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.nightSky),
                             textAlign: TextAlign.center),
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                        child: const Text('Anladım'),
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(instruction,
+                              style: TextStyle(fontSize: 15, color: Colors.orange.shade900),
+                              textAlign: TextAlign.center),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                          child: const Text('Anladım'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      }
+              );
+            },
+          );
+        }
 
-      return SizeFadeTransition(
-          sizeFraction: 0.7,
-          curve: Curves.easeInOut,
-          animation: animation,
-          child: child,
-        );
-      },
+        return SizeFadeTransition(
+            sizeFraction: 0.7,
+            curve: Curves.easeInOut,
+            animation: animation,
+            child: child,
+          );
+        },
     );
   }
 
-  /// Stitch HTML'ine sadık tek checklist satırı — premium glow + pulse ring
+  /// Premium checklist tile — pulse rounded rect buton + tarif fotoğrafı
   Widget _buildStitchChecklistTile({
     required BuildContext context,
     required String title,
@@ -1128,7 +1095,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     required bool isNext,
     required ValueChanged<bool?> onChanged,
     VoidCallback? onTap,
-    Widget? childBelowTitle,
+    String? recipeImageUrl,
     bool isLast = false,
   }) {
     return GestureDetector(
@@ -1136,137 +1103,86 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Aktif öğün için glow arka plan
-          Container(
-            margin: isNext
-                ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4)
-                : EdgeInsets.zero,
-            decoration: isNext
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    color: AppColors.primary.withValues(alpha: 0.04),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.08),
-                        blurRadius: 12,
-                        spreadRadius: 1,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Sol: başlık + buton
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Öğün başlığı
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: isCompleted ? const Color(0xFF8CAF8F) : AppColors.primary,
+                          decoration: isCompleted ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Tamamla butonu — nabız glow + ✓ ikonu
+                      _PulseGlowButton(
+                        isCompleted: isCompleted,
+                        onTap: () => onChanged(!isCompleted),
                       ),
                     ],
-                  )
-                : null,
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isNext ? 12 : 20,
-                vertical: 12,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Checkbox — aktif öğünde pulse ring animasyonu
-                  GestureDetector(
-                    onTap: () => onChanged(!isCompleted),
-                    child: SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Pulse ring — sadece aktif öğünde
-                          if (isNext && !isCompleted)
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0.8, end: 1.0),
-                              duration: const Duration(milliseconds: 1500),
-                              curve: Curves.easeInOut,
-                              builder: (context, value, child) {
-                                return Transform.scale(
-                                  scale: value,
-                                  child: Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: AppColors.primary.withValues(alpha: 0.2 * (1.0 - value) * 5),
-                                        width: 2.5,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              onEnd: () {
-                                // Tekrar tetikle (rebuild ile)
-                              },
-                            ),
-                          // Ana checkbox
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOutBack,
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isCompleted
-                                  ? AppColors.primary
-                                  : (isNext ? AppColors.primary.withAlpha(30) : Colors.transparent),
-                              border: Border.all(
-                                color: isCompleted || isNext
-                                    ? AppColors.primary
-                                    : AppColors.primary.withAlpha(80),
-                                width: 2,
-                              ),
-                              boxShadow: isCompleted
-                                  ? [
-                                      BoxShadow(
-                                        color: AppColors.primary.withValues(alpha: 0.3),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: isCompleted
-                                ? const Icon(Icons.check_rounded, color: Colors.white, size: 22)
-                                : null,
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
+                ),
+                // Sağ: tarif fotoğrafı (varsa)
+                if (recipeImageUrl != null && recipeImageUrl.isNotEmpty) ...[
                   const SizedBox(width: 14),
-                  // İçerik
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Öğün adı
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: isCompleted ? const Color(0xFF8CAF8F) : AppColors.primary,
-                            decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  Column(
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.15),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: CachedNetworkImage(
+                            imageUrl: CloudinaryHelper.optimizeImage(recipeImageUrl, width: 200) ?? recipeImageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, _) => Container(
+                              color: AppColors.primary.withValues(alpha: 0.08),
+                              child: const Center(
+                                child: Icon(Icons.blender, color: AppColors.primary, size: 28),
+                              ),
+                            ),
+                            errorWidget: (_, _, _) => Container(
+                              color: AppColors.primary.withValues(alpha: 0.08),
+                              child: const Center(
+                                child: Icon(Icons.blender, color: AppColors.primary, size: 28),
+                              ),
+                            ),
                           ),
                         ),
-                        if (childBelowTitle != null) ...[
-                          const SizedBox(height: 8),
-                          childBelowTitle,
-                        ],
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tarifi gör →',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
                   ),
-                  // Aktif öğünde ok ikonu
-                  if (isNext && !isCompleted)
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.primary.withValues(alpha: 0.5),
-                      size: 24,
-                    ),
                 ],
-              ),
+              ],
             ),
           ),
           if (!isLast)
@@ -1281,6 +1197,29 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
         ],
       ),
     );
+  }
+
+  /// Ürün adından akıllı başlık üretir
+  String _getMealDisplayTitle(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('formül 1') || n.contains('formul 1') ||
+        n.contains('shake') || n.contains('f1') || n.contains('mama')) {
+      return 'Shake Zamanı';
+    }
+    if (n.contains('çay') || n.contains('tea') || n.contains('herbal tea')) {
+      return 'Çay Zamanı';
+    }
+    if (n.contains('aloe')) {
+      return 'Aloe Zamanı';
+    }
+    if (n.contains('protein') || n.contains('bar')) {
+      return 'Protein Zamanı';
+    }
+    if (n.contains('tabak') || n.contains('yemek') || n.contains('öğün') || n.contains('sağlıklı')) {
+      return 'Öğün Zamanı';
+    }
+    // Bilinmeyen → ürün adı + Zamanı
+    return '$name Zamanı';
   }
 
   /// Segmented Progress Bar — her öğün için bir segment
@@ -2285,5 +2224,117 @@ bool _isShakeMeal(String name) {
       n.contains('şek') ||
       n.contains('mama') ||
       n.contains('f1');
+}
+
+/// Nabız glow efektli tamamla butonu
+/// Sürekli atan pulse glow ring + tıklayınca bounce ile dolma
+class _PulseGlowButton extends StatefulWidget {
+  final bool isCompleted;
+  final VoidCallback onTap;
+
+  const _PulseGlowButton({
+    required this.isCompleted,
+    required this.onTap,
+  });
+
+  @override
+  State<_PulseGlowButton> createState() => _PulseGlowButtonState();
+}
+
+class _PulseGlowButtonState extends State<_PulseGlowButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    if (!widget.isCompleted) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _PulseGlowButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isCompleted && !oldWidget.isCompleted) {
+      _pulseController.stop();
+    } else if (!widget.isCompleted && oldWidget.isCompleted) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          final pulse = _pulseController.value;
+          final isCompleted = widget.isCompleted;
+          final scale = isCompleted ? 1.0 : 0.96 + (pulse * 0.08);
+
+          return Transform.scale(
+            scale: scale,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutBack,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: isCompleted
+                    ? AppColors.primary
+                    : Colors.white,
+                border: Border.all(
+                  color: isCompleted
+                      ? AppColors.primary
+                      : AppColors.primary.withValues(
+                          alpha: 0.5 + pulse * 0.5,
+                        ),
+                  width: isCompleted ? 1.5 : 1.5 + pulse * 0.5,
+                ),
+                boxShadow: isCompleted
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(
+                            alpha: 0.05 + pulse * 0.15,
+                          ),
+                          blurRadius: 4 + pulse * 8,
+                          spreadRadius: pulse * 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+              ),
+              child: Text(
+                isCompleted ? '✓ Tamamlandı' : 'Tamamla',
+                style: TextStyle(
+                  color: isCompleted ? Colors.white : AppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
 

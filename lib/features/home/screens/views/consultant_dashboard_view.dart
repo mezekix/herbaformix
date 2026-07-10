@@ -520,15 +520,7 @@ class _ConsultantDashboardViewState extends State<ConsultantDashboardView> {
   ) {
     if (provider.isLoading) return const CriticalActionsSkeleton();
 
-    final customerCounts = <String, int>{};
-    final filteredTasks = provider.upcomingFollowUps.where((task) {
-      final count = customerCounts[task.customerId] ?? 0;
-      if (count < 2) {
-        customerCounts[task.customerId] = count + 1;
-        return true;
-      }
-      return false;
-    }).toList();
+    final filteredTasks = provider.upcomingFollowUps;
 
     if (filteredTasks.isEmpty) {
       return const CriticalActionsEmptyState();

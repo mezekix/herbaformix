@@ -16,6 +16,17 @@ class MotivationRepository {
       final startOfDay = DateTime(now.year, now.month, now.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
+      final todayDoc = await _db
+          .collection('motivations')
+          .doc(customerId)
+          .collection('daily_messages')
+          .doc('today')
+          .get();
+      final todayMessage = todayDoc.data()?['distributor_mesaji'] as String?;
+      if (todayMessage != null && todayMessage.trim().isNotEmpty) {
+        return todayMessage.trim();
+      }
+
       final s = await _db
           .collection('motivations')
           .doc(customerId)
@@ -35,6 +46,27 @@ class MotivationRepository {
   }
 
   /// O günün distribütör mesajını kaydeder (ID = 'today', upsert).
+  Stream<String?> watchDistributorMotivationMessage(String customerId) {
+    return _db
+        .collection('motivations')
+        .doc(customerId)
+        .collection('daily_messages')
+        .doc('today')
+        .snapshots()
+        .map((doc) {
+      final message = doc.data()?['distributor_mesaji'] as String?;
+      if (message == null || message.trim().isEmpty) return null;
+      return message.trim();
+    }).handleError((error) {
+      AppLogger.error(
+        'watchDistributorMotivationMessage hatasi: $error',
+        tag: 'MotivationRepository',
+        error: error,
+      );
+      return null;
+    });
+  }
+
   Future<void> saveDistributorMotivationMessage(
     String customerId,
     String message,

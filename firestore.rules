@@ -18,15 +18,457 @@ service cloud.firestore {
       return signedIn() && myProfile().data.role in ['distributor', 'supervisor', 'successCreator'];
     }
 
+    function isValidInitialUserProfile(userId) {
+      return isOwner(userId) &&
+        request.resource.data.role == 'customer' &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() <= 254;
+    }
+
+    function profileOwnerMutableKeys() {
+      return [
+        'email',
+        'name',
+        'isOnboarded',
+        'age',
+        'phoneNumber',
+        'weight',
+        'height',
+        'targetWeight',
+        'programStartDate',
+        'userGoal',
+        'wakeTime',
+        'lunchTime',
+        'sleepTime',
+        'birthDate',
+        'gender',
+        'healthNotes',
+        'allergies',
+        'medications',
+        'profilePhotoUrl',
+        'profilePhotoUpdatedAt',
+        'earnedBadges',
+        'waterDailyGoal',
+        'waterMinLimit',
+        'waterMaxLimit',
+        'distributorRequestStatus',
+        'fcmToken',
+        'fcmTokenUpdatedAt',
+        'notificationSettings'
+      ];
+    }
+
     function isAssignedDistributor(customerUserId) {
       return signedIn() &&
         exists(/databases/$(database)/documents/userProfiles/$(customerUserId)) &&
         get(/databases/$(database)/documents/userProfiles/$(customerUserId)).data.assignedDistributorId == request.auth.uid;
     }
 
+    function isCustomerVisibleProduct() {
+      return resource.data.category in ['İç Beslenme', 'Dış Beslenme'];
+    }
+
+    function isValidOrder(data, distributorId) {
+      return data.keys().hasOnly([
+          'userId',
+          'customerId',
+          'customerName',
+          'items',
+          'orderDate',
+          'status',
+          'totalAmount',
+          'totalVpEarned',
+          'notes',
+          'shippingAddress'
+        ]) &&
+        data.keys().hasAll([
+          'userId',
+          'customerId',
+          'customerName',
+          'items',
+          'orderDate',
+          'status',
+          'totalAmount',
+          'totalVpEarned'
+        ]) &&
+        data.userId == distributorId &&
+        data.customerId is string &&
+        data.customerId.size() > 0 &&
+        data.customerId.size() <= 128 &&
+        data.customerName is string &&
+        data.customerName.size() <= 120 &&
+        data.items is list &&
+        data.items.size() > 0 &&
+        data.items.size() <= 50 &&
+        data.orderDate is timestamp &&
+        data.status in [
+          'OrderStatus.pending',
+          'OrderStatus.processing',
+          'OrderStatus.shipped',
+          'OrderStatus.delivered',
+          'OrderStatus.cancelled'
+        ] &&
+        data.totalAmount is number &&
+        data.totalAmount >= 0 &&
+        data.totalAmount <= 1000000 &&
+        data.totalVpEarned is number &&
+        data.totalVpEarned >= 0 &&
+        data.totalVpEarned <= 1000000 &&
+        (!('notes' in data) || data.notes == null ||
+          (data.notes is string && data.notes.size() <= 2000)) &&
+        (!('shippingAddress' in data) || data.shippingAddress == null ||
+          (data.shippingAddress is string && data.shippingAddress.size() <= 1000));
+    }
+
+    function isAssignedCustomerOrder(distributorId, data) {
+      return signedIn() &&
+        myProfile().data.assignedDistributorId == distributorId &&
+        data.customerId == request.auth.uid;
+    }
+
+    function isOptionalNumber(data, field, minValue, maxValue) {
+      return !(field in data) ||
+        data[field] == null ||
+        (data[field] is number &&
+          data[field] >= minValue &&
+          data[field] <= maxValue);
+    }
+
+    function isValidProgressEntry(data) {
+      return data.keys().hasOnly([
+          'date',
+          'weight',
+          'bmi',
+          'waist',
+          'belly',
+          'hip',
+          'chest',
+          'bodyFat',
+          'muscleMass',
+          'arm',
+          'thigh'
+        ]) &&
+        data.keys().hasAll(['date', 'weight']) &&
+        data.date is timestamp &&
+        data.weight is number &&
+        data.weight >= 20 &&
+        data.weight <= 400 &&
+        isOptionalNumber(data, 'bmi', 5, 100) &&
+        isOptionalNumber(data, 'waist', 20, 300) &&
+        isOptionalNumber(data, 'belly', 20, 300) &&
+        isOptionalNumber(data, 'hip', 20, 300) &&
+        isOptionalNumber(data, 'chest', 20, 300) &&
+        isOptionalNumber(data, 'bodyFat', 0, 80) &&
+        isOptionalNumber(data, 'muscleMass', 0, 250) &&
+        isOptionalNumber(data, 'arm', 5, 150) &&
+        isOptionalNumber(data, 'thigh', 10, 200);
+    }
+
+    function isValidWaterLog(data) {
+      return data.keys().hasOnly(['time', 'amount']) &&
+        data.keys().hasAll(['time', 'amount']) &&
+        data.time is timestamp &&
+        data.amount is int &&
+        data.amount > 0 &&
+        data.amount <= 5000;
+    }
+
+    function isValidWaterSummary(data) {
+      return data.keys().hasOnly([
+          'targetMl',
+          'exerciseLevel',
+          'weatherTemp',
+          'weatherHumidity',
+          'weatherStatus',
+          'isWeatherFetched',
+          'updatedAt'
+        ]) &&
+        data.keys().hasAll([
+          'targetMl',
+          'exerciseLevel',
+          'isWeatherFetched',
+          'updatedAt'
+        ]) &&
+        data.targetMl is int &&
+        data.targetMl >= 500 &&
+        data.targetMl <= 10000 &&
+        data.exerciseLevel is string &&
+        data.exerciseLevel in ['sedentary', 'light', 'moderate', 'active', 'very_active'] &&
+        data.isWeatherFetched is bool &&
+        data.updatedAt is timestamp &&
+        isOptionalNumber(data, 'weatherTemp', -80, 80) &&
+        isOptionalNumber(data, 'weatherHumidity', 0, 100) &&
+        (!('weatherStatus' in data) || data.weatherStatus == null ||
+          (data.weatherStatus is string && data.weatherStatus.size() <= 80));
+    }
+
+    function isValidCalorieLog(data, logId) {
+      return data.keys().hasOnly([
+          'date',
+          'meals',
+          'dailyGoal',
+          'totalCalories',
+          'updatedAt',
+          'isAutoGoal'
+        ]) &&
+        data.keys().hasAll([
+          'date',
+          'meals',
+          'dailyGoal',
+          'totalCalories',
+          'updatedAt',
+          'isAutoGoal'
+        ]) &&
+        data.date == logId &&
+        data.date is string &&
+        data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        data.meals is list &&
+        data.meals.size() <= 30 &&
+        data.dailyGoal is int &&
+        data.dailyGoal >= 500 &&
+        data.dailyGoal <= 10000 &&
+        data.totalCalories is int &&
+        data.totalCalories >= 0 &&
+        data.totalCalories <= 20000 &&
+        data.updatedAt is timestamp &&
+        data.isAutoGoal is bool;
+    }
+
+    function isValidDailyRoutine(data) {
+      return data.keys().hasOnly([
+          'productId',
+          'scheduledTime',
+          'isCompleted',
+          'stepType',
+          'amountMl',
+          'slotId'
+        ]) &&
+        data.keys().hasAll([
+          'productId',
+          'scheduledTime',
+          'isCompleted',
+          'stepType'
+        ]) &&
+        data.productId is string &&
+        data.productId.size() > 0 &&
+        data.productId.size() <= 160 &&
+        data.scheduledTime is timestamp &&
+        data.isCompleted is bool &&
+        data.stepType in ['product', 'water', 'normalMeal'] &&
+        (!('amountMl' in data) || data.amountMl == null ||
+          (data.amountMl is int && data.amountMl > 0 && data.amountMl <= 5000)) &&
+        (!('slotId' in data) || data.slotId == null ||
+          (data.slotId is string && data.slotId.size() <= 120));
+    }
+
+    function isValidProgram(data, programId) {
+      return programId == 'active' &&
+        data.keys().hasOnly([
+          'userGoal',
+          'startDate',
+          'durationMonths',
+          'slots',
+          'currentWeight',
+          'targetWeight',
+          'createdAt',
+          'isActive'
+        ]) &&
+        data.keys().hasAll([
+          'userGoal',
+          'startDate',
+          'durationMonths',
+          'slots',
+          'createdAt',
+          'isActive'
+        ]) &&
+        data.userGoal in ['weight_loss', 'healthy_living', 'weight_gain'] &&
+        data.startDate is timestamp &&
+        data.durationMonths is int &&
+        data.durationMonths >= 1 &&
+        data.durationMonths <= 24 &&
+        data.slots is list &&
+        data.slots.size() <= 20 &&
+        data.createdAt is timestamp &&
+        data.isActive is bool &&
+        isOptionalNumber(data, 'currentWeight', 20, 400) &&
+        isOptionalNumber(data, 'targetWeight', 20, 400);
+    }
+
+    function isValidExercise(data, exerciseId) {
+      return exerciseId.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+        data.keys().hasOnly(['isCompleted', 'updatedAt']) &&
+        data.keys().hasAll(['isCompleted', 'updatedAt']) &&
+        data.isCompleted is bool &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidFollowUp(data, distributorId, customerDocId) {
+      return data.keys().hasOnly([
+          'customerId',
+          'consultantId',
+          'date',
+          'type',
+          'status',
+          'notes',
+          'nextFollowUpDate'
+        ]) &&
+        data.keys().hasAll([
+          'customerId',
+          'consultantId',
+          'date',
+          'type',
+          'status',
+          'notes'
+        ]) &&
+        data.consultantId == distributorId &&
+        data.customerId in [customerDocId, request.auth.uid] &&
+        data.date is timestamp &&
+        data.type in [
+          'FollowUpType.phoneCall',
+          'FollowUpType.whatsappMessage',
+          'FollowUpType.email',
+          'FollowUpType.inPerson'
+        ] &&
+        data.status in [
+          'FollowUpStatus.completed',
+          'FollowUpStatus.requiresAction'
+        ] &&
+        data.notes is string &&
+        data.notes.size() <= 3000 &&
+        (!('nextFollowUpDate' in data) ||
+          data.nextFollowUpDate == null ||
+          data.nextFollowUpDate is timestamp);
+    }
+
+    function isValidScheduledFollowUp(data) {
+      return data.keys().hasOnly([
+          'consultantId',
+          'customerId',
+          'customerFirstName',
+          'customerLastName',
+          'dueDate',
+          'title',
+          'isCompleted',
+          'notes',
+          'createdAt',
+          'isAutoGenerated'
+        ]) &&
+        data.keys().hasAll([
+          'consultantId',
+          'customerId',
+          'customerFirstName',
+          'customerLastName',
+          'dueDate',
+          'title',
+          'isCompleted',
+          'createdAt',
+          'isAutoGenerated'
+        ]) &&
+        data.consultantId is string &&
+        data.consultantId.size() > 0 &&
+        data.consultantId.size() <= 128 &&
+        data.customerId is string &&
+        data.customerId.size() > 0 &&
+        data.customerId.size() <= 128 &&
+        data.customerFirstName is string &&
+        data.customerFirstName.size() <= 80 &&
+        data.customerLastName is string &&
+        data.customerLastName.size() <= 80 &&
+        data.dueDate is timestamp &&
+        data.title is string &&
+        data.title.size() > 0 &&
+        data.title.size() <= 180 &&
+        data.isCompleted is bool &&
+        data.createdAt is timestamp &&
+        data.isAutoGenerated is bool &&
+        (!('notes' in data) || data.notes == null ||
+          (data.notes is string && data.notes.size() <= 3000));
+    }
+
+    function isScheduledFollowUpLinkedCustomer(data) {
+      return signedIn() && (
+        data.customerId == request.auth.uid ||
+        (
+          exists(/databases/$(database)/documents/users/$(data.consultantId)/customers/$(data.customerId)) &&
+          get(/databases/$(database)/documents/users/$(data.consultantId)/customers/$(data.customerId)).data.linkedUserId == request.auth.uid
+        )
+      );
+    }
+
+    function isValidProgramTemplate(data) {
+      return data.keys().hasOnly([
+          'name',
+          'description',
+          'userGoal',
+          'slots',
+          'defaultDurationMonths',
+          'createdBy',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.keys().hasAll([
+          'name',
+          'userGoal',
+          'slots',
+          'defaultDurationMonths',
+          'createdBy',
+          'createdAt',
+          'updatedAt'
+        ]) &&
+        data.name is string &&
+        data.name.size() > 0 &&
+        data.name.size() <= 120 &&
+        (!('description' in data) || data.description == null ||
+          (data.description is string && data.description.size() <= 1000)) &&
+        data.userGoal in ['weight_loss', 'healthy_living', 'weight_gain'] &&
+        data.slots is list &&
+        data.slots.size() <= 20 &&
+        data.defaultDurationMonths is int &&
+        data.defaultDurationMonths >= 1 &&
+        data.defaultDurationMonths <= 24 &&
+        data.createdBy is string &&
+        data.createdBy.size() > 0 &&
+        data.createdBy.size() <= 128 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidMotivationMessage(data) {
+      return data.keys().hasOnly([
+          'distributor_mesaji',
+          'distributor_mesaji_tarihi',
+          'timestamp',
+          'sistem_soz_index'
+        ]) &&
+        data.keys().hasAll([
+          'distributor_mesaji',
+          'distributor_mesaji_tarihi',
+          'timestamp',
+          'sistem_soz_index'
+        ]) &&
+        data.distributor_mesaji is string &&
+        data.distributor_mesaji.size() > 0 &&
+        data.distributor_mesaji.size() <= 1000 &&
+        data.distributor_mesaji_tarihi is timestamp &&
+        data.timestamp is timestamp &&
+        data.sistem_soz_index is int &&
+        data.sistem_soz_index >= 0 &&
+        data.sistem_soz_index <= 9999;
+    }
+
+    function isValidMotivationScore(data) {
+      return data.keys().hasOnly(['skor', 'tarih', 'musteri_id']) &&
+        data.keys().hasAll(['skor', 'tarih', 'musteri_id']) &&
+        data.skor is int &&
+        data.skor >= 1 &&
+        data.skor <= 10 &&
+        data.tarih is timestamp &&
+        data.musteri_id == request.auth.uid;
+    }
+
     match /products/{productId} {
       // Ürün kataloğu giriş yapmış herkes okuyabilir, sadece distribütörler yazabilir.
-      allow read: if signedIn();
+      allow read: if isDistributor() || (signedIn() && isCustomerVisibleProduct());
       allow write: if isDistributor();
     }
 
@@ -40,7 +482,7 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/userProfiles/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/userProfiles/$(request.auth.uid)).data.assignedDistributorId == userId;
 
-      allow create: if isOwner(userId);
+      allow create: if isValidInitialUserProfile(userId);
       allow delete: if isOwner(userId);
 
       // Sahibi (kullanıcı) kendi profilinin tüm alanlarını güncelleyebilir.
@@ -49,7 +491,13 @@ service cloud.firestore {
       //   - waterMinLimit, waterMaxLimit, waterDailyGoal → su limiti ayarı
       //   - assignedDistributorId    → müşteri silindiğinde bağlantıyı kesmek için
       // Diğer hassas alanlar (role, isOnboarded, earnedBadges, weight, vb.) korunur.
-      allow update: if (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']))
+      allow update: if (isOwner(userId) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(profileOwnerMutableKeys()) &&
+          request.resource.data.role == resource.data.role &&
+          (
+            !('assignedDistributorId' in request.resource.data) ||
+            request.resource.data.assignedDistributorId == resource.data.assignedDistributorId
+          ))
         || (
           signedIn()
           && resource.data.assignedDistributorId == request.auth.uid
@@ -61,6 +509,10 @@ service cloud.firestore {
                 'waterMinLimit',
                 'waterMaxLimit',
                 'waterDailyGoal',
+                'programStartDate',
+                'userGoal',
+                'weight',
+                'targetWeight',
                 'assignedDistributorId'
               ])
           // assignedDistributorId değişiyorsa yalnızca SİLİNEBİLİR.
@@ -73,22 +525,45 @@ service cloud.firestore {
     }
 
     match /inviteCodes/{codeId} {
-      allow get: if true;
+      allow get: if signedIn();
       allow list: if signedIn() && (
         resource.data.distributorId == request.auth.uid ||
         resource.data.usedByUserId == request.auth.uid
       );
 
       allow create: if isDistributor() &&
+        request.resource.data.keys().hasOnly([
+          'code',
+          'distributorId',
+          'createdAt',
+          'expiresAt',
+          'status',
+          'isUsed',
+          'customerRecordId',
+          'customerName',
+          'customerPhone',
+          'customerEmail'
+        ]) &&
+        request.resource.data.code == codeId &&
+        request.resource.data.distributorId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
         request.resource.data.isUsed == false &&
+        request.resource.data.expiresAt > request.time &&
         !('usedByUserId' in request.resource.data);
 
       allow update: if signedIn() &&
         resource.data.isUsed == false &&
+        resource.data.status == 'pending' &&
+        resource.data.expiresAt > request.time &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['isUsed', 'status', 'usedByUserId']) &&
         request.resource.data.isUsed == true &&
+        request.resource.data.status == 'used' &&
         request.resource.data.usedByUserId == request.auth.uid &&
         request.resource.data.code == resource.data.code &&
-        request.resource.data.distributorId == resource.data.distributorId;
+        request.resource.data.distributorId == resource.data.distributorId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.expiresAt == resource.data.expiresAt;
 
       // Sadece kodu üreten distribütör (veya kullanan müşterinin kendisi) silebilir.
       allow delete: if signedIn() && (
@@ -102,20 +577,42 @@ service cloud.firestore {
 
       match /customers/{customerId} {
         allow read, create: if isOwner(userId);
-        allow delete: if isOwner(userId) || (signedIn() && resource.data.linkedUserId == request.auth.uid);
+        allow delete: if isOwner(userId) || (
+          signedIn() &&
+          ('linkedUserId' in resource.data) &&
+          resource.data.linkedUserId == request.auth.uid
+        );
         allow update: if isOwner(userId) || (
           signedIn() &&
+          ('linkedUserId' in resource.data) &&
+          resource.data.linkedUserId == request.auth.uid &&
           request.resource.data.linkedUserId == request.auth.uid &&
           request.resource.data.firstName == resource.data.firstName &&
           request.resource.data.lastName == resource.data.lastName &&
           request.resource.data.phoneNumber == resource.data.phoneNumber &&
           request.resource.data.email == resource.data.email &&
           request.resource.data.consultantId == resource.data.consultantId
+        ) || (
+          signedIn() &&
+          (!('linkedUserId' in resource.data) || resource.data.linkedUserId == null) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['linkedUserId', 'activatedAt']) &&
+          request.resource.data.linkedUserId == request.auth.uid &&
+          ('inviteCodeId' in resource.data) &&
+          getAfter(/databases/$(database)/documents/inviteCodes/$(resource.data.inviteCodeId)).data.usedByUserId == request.auth.uid
         );
 
         match /follow_ups/{followUpId} {
           allow read: if isOwner(userId);
-          allow write: if isOwner(userId) || (
+          allow create, update: if (
+            isOwner(userId) ||
+            (
+              signedIn() &&
+              exists(/databases/$(database)/documents/users/$(userId)/customers/$(customerId)) &&
+              get(/databases/$(database)/documents/users/$(userId)/customers/$(customerId)).data.linkedUserId == request.auth.uid
+            )
+          ) && isValidFollowUp(request.resource.data, userId, customerId);
+          allow delete: if isOwner(userId) || (
             signedIn() &&
             exists(/databases/$(database)/documents/users/$(userId)/customers/$(customerId)) &&
             get(/databases/$(database)/documents/users/$(userId)/customers/$(customerId)).data.linkedUserId == request.auth.uid
@@ -124,47 +621,89 @@ service cloud.firestore {
       }
 
       match /orders/{orderId} {
-        allow read: if isOwner(userId) || (signedIn() && myProfile().data.assignedDistributorId == userId && resource.data.customerId == request.auth.uid);
-        allow create: if isOwner(userId) || (signedIn() && myProfile().data.assignedDistributorId == userId && request.resource.data.customerId == request.auth.uid);
-        allow update: if isOwner(userId) || (signedIn() && myProfile().data.assignedDistributorId == userId && resource.data.customerId == request.auth.uid && request.resource.data.customerId == request.auth.uid);
+        allow read: if isOwner(userId) ||
+          isAssignedCustomerOrder(userId, resource.data);
+        allow create: if (
+          isOwner(userId) &&
+          isValidOrder(request.resource.data, userId)
+        ) || (
+          isAssignedCustomerOrder(userId, request.resource.data) &&
+          isValidOrder(request.resource.data, userId) &&
+          request.resource.data.status == 'OrderStatus.pending'
+        );
+        allow update: if (
+          isOwner(userId) &&
+          isValidOrder(request.resource.data, userId)
+        ) || (
+          isAssignedCustomerOrder(userId, resource.data) &&
+          isAssignedCustomerOrder(userId, request.resource.data) &&
+          resource.data.status == 'OrderStatus.pending' &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['notes', 'shippingAddress']) &&
+          isValidOrder(request.resource.data, userId)
+        );
         allow delete: if isOwner(userId);
       }
 
       match /progressEntries/{entryId} {
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
-        allow write: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          isValidProgressEntry(request.resource.data);
+        allow delete: if isOwner(userId);
       }
 
       match /waterLogs/{logId} {
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
-        allow write: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          isValidWaterLog(request.resource.data);
+        allow delete: if isOwner(userId);
       }
 
       match /calorieLogs/{logId} {
         // Kullanıcı kendi kalori kayıtlarını okur/yazar.
         // Atanmış distribütör müşterinin günlük durumunu görebilir.
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
-        allow write: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          isValidCalorieLog(request.resource.data, logId);
+        allow delete: if isOwner(userId);
       }
 
       match /dailyRoutines/{routineId} {
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
-        allow write: if isOwner(userId) || isAssignedDistributor(userId);
+        allow create: if (isOwner(userId) || isAssignedDistributor(userId)) &&
+          isValidDailyRoutine(request.resource.data);
+        allow update: if (
+          isAssignedDistributor(userId) &&
+          isValidDailyRoutine(request.resource.data)
+        ) || (
+          isOwner(userId) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['isCompleted']) &&
+          isValidDailyRoutine(request.resource.data)
+        );
+        allow delete: if isOwner(userId) || isAssignedDistributor(userId);
       }
 
       match /program/{programId} {
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
-        allow write: if isOwner(userId) || isAssignedDistributor(userId);
+        allow create, update: if (isOwner(userId) || isAssignedDistributor(userId)) &&
+          isValidProgram(request.resource.data, programId);
+        allow delete: if (isOwner(userId) || isAssignedDistributor(userId)) &&
+          programId == 'active';
       }
 
       match /daily_exercise/{exerciseId} {
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
-        allow write: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          isValidExercise(request.resource.data, exerciseId);
+        allow delete: if isOwner(userId);
       }
 
       match /waterSummaries/{summaryId} {
         allow read: if isOwner(userId) || isAssignedDistributor(userId);
-        allow write: if isOwner(userId);
+        allow create, update: if isOwner(userId) &&
+          isValidWaterSummary(request.resource.data);
+        allow delete: if isOwner(userId);
       }
 
       match /{document=**} {
@@ -176,16 +715,23 @@ service cloud.firestore {
       // Sadece takip kaydının consultant'ı veya bağlı müşterisi okuyabilir.
       allow read: if signedIn() && (
         resource.data.consultantId == request.auth.uid ||
-        resource.data.customerId == request.auth.uid ||
-        ('linkedUserId' in resource.data && resource.data.linkedUserId == request.auth.uid)
+        isScheduledFollowUpLinkedCustomer(resource.data)
       );
       // Sadece consultant olarak kendini gösteren distribütör oluşturabilir ve
       // gösterdiği müşterinin gerçekten onun müşterisi olduğunu ispatlamalıdır.
       allow create: if signedIn() && 
         request.resource.data.consultantId == request.auth.uid &&
+        isValidScheduledFollowUp(request.resource.data) &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)/customers/$(request.resource.data.customerId));
       // Sadece kaydı oluşturan consultant güncelleyebilir/silebilir.
-      allow update, delete: if signedIn() && resource.data.consultantId == request.auth.uid;
+      allow update: if signedIn() &&
+        resource.data.consultantId == request.auth.uid &&
+        request.resource.data.consultantId == resource.data.consultantId &&
+        request.resource.data.customerId == resource.data.customerId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.isAutoGenerated == resource.data.isAutoGenerated &&
+        isValidScheduledFollowUp(request.resource.data);
+      allow delete: if signedIn() && resource.data.consultantId == request.auth.uid;
     }
 
     match /careerRoadmap/{levelId} {
@@ -198,17 +744,28 @@ service cloud.firestore {
       // Şablon program kataloğu (top-level). Okuma giriş yapmışlara, yazma distribütörlere.
       // Kullanıcıya özel programlar /users/{userId}/program/ altında ayrı kuralla yönetilir.
       allow read: if signedIn();
-      allow write: if isDistributor();
+      allow create: if isDistributor() &&
+        request.resource.data.createdBy == request.auth.uid &&
+        isValidProgramTemplate(request.resource.data);
+      allow update: if isDistributor() &&
+        resource.data.createdBy == request.auth.uid &&
+        request.resource.data.createdBy == resource.data.createdBy &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        isValidProgramTemplate(request.resource.data);
+      allow delete: if isDistributor() &&
+        resource.data.createdBy == request.auth.uid;
     }
 
     match /motivations/{customerId} {
       allow read: if isOwner(customerId) || isAssignedDistributor(customerId);
-      allow write: if isAssignedDistributor(customerId);
+      allow create, update: if false;
       allow delete: if isOwner(customerId);
 
       match /daily_messages/{messageId} {
         allow read: if isOwner(customerId) || isAssignedDistributor(customerId);
-        allow write: if isAssignedDistributor(customerId);
+        allow create, update: if isAssignedDistributor(customerId) &&
+          messageId == 'today' &&
+          isValidMotivationMessage(request.resource.data);
         allow delete: if isOwner(customerId);
       }
     }
@@ -217,9 +774,10 @@ service cloud.firestore {
       allow read: if signedIn() && (
         (resource != null && 'musteri_id' in resource.data && (isOwner(resource.data.musteri_id) || isAssignedDistributor(resource.data.musteri_id)))
       );
-      allow write: if signedIn() && (
-        (request.resource != null && 'musteri_id' in request.resource.data && isOwner(request.resource.data.musteri_id))
-      );
+      allow create, update: if signedIn() &&
+        isValidMotivationScore(request.resource.data);
+      allow delete: if signedIn() &&
+        resource.data.musteri_id == request.auth.uid;
     }
   }
 }

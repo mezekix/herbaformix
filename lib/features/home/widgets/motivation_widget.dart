@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -29,12 +30,20 @@ class _MotivationWidgetState extends State<MotivationWidget> {
   String? _distributorMessage;
   String? _distributorName;
   String? _loadedGoal;
+  String? _listeningUserId;
   bool _loadingQuotes = false;
+  bool _showDistributorMessage = true;
+  StreamSubscription<String?>? _messageSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadDistributorMessage();
+  }
+
+  @override
+  void dispose() {
+    _messageSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadQuotes(String userGoal) async {
@@ -82,12 +91,55 @@ class _MotivationWidgetState extends State<MotivationWidget> {
           setState(() {
             _distributorMessage = message;
             _distributorName = distributor?.name ?? 'Distribütörün';
+            _showDistributorMessage = true;
           });
         }
       }
     } catch (e) {
       AppLogger.error('loadDistributorMessage hatası: $e', tag: 'MotivationWidget', error: e);
     }
+  }
+
+  void _listenToDistributorMessage(String userId, String distributorId) {
+    if (_listeningUserId == userId) return;
+    _listeningUserId = userId;
+    _messageSubscription?.cancel();
+    _messageSubscription = context
+        .read<FirestoreService>()
+        .watchDistributorMotivationMessage(userId)
+        .listen((message) async {
+      if (!mounted) return;
+
+      if (message == null || message.trim().isEmpty) {
+        setState(() {
+          _distributorMessage = null;
+          _distributorName = null;
+          _showDistributorMessage = false;
+        });
+        return;
+      }
+
+      var distributorName = _distributorName;
+      if (distributorName == null) {
+        final distributor = await context
+            .read<FirestoreService>()
+            .getDistributorProfile(distributorId);
+        distributorName = distributor?.name ?? 'Distribütörün';
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _distributorMessage = message;
+        _distributorName = distributorName;
+        _showDistributorMessage = true;
+      });
+    }, onError: (error) {
+      AppLogger.error(
+        'listenDistributorMessage hatasi: $error',
+        tag: 'MotivationWidget',
+        error: error,
+      );
+    });
   }
 
   void _switchQuote() {
@@ -150,6 +202,12 @@ class _MotivationWidgetState extends State<MotivationWidget> {
     final profileGoal = context.select<AuthProvider, String?>(
       (ap) => ap.userProfile?.userGoal,
     );
+    final userId = context.select<AuthProvider, String?>(
+      (ap) => ap.userProfile?.id,
+    );
+    final distributorId = context.select<AuthProvider, String?>(
+      (ap) => ap.userProfile?.assignedDistributorId,
+    );
     final programGoal = context.select<ProgramProvider, String?>(
       (pp) => pp.activeProgram?.userGoal,
     );
@@ -161,9 +219,20 @@ class _MotivationWidgetState extends State<MotivationWidget> {
       });
     }
 
+    if (userId != null &&
+        userId.isNotEmpty &&
+        distributorId != null &&
+        distributorId.isNotEmpty &&
+        _listeningUserId != userId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _listenToDistributorMessage(userId, distributorId);
+      });
+    }
+
     final style = _styleForGoal(userGoal);
-    final isDistributorMsg = _distributorMessage != null;
-    final shownQuote = _distributorMessage ?? _displayedQuote;
+    final isDistributorMsg =
+        _distributorMessage != null && _showDistributorMessage;
+    final shownQuote = isDistributorMsg ? _distributorMessage! : _displayedQuote;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -310,65 +379,70 @@ class _MotivationWidgetState extends State<MotivationWidget> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  if (!isDistributorMsg)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Material(
-                        color: Colors.white.withValues(alpha: 0.14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Material(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(24),
+                      child: InkWell(
                         borderRadius: BorderRadius.circular(24),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(24),
-                          onTap: _switchQuote,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.refresh_rounded,
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  size: 16,
+                        onTap: isDistributorMsg
+                            ? () => setState(() {
+                                  _showDistributorMessage = false;
+                                })
+                            : _switchQuote,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isDistributorMsg
+                                    ? Icons.auto_awesome_rounded
+                                    : Icons.refresh_rounded,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isDistributorMsg ? 'Günün sözüne dön' : 'Yeni söz',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.95),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
                                 ),
+                              ),
+                              if (!isDistributorMsg && _sessionSwitches > 0) ...[
                                 const SizedBox(width: 6),
-                                Text(
-                                  'Yeni söz',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.95),
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${_maxSwitches - _sessionSwitches}',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.95),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
-                                if (_sessionSwitches > 0) ...[
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.18),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Text(
-                                      '${_maxSwitches - _sessionSwitches}',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.95),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
-                            ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  if (_distributorName != null) ...[
+                  ),
+                  if (isDistributorMsg && _distributorName != null) ...[
                     const SizedBox(height: 16),
                     Divider(
                       color: Colors.white.withValues(alpha: 0.18),

@@ -7,6 +7,8 @@ class ProductRepository {
   ProductRepository({FirebaseFirestore? firestore})
       : _db = firestore ?? FirebaseFirestore.instance;
 
+  static const customerVisibleCategories = ['İç Beslenme', 'Dış Beslenme'];
+
   final FirebaseFirestore _db;
 
   CollectionReference<ProductModel> get ref => _db
@@ -16,11 +18,18 @@ class ProductRepository {
         toFirestore: (m, _) => m.toMap(),
       );
 
-  Stream<List<ProductModel>> getProducts() {
-    return ref
-        .orderBy('name')
-        .snapshots()
-        .map((s) => s.docs.map((d) => d.data()).toList());
+  Stream<List<ProductModel>> getProducts({bool customerVisibleOnly = false}) {
+    final Query<ProductModel> query = customerVisibleOnly
+        ? ref.where('category', whereIn: customerVisibleCategories)
+        : ref.orderBy('name');
+
+    return query.snapshots().map((s) {
+      final products = s.docs.map((d) => d.data()).toList();
+      if (customerVisibleOnly) {
+        products.sort((a, b) => a.name.compareTo(b.name));
+      }
+      return products;
+    });
   }
 
   Future<DocumentReference<ProductModel>> addProduct(ProductModel product) =>

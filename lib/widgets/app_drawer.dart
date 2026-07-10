@@ -15,6 +15,7 @@ import '../features/home/screens/home_screen.dart';
 import '../features/orders/screens/order_list_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
+import '../features/program/screens/program_templates_screen.dart';
 import '../features/water_tracker/screens/water_tracker_screen.dart';
 import '../features/follow_ups/screens/follow_up_dashboard_screen.dart';
 import '../features/follow_ups/providers/follow_up_dashboard_provider.dart';
@@ -242,6 +243,14 @@ class AppDrawer extends StatelessWidget {
                   badgeCount: badgeCount,
                 );
               },
+            ),
+          if (userProfile?.role != UserRole.customer)
+            _buildListTile(
+              context,
+              icon: Icons.view_list_outlined,
+              title: 'Program Şablonları',
+              routeName: ProgramTemplatesScreen.routeName,
+              pathSegment: ProgramTemplatesScreen.routeName,
             ),
           if (userProfile?.role != UserRole.customer)
             ListTile(

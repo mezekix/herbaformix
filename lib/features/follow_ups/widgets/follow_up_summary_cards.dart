@@ -17,7 +17,7 @@ class FollowUpSummaryCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 90,
+      height: 96,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -87,7 +87,7 @@ class _SummaryCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: 100,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isActive ? color.withAlpha(25) : AppColors.surface,
           borderRadius: BorderRadius.circular(14),
@@ -97,16 +97,23 @@ class _SummaryCard extends StatelessWidget {
           ),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 22),
+            Icon(icon, color: color, size: 21),
             const SizedBox(height: 4),
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
+            SizedBox(
+              height: 22,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
               ),
             ),
             Text(
