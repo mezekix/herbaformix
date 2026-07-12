@@ -254,11 +254,13 @@ class FirestoreService {
     required UserProfileModel userProfile,
     required InviteCodeModel inviteCode,
     required String newUserId,
+    bool existingUser = false,
   }) =>
       _inviteCodeRepo.signUpWithInviteCodeBatch(
         userProfile: userProfile,
         inviteCode: inviteCode,
         newUserId: newUserId,
+        existingUser: existingUser,
       );
 
   Stream<List<InviteCodeModel>> getInviteCodesForDistributor(String id) =>
@@ -359,34 +361,30 @@ class FirestoreService {
 
     // 2) Distribütör CRM kaydını tamamen sil (kişisel verilerin -email vb.- kalmaması için).
     if (assignedDistributorId != null && assignedDistributorId.isNotEmpty) {
-      try {
-        final crmRecord = await _customerRepo.getCustomerByLinkedUserId(
-          assignedDistributorId,
-          uid,
+      final crmRecord = await _customerRepo.getCustomerByLinkedUserId(
+        assignedDistributorId,
+        uid,
+      );
+      if (crmRecord != null) {
+        // Önce müşterinin altındaki follow_ups koleksiyonunu sil
+        await _deleteSubcollection(
+          'users/$assignedDistributorId/customers/${crmRecord.id}/follow_ups',
         );
-        if (crmRecord != null) {
-          // Önce müşterinin altındaki follow_ups koleksiyonunu sil
-          await _deleteSubcollection('users/$assignedDistributorId/customers/${crmRecord.id}/follow_ups');
-          // Sonra CRM müşteri kaydını sil
-          await _safeDeleteDoc(_db
-              .collection('users')
-              .doc(assignedDistributorId)
-              .collection('customers')
-              .doc(crmRecord.id));
-        }
-      } catch (e) {
-        AppLogger.error('Distribütör CRM kaydı silme hatası: $e', tag: 'FirestoreService', error: e);
+        // Sonra CRM müşteri kaydını sil
+        await _safeDeleteDoc(_db
+            .collection('users')
+            .doc(assignedDistributorId)
+            .collection('customers')
+            .doc(crmRecord.id));
       }
     }
 
     // 3) Tüm olası alt koleksiyonları sil (müşteri veya distribütör fark etmeksizin).
-    try {
-      final customersSnap = await _db.collection('users/$uid/customers').get();
-      for (final customerDoc in customersSnap.docs) {
-        await _deleteSubcollection('users/$uid/customers/${customerDoc.id}/follow_ups');
-      }
-    } catch (e) {
-      AppLogger.error('Müşteriler follow_ups silme hatası: $e', tag: 'FirestoreService', error: e);
+    final customersSnap = await _db.collection('users/$uid/customers').get();
+    for (final customerDoc in customersSnap.docs) {
+      await _deleteSubcollection(
+        'users/$uid/customers/${customerDoc.id}/follow_ups',
+      );
     }
 
     await _deleteSubcollection('users/$uid/customers');
@@ -423,25 +421,17 @@ class FirestoreService {
 
   /// Belirtilen alt koleksiyondaki tüm dokümanları 450'lik batch'ler halinde siler.
   Future<void> _deleteSubcollection(String path) async {
-    try {
-      final snap = await _db.collection(path).get();
-      if (snap.docs.isNotEmpty) {
-        await _deleteDocs(snap.docs.map((d) => d.reference).toList());
-      }
-    } catch (e) {
-      AppLogger.error('Alt koleksiyon silme hatası ($path): $e', tag: 'FirestoreService', error: e);
+    final snap = await _db.collection(path).get();
+    if (snap.docs.isNotEmpty) {
+      await _deleteDocs(snap.docs.map((d) => d.reference).toList());
     }
   }
 
   /// Bir sorgunun döndürdüğü tüm dokümanları siler.
   Future<void> _deleteQuery(Query query) async {
-    try {
-      final snap = await query.get();
-      if (snap.docs.isNotEmpty) {
-        await _deleteDocs(snap.docs.map((d) => d.reference).toList());
-      }
-    } catch (e) {
-      AppLogger.error('Sorgu silme hatası: $e', tag: 'FirestoreService', error: e);
+    final snap = await query.get();
+    if (snap.docs.isNotEmpty) {
+      await _deleteDocs(snap.docs.map((d) => d.reference).toList());
     }
   }
 
@@ -461,11 +451,7 @@ class FirestoreService {
 
   /// Doküman silme; doküman zaten yoksa hata fırlatmaz.
   Future<void> _safeDeleteDoc(DocumentReference ref) async {
-    try {
-      await ref.delete();
-    } catch (e) {
-      AppLogger.error('Doküman silme hatası (${ref.path}): $e', tag: 'FirestoreService', error: e);
-    }
+    await ref.delete();
   }
 
   /// Yerel Firestore önbelleğini ve bağlantısını sıfırlar.

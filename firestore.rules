@@ -499,6 +499,23 @@ service cloud.firestore {
             request.resource.data.assignedDistributorId == resource.data.assignedDistributorId
           ))
         || (
+          isOwner(userId)
+          && resource.data.role == 'customer'
+          && request.resource.data.role == resource.data.role
+          && (!('assignedDistributorId' in resource.data) ||
+            resource.data.assignedDistributorId == null)
+          && request.resource.data.assignedDistributorId is string
+          && request.resource.data.assignedDistributorId.size() > 0
+          && request.resource.data.assignedDistributorId.size() <= 128
+          && request.resource.data.connectionInviteCodeId is string
+          && request.resource.data.connectionInviteCodeId.size() == 8
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['assignedDistributorId', 'connectionInviteCodeId'])
+          && getAfter(/databases/$(database)/documents/inviteCodes/$(request.resource.data.connectionInviteCodeId)).data.usedByUserId == request.auth.uid
+          && getAfter(/databases/$(database)/documents/inviteCodes/$(request.resource.data.connectionInviteCodeId)).data.distributorId == request.resource.data.assignedDistributorId
+          && getAfter(/databases/$(database)/documents/inviteCodes/$(request.resource.data.connectionInviteCodeId)).data.status == 'used'
+        )
+        || (
           signedIn()
           && resource.data.assignedDistributorId == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys()
@@ -553,17 +570,24 @@ service cloud.firestore {
 
       allow update: if signedIn() &&
         resource.data.isUsed == false &&
-        resource.data.status == 'pending' &&
-        resource.data.expiresAt > request.time &&
+        (!('status' in resource.data) || resource.data.status == 'pending') &&
+        (
+          (
+            ('expiresAt' in resource.data) &&
+            resource.data.expiresAt is timestamp &&
+            resource.data.expiresAt > request.time
+          ) ||
+          (
+            !('expiresAt' in resource.data) &&
+            resource.data.createdAt is timestamp &&
+            resource.data.createdAt + duration.value(7, 'd') > request.time
+          )
+        ) &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['isUsed', 'status', 'usedByUserId']) &&
         request.resource.data.isUsed == true &&
         request.resource.data.status == 'used' &&
-        request.resource.data.usedByUserId == request.auth.uid &&
-        request.resource.data.code == resource.data.code &&
-        request.resource.data.distributorId == resource.data.distributorId &&
-        request.resource.data.createdAt == resource.data.createdAt &&
-        request.resource.data.expiresAt == resource.data.expiresAt;
+        request.resource.data.usedByUserId == request.auth.uid;
 
       // Sadece kodu üreten distribütör (veya kullanan müşterinin kendisi) silebilir.
       allow delete: if signedIn() && (

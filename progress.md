@@ -1,6 +1,6 @@
 # HERBAFORMIX — Proje İlerleme Takibi (Progress)
 
-> **Son Güncelleme:** 2026-06-27
+> **Son Güncelleme:** 2026-07-10
 > **Mevcut Sürüm:** v1.2.0
 > **Genel İlerleme:** ~%88 (Production seviyesi)
 > **Bir sonraki kilometre taşı:** v2.0 AI Premium (Faz 26–28)
@@ -34,6 +34,67 @@ Danışanların kişisel sağlık hedeflerine ulaşırken eğlenceli ve oyunlaş
 | CI/CD pipeline | ❌ | PR lint+test gating yok (Faz 15.4) |
 | `FirestoreService` facade | 472 satır / ~100 delegate | `@Deprecated` ile sunset (P12) |
 | Anonim giriş throttle | ❌ | Sınırsız hesap açılabilir (P7) |
+
+---
+
+## 🧭 2026-07-10 ARA DURUM NOTU
+
+> Çalışma ağacındaki güncel değişikliklere göre eklendi. Bu bölüm commit/deploy sonrası tekrar kesinleştirilmeli.
+
+### Bir Sonraki Sprint Odakları
+1. P8 Firestore rules değişikliklerini test et, ardından rules/index deploy durumunu kesinleştir.
+2. P7 auth lifecycle içinde davet kodu rollback temizliğini manuel senaryolarla doğrula; anonim throttle ve email regex başlıklarını ayrı küçük PR'a böl.
+3. Cloud Functions motivasyon bildirimi debug kayıtlarını build/deploy sonrası gerçek cihaz token'ı ile doğrula.
+
+### Deploy Durumu
+| Bileşen | Durum | Not |
+|---|---|---|
+| Firestore rules | ⏳ Bekliyor | Davet kodu bağlantı kuralı ve eski kayıt fallback'i deploy öncesi test edilmeli |
+| Firestore indexes | ⏳ Bekliyor | Rules deploy ile birlikte tekrar kontrol edilmeli |
+| Cloud Functions | ⏳ Build/deploy bekliyor | `notification_debug` ve FCM payload değişiklikleri doğrulanmalı |
+| Flutter app | ⏳ Test bekliyor | Auth, tarif kartı ve müşteri silme akışları manuel kontrol edilmeli |
+
+### Riskler / Dikkat Edilecekler
+- [ ] Firestore rules değişiklikleri deploy edilmeden P8 tamamlandı sayılmamalı.
+- [ ] `functions/src/index.ts` dosyasında encoding/BOM kaynaklı build riski kontrol edilmeli.
+- [ ] Çalışma ağacındaki silinmiş geçici script ve Stitch görsellerinin bilinçli temizlik olup olmadığı commit öncesi doğrulanmalı.
+- [ ] Hesap silme akışında hataların artık üst katmana taşınması UI'da beklenmeyen hata mesajı üretebilir; kullanıcı deneyimi kontrol edilmeli.
+- [ ] `notification_debug` koleksiyonunun kalıcı mı geçici mi olacağına karar verilmeli; kalıcı olacaksa rules/retention stratejisi yazılmalı.
+
+### Devam Eden Güvenlik ve Akış İyileştirmeleri
+- [x] Davet kodu ile kayıt akışında başarısız senaryoda kısmen oluşturulan Firebase Auth kullanıcısını temizleme eklendi (`AuthProvider._deletePartiallyCreatedUser`).
+- [x] Mevcut kullanıcıyı davet koduyla distribütöre bağlama akışı için repository/facade parametresi genişletildi (`existingUser` desteği).
+- [x] Firestore kurallarında müşteri profilinin davet kodu kullanıldıktan sonra distribütöre bağlanabilmesi için kontrollü update kapısı eklendi.
+- [x] Davet kodu kullanım kuralı eski verilerle daha uyumlu hale getirildi: `status` ve `expiresAt` olmayan kayıtlarda `createdAt + 7 gün` fallback'i destekleniyor.
+- [x] Müşteri silme akışında planlanmış takip kayıtları hem CRM müşteri ID'si hem bağlı kullanıcı ID'si üzerinden temizlenecek şekilde genişletildi.
+- [x] Hesap silme/alt koleksiyon temizleme kodunda hataları yutmak yerine üst katmana taşıyan daha görünür hata davranışına geçildi.
+
+### Bildirim ve Tarif Deneyimi
+- [x] Cloud Functions motivasyon bildirimi akışına `notification_debug` kayıtları eklendi; profil yok, token yok, bildirim kapalı, gönderildi ve hata durumları izlenebilir hale geldi.
+- [x] FCM bildirim başlıklarından emoji kaldırıldı; Android channel ve APNs sound/category alanları daha net ayarlandı.
+- [x] Tarif kartlarında açıklamanın ilk cümlesi gösterilmeye başlandı; grid oranı uzun açıklamalara yer açacak şekilde ayarlandı.
+
+### Doğrulama Bekleyenler
+- [ ] `flutter test --no-pub`
+- [ ] Firestore rules test/deploy doğrulaması
+- [ ] Cloud Functions lint/build ve deploy doğrulaması
+- [ ] Davet kodu ile yeni kullanıcı ve mevcut kullanıcı bağlama manuel senaryo testi
+- [ ] Tarif grid'i için dar ekran görsel kontrolü
+
+### Manuel Test Checklist
+- [ ] Yeni müşteri geçerli davet koduyla kayıt olur ve `assignedDistributorId` doğru atanır.
+- [ ] Kayıt sırasında geçersiz davet kodu girilirse oluşturulan Firebase Auth kullanıcısı temizlenir.
+- [ ] Mevcut müşteri kullanılan davet koduyla distribütöre bağlanır.
+- [ ] Expired, kullanılmış veya hatalı davet kodu bağlantı akışında reddedilir.
+- [ ] Distribütör müşteri silince ilgili `scheduled_follow_ups` kayıtları hem CRM müşteri ID'si hem bağlı kullanıcı ID'si için temizlenir.
+- [ ] Motivasyon mesajı gönderiminde `notification_debug` dokümanı doğru `status` ile oluşur.
+- [ ] FCM token olmayan kullanıcıda bildirim akışı hata yerine `skipped_missing_token` olarak kaydedilir.
+- [ ] Tarif kartları küçük ekran grid görünümünde taşma yapmadan açıklama ilk cümlesini gösterir.
+
+### Bugünkü Kararlar / Varsayımlar
+- Davet kodu bağlantısı iki adımlı kabul ediliyor: önce `inviteCodes` belgesi `used` olur, ardından müşteri profili kontrollü şekilde distribütöre bağlanır.
+- `expiresAt` alanı olmayan eski davet kodlarında geçerlilik hesabı için `createdAt + 7 gün` fallback'i kullanılacak.
+- `notification_debug` şimdilik gözlem ve hata ayıklama aracı olarak tutulacak; üretim öncesi veri saklama ve erişim kuralı ayrıca netleştirilecek.
 
 ---
 
@@ -1101,8 +1162,8 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | **P4 — Centralized logger** | `lib/core/logger.dart` yaz, 220 `debugPrint`'i taşı; release'te sustur, kDebugMode'da bas | 🔴 Yüksek | 📋 Planlandı |
 | **P5 — Design system hardening** | `AppColors.textMuted*` (400/500/700) ekle, 193 `Colors.grey.shade*` → `AppColors.*` | 🔴 Yüksek | 📋 Planlandı |
 | **P6 — `home_screen.dart` böl** | IndexedStack + her sekme ayrı `*_tab.dart`; 123 KB → ~8 × 15 KB | 🔴 Yüksek | 📋 Planlandı |
-| **P7 — Auth lifecycle hardening** | (a) AuthProvider dispose, (b) anonim throttle, (c) login email regex, (d) social butonları çöz | 🔴 Yüksek | 📋 Planlandı |
-| **P8 — Firestore rules audit** | `inviteCodes` read, `scheduled_follow_ups` create, `orders` create alan doğrulama | 🔴 Yüksek | 📋 Planlandı |
+| **P7 — Auth lifecycle hardening** | (a) AuthProvider dispose, (b) anonim throttle, (c) login email regex, (d) social butonları çöz | 🔴 Yüksek | 🔄 Başladı: davet kaydı rollback temizliği eklendi; diğer başlıklar bekliyor |
+| **P8 — Firestore rules audit** | `inviteCodes` read, `scheduled_follow_ups` create, `orders` create alan doğrulama | 🔴 Yüksek | 🔄 Başladı: davet kodu bağlantı kuralları güncellendi; rules test/deploy bekliyor |
 | **P9 — Cache bounded** | `CACHE_SIZE_UNLIMITED` → 50 MB + cache temizleme UI | 🟡 Orta | 📋 Planlandı |
 | **P10 — Lint hardening** | `analysis_options.yaml`'a `prefer_const_constructors`, `unawaited_futures`, `avoid_dynamic_calls` | 🟡 Orta | 📋 Planlandı |
 | **P11 — Gemini retry + rate limit** | Exponential backoff (1s/2s/4s) + UI-side debounce | 🟡 Orta | 📋 Planlandı |

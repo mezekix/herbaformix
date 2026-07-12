@@ -1,4 +1,4 @@
-import * as functions from "firebase-functions";
+﻿import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
 admin.initializeApp();
@@ -36,6 +36,16 @@ function wasAlreadyNotifiedForDueDate(
   return true;
 }
 
+async function recordNotificationAttempt(
+  userId: string,
+  data: admin.firestore.DocumentData,
+): Promise<void> {
+  await db.collection("notification_debug").doc(userId).set({
+    ...data,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, {merge: true});
+}
+
 // 1. Program Bildirimi (users/{userId}/program/{programId} active olunca tetiklenir)
 export const onProgramCreateOrUpdate = functions.firestore
   .document("users/{userId}/program/{programId}")
@@ -68,7 +78,7 @@ export const onProgramCreateOrUpdate = functions.firestore
           const message = {
             token: fcmToken,
             notification: {
-              title: "Yeni Programın Hazır! 🥗",
+              title: "Yeni Programın Hazır!",
               body: "Distribütörün senin için yeni bir program hazırladı. Hemen incele!",
             },
             data: {
@@ -122,56 +132,89 @@ export const onMotivationMessageCreate = functions.firestore
       ])
       : "";
 
+
     if (previousTextContent === textContent) return;
 
     try {
-      // Kullanıcı profilini oku
       const profileDoc = await db.collection("userProfiles").doc(customerId).get();
-      if (!profileDoc.exists) return;
+      if (!profileDoc.exists) {
+        await recordNotificationAttempt(customerId, {
+          type: "daily_message",
+          status: "skipped_profile_missing",
+        });
+        console.warn(`Motivasyon bildirimi atlandi: ${customerId} profili yok.`);
+        return;
+      }
 
       const profileData = profileDoc.data();
       const fcmToken = profileData?.fcmToken;
       const settings = profileData?.notificationSettings;
 
-      // Bildirim tercihi kontrolü
       if (settings && settings.dailyMessages === false) {
-        console.log(`Kullanıcı ${customerId} motivasyon bildirimlerini kapatmış.`);
+        await recordNotificationAttempt(customerId, {
+          type: "daily_message",
+          status: "skipped_disabled",
+        });
+        console.log(`Motivasyon bildirimi kapali: ${customerId}.`);
         return;
       }
 
-      if (fcmToken) {
-
-        const message = {
-          token: fcmToken,
-          notification: {
-            title: "Distribütöründen Mesaj Var! 💬",
-            body: textContent,
-          },
-          data: {
-            type: "daily_message",
-          },
-          android: {
-            notification: {
-              clickAction: "FLUTTER_NOTIFICATION_CLICK",
-            },
-          },
-          apns: {
-            payload: {
-              aps: {
-                category: "DAILY_MESSAGE_CATEGORY",
-              },
-            },
-          },
-        };
-
-        await messaging.send(message);
-        console.log(`Motivasyon mesajı bildirimi gönderildi: ${customerId}`);
+      if (!fcmToken) {
+        await recordNotificationAttempt(customerId, {
+          type: "daily_message",
+          status: "skipped_missing_token",
+        });
+        console.warn(`Motivasyon bildirimi atlandi: ${customerId} icin fcmToken yok.`);
+        return;
       }
+
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: "Distribütöründen Mesaj Var!",
+          body: textContent,
+        },
+        data: {
+          type: "daily_message",
+        },
+        android: {
+          priority: "high" as const,
+          notification: {
+            channelId: "fcm_default_v1",
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+          },
+        },
+        apns: {
+          headers: {
+            "apns-priority": "10",
+          },
+          payload: {
+            aps: {
+              category: "DAILY_MESSAGE_CATEGORY",
+              sound: "default",
+            },
+          },
+        },
+      };
+
+      await messaging.send(message);
+      await recordNotificationAttempt(customerId, {
+        type: "daily_message",
+        status: "sent",
+        hasToken: true,
+        tokenSuffix: String(fcmToken).slice(-8),
+      });
+      console.log(`Motivasyon mesaji bildirimi gonderildi: ${customerId}`);
     } catch (error) {
-      console.error("Motivasyon bildirim hatası:", error);
+      await recordNotificationAttempt(customerId, {
+        type: "daily_message",
+        status: "send_error",
+        errorCode: (error as {code?: string}).code ?? "unknown",
+        errorMessage: (error as Error).message ?? String(error),
+      });
+      console.error("Motivasyon bildirim hatasi:", error);
     }
   });
-
 // 3. Takip Hatırlatıcısı (Zamanlanmış cron job)
 export const checkFollowUpsScheduled = functions.pubsub
   .schedule("every 1 hours")
@@ -220,7 +263,7 @@ export const checkFollowUpsScheduled = functions.pubsub
           const message = {
             token: fcmToken,
             notification: {
-              title: "Müşteri Takip Zamanı! ⏰",
+              title: "Müşteri Takip Zamanı!",
               body: `Müşteriniz ${customerName} için planlanan takip zamanı geldi: ${title}`,
             },
             data: {

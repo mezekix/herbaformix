@@ -236,13 +236,25 @@ class InviteCodeRepository {
     required UserProfileModel userProfile,
     required InviteCodeModel inviteCode,
     required String newUserId,
+    bool existingUser = false,
   }) async {
     try {
       final batch = _db.batch();
 
       final userProfileRef =
           _db.collection('userProfiles').doc(newUserId);
-      batch.set(userProfileRef, userProfile.toMap(), SetOptions(merge: true));
+      if (existingUser) {
+        batch.update(userProfileRef, {
+          'assignedDistributorId': inviteCode.distributorId,
+          'connectionInviteCodeId': inviteCode.id,
+        });
+      } else {
+        batch.set(
+          userProfileRef,
+          userProfile.toMap(),
+          SetOptions(merge: true),
+        );
+      }
 
       final inviteCodeRef = ref.doc(inviteCode.id);
       batch.update(inviteCodeRef, {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../../core/locale_provider.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../services/fcm_service.dart';
 import '../../program/services/notification_service.dart';
 import '../widgets/change_password_dialog.dart';
 import '../../../models/user_role.dart';
@@ -103,11 +104,15 @@ class AppSettingsScreen extends StatelessWidget {
                     ),
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
-                  onTap: hasPermission
-                      ? null
-                      : () async {
+                  onTap: () async {
                           final service = NotificationService();
-                          final granted = await service.requestPermission();
+                          final localGranted = await service.requestPermission();
+                          final fcmGranted =
+                              await FcmService().requestPermission();
+                          if (fcmGranted && context.mounted) {
+                            await context.read<AuthProvider>().syncFcmToken();
+                          }
+                          final granted = localGranted || fcmGranted;
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

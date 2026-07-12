@@ -82,34 +82,8 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
       }
 
       // 2. Profili güncelle: assignedDistributorId ekle
-      final updatedProfile = UserProfileModel(
-        id: userProfile.id,
-        email: userProfile.email,
-        role: userProfile.role,
-        name: userProfile.name,
-        phoneNumber: userProfile.phoneNumber,
-        birthDate: userProfile.birthDate,
-        gender: userProfile.gender,
-        height: userProfile.height,
-        weight: userProfile.weight,
-        targetWeight: userProfile.targetWeight,
-        healthNotes: userProfile.healthNotes,
-        allergies: userProfile.allergies,
-        medications: userProfile.medications,
+      final updatedProfile = userProfile.copyWith(
         assignedDistributorId: inviteCode.distributorId,
-        profilePhotoUrl: userProfile.profilePhotoUrl,
-        profilePhotoUpdatedAt: userProfile.profilePhotoUpdatedAt,
-        distributorLevel: userProfile.distributorLevel,
-        monthlyVPTarget: userProfile.monthlyVPTarget,
-        isOnboarded: userProfile.isOnboarded,
-        age: userProfile.age,
-        programStartDate: userProfile.programStartDate,
-        userGoal: userProfile.userGoal,
-        wakeTime: userProfile.wakeTime,
-        lunchTime: userProfile.lunchTime,
-        sleepTime: userProfile.sleepTime,
-        earnedBadges: userProfile.earnedBadges,
-        waterDailyGoal: userProfile.waterDailyGoal,
       );
 
       // 3. Atomik batch: profil güncelle + davet kodunu "used" yap + CRM bağla
@@ -117,6 +91,7 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
         userProfile: updatedProfile,
         inviteCode: inviteCode,
         newUserId: uid,
+        existingUser: true,
       );
 
       // 4. AuthProvider'daki profili yenile

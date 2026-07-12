@@ -27,6 +27,15 @@ class RecipeCard extends StatelessWidget {
     );
   }
 
+  String get _firstSummarySentence {
+    final description = recipe.description.trim();
+    if (description.isEmpty) return '';
+
+    final sentenceEnd = description.indexOf(RegExp(r'[.!?]'));
+    if (sentenceEnd == -1) return description;
+    return description.substring(0, sentenceEnd + 1).trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isCompact) {
@@ -106,6 +115,19 @@ class RecipeCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (_firstSummarySentence.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _firstSummarySentence,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.grey600,
+                        height: 1.35,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 4,
@@ -218,6 +240,19 @@ class RecipeCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (_firstSummarySentence.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      _firstSummarySentence,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.grey600,
+                        height: 1.3,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -231,8 +266,8 @@ class RecipeCard extends StatelessWidget {
     final hasVideo = recipe.videoUrl != null && recipe.videoUrl!.isNotEmpty;
     final thumbUrl = hasVideo
         ? CloudinaryHelper.videoPoster(recipe.videoUrl) ??
-            CloudinaryHelper.optimizeImageSquare(recipe.imageUrl)
-        : CloudinaryHelper.optimizeImageSquare(recipe.imageUrl);
+            CloudinaryHelper.optimizeImage(recipe.imageUrl, width: 480)
+        : CloudinaryHelper.optimizeImage(recipe.imageUrl, width: 480);
 
     if (thumbUrl == null || thumbUrl.isEmpty) {
       return Container(
@@ -244,9 +279,10 @@ class RecipeCard extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
+        Container(color: AppColors.background),
         CachedNetworkImage(
           imageUrl: thumbUrl,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           placeholder: (_, _) => Container(
             color: AppColors.background,
             alignment: Alignment.center,

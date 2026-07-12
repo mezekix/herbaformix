@@ -55,3 +55,19 @@ app.*.map.json
 /android/app/release
 
 testsprite_tests\tmp\config.json
+
+# Local Codex/Dart tool state
+.codex-dart-appdata/
+
+# Temporary repair/export artifacts
+extracted_methods.txt
+final_fix.py
+finalize_consultant.py
+find_brace.py
+first_message.txt
+fix_*.py
+process_logo.py
+replace_colors.py
+restore_methods.py
+stitch_*.html
+stitch_*.png

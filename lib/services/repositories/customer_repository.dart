@@ -140,8 +140,11 @@ class CustomerRepository {
 
     // 2) Planlanmış takipler
     try {
+      final scheduledCustomerIds = linkedUserId != null && linkedUserId.isNotEmpty
+          ? [customerId, linkedUserId]
+          : [customerId];
       final scheduled = await scheduledFollowUpsRef()
-          .where('customerId', isEqualTo: customerId)
+          .where('customerId', whereIn: scheduledCustomerIds)
           .where('consultantId', isEqualTo: userId)
           .get();
       for (final doc in scheduled.docs) {
@@ -161,13 +164,20 @@ class CustomerRepository {
       AppLogger.error('deleteCustomer: follow_ups temizlenirken hata: $e', tag: 'CustomerRepository', error: e);
     }
 
-    // 4) Bağlı kullanıcı varsa assignedDistributorId'sini temizle
-    if (linkedUserId != null && linkedUserId.isNotEmpty) {
-      final profileRef = _db.collection('userProfiles').doc(linkedUserId);
-      batch.update(profileRef, {'assignedDistributorId': FieldValue.delete()});
-    }
-
     await batch.commit();
+
+    if (linkedUserId != null && linkedUserId.isNotEmpty) {
+      try {
+        final profileRef = _db.collection('userProfiles').doc(linkedUserId);
+        await profileRef.update({'assignedDistributorId': FieldValue.delete()});
+      } catch (e) {
+        AppLogger.error(
+          'deleteCustomer: linked profile cleanup skipped: $e',
+          tag: 'CustomerRepository',
+          error: e,
+        );
+      }
+    }
   }
 
   // ── follow_ups (alt koleksiyon) ────────────────────────────────────────

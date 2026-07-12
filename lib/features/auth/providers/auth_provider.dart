@@ -650,6 +650,7 @@ class AuthProvider with ChangeNotifier {
     _isProcessingAuth = true;
     notifyListeners();
 
+    fb_auth.User? createdUser;
     try {
       // Firebase Auth ile kullanıcı oluştur
       final userCredential = await _authService.createUserWithEmailAndPassword(
@@ -665,6 +666,7 @@ class AuthProvider with ChangeNotifier {
       }
 
       final newUser = userCredential!.user!;
+      createdUser = newUser;
       final inviteCodeModel = await _firestoreService.validateInviteCode(
         inviteCode.trim(),
       );
@@ -679,6 +681,7 @@ class AuthProvider with ChangeNotifier {
             error: deleteError,
           );
         }
+        createdUser = null;
         _status = AuthStatus.unauthenticated;
         _errorMessage = 'Geçersiz davet kodu.';
         notifyListeners();
@@ -700,6 +703,7 @@ class AuthProvider with ChangeNotifier {
         newUserId: newUser.uid,
       );
 
+      createdUser = null;
       _userProfile = newProfile;
       AppLogger.info('Davet koduyla kayıt başarılı', tag: 'AuthProvider');
       notifyListeners();
@@ -707,12 +711,14 @@ class AuthProvider with ChangeNotifier {
       // _onAuthStateChanged durumu güncelleyecek
       return true;
     } on fb_auth.FirebaseAuthException catch (e) {
+      await _deletePartiallyCreatedUser(createdUser);
       AppLogger.error('signUpWithInviteCode FirebaseAuthException', tag: 'AuthProvider', error: e);
       _status = AuthStatus.unauthenticated;
       _errorMessage = 'Kayıt sırasında bir hata oluştu: ${e.message}';
       notifyListeners();
       return false;
     } catch (e) {
+      await _deletePartiallyCreatedUser(createdUser);
       AppLogger.error('signUpWithInviteCode hatası', tag: 'AuthProvider', error: e);
       _status = AuthStatus.unauthenticated;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -720,6 +726,19 @@ class AuthProvider with ChangeNotifier {
       return false;
     } finally {
       _isProcessingAuth = false;
+    }
+  }
+
+  Future<void> _deletePartiallyCreatedUser(fb_auth.User? user) async {
+    if (user == null) return;
+    try {
+      await user.delete();
+    } catch (e) {
+      AppLogger.error(
+        'Başarısız davet kaydı sonrası auth kullanıcı temizlenemedi',
+        tag: 'AuthProvider',
+        error: e,
+      );
     }
   }
 
