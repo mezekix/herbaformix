@@ -34,16 +34,27 @@ import 'services/firestore_service.dart';
 /// Bu sarmalayıcı, AuthProvider bildirimlerini [addPostFrameCallback] ile
 /// build fazı **sonrasına** erteler ve scope çakışmasını önler.
 class _GoRouterRefreshNotifier extends ChangeNotifier {
-  _GoRouterRefreshNotifier(AuthProvider authProvider) {
-    authProvider.addListener(_onAuthChanged);
+  _GoRouterRefreshNotifier(this._authProvider) {
+    _authProvider.addListener(_onAuthChanged);
   }
+
+  final AuthProvider _authProvider;
+  bool _isDisposed = false;
 
   void _onAuthChanged() {
     // Build fazı sırasında GoRouter refresh tetiklenmesini engelle.
     // Mevcut frame tamamlandıktan sonra güvenli bir şekilde bildirim gönder.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isDisposed) return;
       notifyListeners();
     });
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _authProvider.removeListener(_onAuthChanged);
+    super.dispose();
   }
 }
 

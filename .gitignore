@@ -42,6 +42,7 @@ ui-debug.log
 # Cloud Functions generated/vendor files
 functions/lib/
 functions/node_modules/
+test/firestore_rules/node_modules/
 
 # Symbolication related
 app.*.symbols

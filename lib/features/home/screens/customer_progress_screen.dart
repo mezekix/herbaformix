@@ -1,3 +1,4 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import '../../../models/badge_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../progress/providers/progress_provider.dart';
+import '../../progress/screens/badge_showcase_screen.dart';
 import '../../progress/screens/progress_dashboard_screen.dart';
 import '../../progress/screens/progress_photos_screen.dart';
 import '../../progress/widgets/transformation_studio_widget.dart';
@@ -22,9 +24,14 @@ class CustomerProgressScreen extends StatefulWidget {
 }
 
 class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
+  late final ConfettiController _badgeConfettiController;
+
   @override
   void initState() {
     super.initState();
+    _badgeConfettiController = ConfettiController(
+      duration: const Duration(seconds: 2),
+    );
     // Rozet kazanıldığında snackbar göster
     ProgressProvider.onBadgeEarned = _onBadgeEarned;
 
@@ -45,6 +52,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
     if (!mounted) return;
     final badge = AppBadges.findById(badgeId);
     if (badge == null) return;
+    _badgeConfettiController.play();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -83,6 +91,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
   @override
   void dispose() {
     ProgressProvider.onBadgeEarned = null;
+    _badgeConfettiController.dispose();
     context.read<ProgressProvider>().stopListening();
     super.dispose();
   }
@@ -99,8 +108,11 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
         : 0;
 
     return SafeArea(
-      child: CustomScrollView(
-        slivers: [
+      child: Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          CustomScrollView(
+            slivers: [
               const SliverPadding(padding: EdgeInsets.only(top: 24)),
 
               // 1. Özet kartları
@@ -205,6 +217,30 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                 child: _buildBadges(context, progressProvider),
               ),
               const SliverPadding(padding: EdgeInsets.only(bottom: 96)),
+            ],
+          ),
+          Positioned(
+            top: 24,
+            child: IgnorePointer(
+              child: ConfettiWidget(
+                confettiController: _badgeConfettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                numberOfParticles: 32,
+                maxBlastForce: 18,
+                minBlastForce: 6,
+                emissionFrequency: 0.08,
+                gravity: 0.16,
+                colors: const [
+                  AppColors.primary,
+                  AppColors.mango,
+                  AppColors.aqua,
+                  AppColors.laguna,
+                  AppColors.papaya,
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -703,13 +739,36 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
                   color: AppColors.nightSky,
                 ),
               ),
-              Text(
-                '${earned.length}/${allBadges.length}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${earned.length}/${allBadges.length}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () =>
+                        context.goNamed(BadgeShowcaseScreen.routeName),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: const Size(0, 36),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Tümünü gör',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

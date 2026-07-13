@@ -138,6 +138,11 @@ class CustomerRepository {
     // 1) Müşteri dokümanı
     batch.delete(customersRef(userId).doc(customerId));
 
+    if (linkedUserId != null && linkedUserId.isNotEmpty) {
+      final profileRef = _db.collection('userProfiles').doc(linkedUserId);
+      batch.update(profileRef, {'assignedDistributorId': FieldValue.delete()});
+    }
+
     // 2) Planlanmış takipler
     try {
       final scheduledCustomerIds = linkedUserId != null && linkedUserId.isNotEmpty
@@ -165,19 +170,6 @@ class CustomerRepository {
     }
 
     await batch.commit();
-
-    if (linkedUserId != null && linkedUserId.isNotEmpty) {
-      try {
-        final profileRef = _db.collection('userProfiles').doc(linkedUserId);
-        await profileRef.update({'assignedDistributorId': FieldValue.delete()});
-      } catch (e) {
-        AppLogger.error(
-          'deleteCustomer: linked profile cleanup skipped: $e',
-          tag: 'CustomerRepository',
-          error: e,
-        );
-      }
-    }
   }
 
   // ── follow_ups (alt koleksiyon) ────────────────────────────────────────

@@ -32,6 +32,11 @@ class AuthProvider with ChangeNotifier {
   bool _isProcessingAuth = false; // Aktif bir giriş/kayıt işlemi var mı?
   bool _isDeletingAccount = false; // Hesap silme işlemi devam ediyor mu?
   StreamSubscription<fb_auth.User?>? _authStateSubscription;
+  Timer? _profileLoadRetryTimer;
+  int _profileLoadRetryCount = 0;
+  bool _isDisposed = false;
+
+  static const int _maxProfileLoadRetries = 3;
 
   bool get isProcessingAuth => _isProcessingAuth;
   bool get isDeletingAccount => _isDeletingAccount;
@@ -50,9 +55,11 @@ class AuthProvider with ChangeNotifier {
   /// birleştirir (debounce).
   @override
   void notifyListeners() {
+    if (_isDisposed) return;
     if (_notifyScheduled) return;
     _notifyScheduled = true;
     Future.microtask(() {
+      if (_isDisposed) return;
       _notifyScheduled = false;
       super.notifyListeners();
     });
@@ -85,6 +92,8 @@ class AuthProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _profileLoadRetryTimer?.cancel();
     _authStateSubscription?.cancel();
     _fcmService.onTokenRefresh = null;
     super.dispose();
@@ -135,6 +144,8 @@ class AuthProvider with ChangeNotifier {
   Future<void> _onAuthStateChanged(fb_auth.User? firebaseUser) async {
     try {
       if (firebaseUser == null) {
+        _profileLoadRetryTimer?.cancel();
+        _profileLoadRetryCount = 0;
         if (_firebaseUser == null && _status == AuthStatus.unauthenticated) {
           return;
         }
@@ -155,6 +166,8 @@ class AuthProvider with ChangeNotifier {
         final profile = await _firestoreService.getUserProfile(firebaseUser.uid);
 
         if (profile != null) {
+          _profileLoadRetryTimer?.cancel();
+          _profileLoadRetryCount = 0;
           _userProfile = profile;
           // İzin verildiyse FCM token'ı arka planda senkronla.
           unawaited(_syncFcmTokenIfPermitted(firebaseUser.uid));
@@ -174,12 +187,37 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       AppLogger.error('_onAuthStateChanged hatası', tag: 'AuthProvider', error: e);
       _userProfile = null;
-      _status = AuthStatus.unauthenticated;
-      _errorMessage = "Profil yükleme hatası: $e";
+      if (firebaseUser != null && _scheduleProfileLoadRetry(firebaseUser)) {
+        _status = AuthStatus.authenticating;
+        _errorMessage = null;
+      } else {
+        _profileLoadRetryCount = 0;
+        _status = AuthStatus.unauthenticated;
+        _errorMessage = "Profil yükleme hatası: $e";
+      }
     } finally {
       AppLogger.debug('Durum değişti -> $_status', tag: 'AuthProvider');
       notifyListeners();
     }
+  }
+
+  bool _scheduleProfileLoadRetry(fb_auth.User firebaseUser) {
+    if (_isDisposed || _profileLoadRetryCount >= _maxProfileLoadRetries) {
+      return false;
+    }
+
+    _profileLoadRetryTimer?.cancel();
+    _profileLoadRetryCount++;
+    final delay = Duration(seconds: _profileLoadRetryCount * 2);
+    AppLogger.warning(
+      'Profil yükleme tekrar denenecek ($_profileLoadRetryCount/$_maxProfileLoadRetries)',
+      tag: 'AuthProvider',
+    );
+    _profileLoadRetryTimer = Timer(delay, () {
+      if (_isDisposed) return;
+      unawaited(_onAuthStateChanged(firebaseUser));
+    });
+    return true;
   }
 
   Future<bool> signIn(String email, String password) async {

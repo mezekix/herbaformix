@@ -406,8 +406,8 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 - [x] Hedef bazlı rozet mantığı (`weight_loss` / `weight_gain`)
 - [x] Genişletilmiş seri hesabı (su dolumu + routine tamamlama dahil)
-- [ ] Rozet vitrin ekranı (ayrı sayfa olarak)
-- [ ] Confetti animasyonu rozet kazanıldığında (`confetti` paketi pubspec'te hazır)
+- [x] Rozet vitrin ekranı (ayrı sayfa olarak) — `BadgeShowcaseScreen`
+- [x] Confetti animasyonu rozet kazanıldığında (`confetti` paketi ile `CustomerProgressScreen` callback'ine bağlandı)
 
 ---
 
@@ -522,8 +522,8 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [x] Program şablon kataloğu kuralı (`programs/`)
 - [x] Varsayılan engelleme kuralı (`/{document=**} → false`)
 - [x] Firestore indeksleri (`firestore.indexes.json`)
-- [ ] `scheduled_follow_ups` ve `careerRoadmap` kurallarının audit'i (zayıf olabilir)
-- [ ] Kuralların test edilmesi (Firebase Emulator + `@firebase/rules-unit-testing`)
+- [x] `scheduled_follow_ups` ve `careerRoadmap` kurallarının audit'i — consultant/customer ownership, immutable alanlar ve read-only referans veri modeli kontrol edildi
+- [x] Kuralların test edilmesi — `test/firestore_rules` altında Firebase Emulator + `@firebase/rules-unit-testing` ile 7 senaryo eklendi ve geçti (`npm test`)
 
 ---
 
@@ -1127,16 +1127,16 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | # | Öncelik | Açıklama | Dosya/Konum |
 |---|---|---|---|
 | 1 | 🟡 Orta | Fotoğraflar yalnızca yerel — cihaz değişince kaybolur | `progress_photos_screen.dart` |
-| 2 | 🟡 Orta | `scheduled_follow_ups` ve `careerRoadmap` güvenlik kuralları audit edilmedi | `firestore.rules:157-174` |
+| ~~2~~ | ✅ Kapandı | ~~`scheduled_follow_ups` ve `careerRoadmap` güvenlik kuralları audit edilmedi~~ → ownership/immutable alanlar audit edildi, emulator rules testleri eklendi | `test/firestore_rules/` |
 | 3 | 🟡 Orta | **iOS Google Sign-In yapılandırması eksik** — `GoogleService-Info.plist` yok, `Info.plist`'te `CFBundleURLSchemes` (REVERSED_CLIENT_ID) tanımlı değil. iOS'ta Firebase de Google Sign-In de çalışmaz. | `ios/Runner/` |
 | 4 | 🟡 Orta | **Login Screen — Apple ve Face/Biometric sosyal butonları işlevsiz** — `onTap` parametresi geçilmemiş, tıklanınca hiçbir şey olmuyor; kullanıcıyı yanıltıyor. Ya implemente edilmeli ya gizlenmeli. | `login_screen.dart:407-421` |
 | ~~5~~ | ✅ Kapandı | ~~Mango sarısı üzerinde beyaz yazı kontrast sorunu~~ → `AppColors.mangoDeep` eklendi + 7 noktada düzeltildi | `app_colors.dart` |
 | 6 | 🟢 Düşük | Test dosyaları eksik (unit/widget/integration) | `test/` dizini |
 | 7 | 🟢 Düşük | Recipes — tüm tarifler `formul1_id` ile mock; gerçek `productId` eşleştirmesi yok | `recipe_provider.dart:38` |
-| 8 | 🟢 Düşük | Confetti animasyonu rozet kazanılırken devreye girmiyor (paket hazır) | `progress_provider.dart` |
+| ~~8~~ | ✅ Kapandı | ~~Confetti animasyonu rozet kazanılırken devreye girmiyor~~ → `CustomerProgressScreen` içinde `onBadgeEarned` callback'i confetti tetikliyor | `customer_progress_screen.dart` |
 | 9 | 🟢 Düşük | Android SHA-1 hash'inin Firebase Console'a kayıtlı olduğu manuel doğrulanmalı (Google Sign-In Android için kritik) | Firebase Console |
 | 10 | 🔴 Yüksek | `inviteCodes` koleksiyonu **anonim olarak** okunabiliyor → müşteri isim/telefon/e-posta sızıntısı | `firestore.rules:76` |
-| 11 | 🔴 Yüksek | `scheduled_follow_ups` create kuralında `customerId` varlığı doğrulanmıyor → distribütör sahte kayıt açabilir | `firestore.rules:179` |
+| ~~11~~ | ✅ Kapandı | ~~`scheduled_follow_ups` create kuralında `customerId` varlığı doğrulanmıyor~~ → `exists(/users/{consultant}/customers/{customerId})` kuralı emulator testiyle doğrulandı | `firestore.rules`, `test/firestore_rules/` |
 | 12 | 🟡 Orta | `Settings.CACHE_SIZE_UNLIMITED` → düşük depolamalı cihazlarda SQLite şişme riski | `main.dart:36` |
 | 13 | 🟡 Orta | `home_screen.dart` ~123 KB / ~3200 satır → bölünmeli (her sekme kendi `*_tab.dart`'ında) | `features/home/screens/home_screen.dart` |
 | 14 | 🟡 Orta | `AuthProvider` dispose'da `_authStateChanges` subscription iptal edilmiyor → memory leak | `auth_provider.dart:69` |
@@ -1163,7 +1163,7 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | **P5 — Design system hardening** | `AppColors.textMuted*` (400/500/700) ekle, 193 `Colors.grey.shade*` → `AppColors.*` | 🔴 Yüksek | 📋 Planlandı |
 | **P6 — `home_screen.dart` böl** | IndexedStack + her sekme ayrı `*_tab.dart`; 123 KB → ~8 × 15 KB | 🔴 Yüksek | 📋 Planlandı |
 | **P7 — Auth lifecycle hardening** | (a) AuthProvider dispose, (b) anonim throttle, (c) login email regex, (d) social butonları çöz | 🔴 Yüksek | 🔄 Başladı: davet kaydı rollback temizliği eklendi; diğer başlıklar bekliyor |
-| **P8 — Firestore rules audit** | `inviteCodes` read, `scheduled_follow_ups` create, `orders` create alan doğrulama | 🔴 Yüksek | 🔄 Başladı: davet kodu bağlantı kuralları güncellendi; rules test/deploy bekliyor |
+| **P8 — Firestore rules audit** | `inviteCodes` read, `scheduled_follow_ups` create, `orders` create alan doğrulama | 🔴 Yüksek | 🔄 Başladı: davet kodu bağlantı kuralları güncellendi; `scheduled_follow_ups` + `careerRoadmap` emulator testleri geçti, deploy bekliyor |
 | **P9 — Cache bounded** | `CACHE_SIZE_UNLIMITED` → 50 MB + cache temizleme UI | 🟡 Orta | 📋 Planlandı |
 | **P10 — Lint hardening** | `analysis_options.yaml`'a `prefer_const_constructors`, `unawaited_futures`, `avoid_dynamic_calls` | 🟡 Orta | 📋 Planlandı |
 | **P11 — Gemini retry + rate limit** | Exponential backoff (1s/2s/4s) + UI-side debounce | 🟡 Orta | 📋 Planlandı |

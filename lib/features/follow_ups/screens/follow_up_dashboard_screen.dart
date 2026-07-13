@@ -377,7 +377,17 @@ class _FollowUpDashboardScreenState extends State<FollowUpDashboardScreen> {
     bool isAutoPlanMode = false;
     String? selectedProductName;
 
-    final customers = customerProvider.customers;
+    List<CustomerModel> customers;
+    try {
+      customers = await _loadSelectableCustomers(customerProvider);
+    } catch (_) {
+      customers = customerProvider.customers;
+    }
+    if (!mounted) {
+      titleController.dispose();
+      notesController.dispose();
+      return;
+    }
     final products = productProvider.products;
 
     await showModalBottomSheet(
@@ -716,5 +726,36 @@ class _FollowUpDashboardScreenState extends State<FollowUpDashboardScreen> {
 
     titleController.dispose();
     notesController.dispose();
+  }
+
+  Future<List<CustomerModel>> _loadSelectableCustomers(
+    CustomerProvider customerProvider,
+  ) async {
+    final combinedCustomers = await customerProvider.getCombinedCustomers();
+    final resolved = <CustomerModel>[];
+    final addedIds = <String>{};
+
+    for (final entry in combinedCustomers) {
+      final customer = entry.customerRecord ??
+          await customerProvider.getLinkedCustomerFallback(entry);
+      if (customer == null || addedIds.contains(customer.id)) continue;
+      resolved.add(customer);
+      addedIds.add(customer.id);
+    }
+
+    if (resolved.isEmpty) {
+      for (final customer in customerProvider.customers) {
+        if (addedIds.contains(customer.id)) continue;
+        resolved.add(customer);
+        addedIds.add(customer.id);
+      }
+    }
+
+    resolved.sort((a, b) {
+      final aName = '${a.firstName} ${a.lastName}'.trim();
+      final bName = '${b.firstName} ${b.lastName}'.trim();
+      return aName.compareTo(bName);
+    });
+    return resolved;
   }
 }

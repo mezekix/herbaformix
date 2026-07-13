@@ -25,6 +25,7 @@ import '../features/profile/screens/support_screen.dart';
 import '../features/progress/screens/progress_dashboard_screen.dart';
 import '../features/progress/screens/progress_photos_screen.dart';
 import '../features/progress/screens/measurements_history_screen.dart';
+import '../features/progress/screens/badge_showcase_screen.dart';
 import '../features/water_tracker/screens/water_tracker_screen.dart';
 import '../models/customer_model.dart';
 import '../models/order_model.dart';
@@ -174,6 +175,11 @@ class AppRouter {
             path: MeasurementsHistoryScreen.routeName,
             name: MeasurementsHistoryScreen.routeName,
             builder: (context, state) => const MeasurementsHistoryScreen(),
+          ),
+          GoRoute(
+            path: BadgeShowcaseScreen.routeName,
+            name: BadgeShowcaseScreen.routeName,
+            builder: (context, state) => const BadgeShowcaseScreen(),
           ),
           GoRoute(
             path: FollowUpDashboardScreen.routeName, // 'follow-ups'
