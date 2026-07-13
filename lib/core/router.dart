@@ -72,7 +72,10 @@ class AppRouter {
     debugLogDiagnostics: true,
     refreshListenable:
         refreshListenable, // Auth durumu değiştiğinde rotaları yeniden değerlendirir.
-    initialLocation: SplashScreen.routeName, // Başlangıç her zaman Splash
+    // Splash geçici olarak devre dışı: uygulama giriş ekranıyla açılır.
+    // Yeniden etkinleştirmek için `LoginScreen.routeName` yerine
+    // `SplashScreen.routeName` kullanın.
+    initialLocation: LoginScreen.routeName,
     routes: <RouteBase>[
       GoRoute(
         path: SplashScreen.routeName, // '/splash'

@@ -1,6 +1,6 @@
 # HERBAFORMIX — Proje İlerleme Takibi (Progress)
 
-> **Son Güncelleme:** 2026-07-10
+> **Son Güncelleme:** 2026-07-12
 > **Mevcut Sürüm:** v1.2.0
 > **Genel İlerleme:** ~%88 (Production seviyesi)
 > **Bir sonraki kilometre taşı:** v2.0 AI Premium (Faz 26–28)
@@ -13,102 +13,15 @@ Danışanların kişisel sağlık hedeflerine ulaşırken eğlenceli ve oyunlaş
 
 ---
 
-## 🩺 KOD SAĞLIĞI (2026-06-27 snapshot)
-
-> Kod tabanının sayısal durumu — sprint başında gözden geçirilir.
-
-| Metrik | Değer | Not |
-|---|---|---|
-| Toplam Dart dosyası (`lib/`) | 138 | |
-| Toplam Dart kodu | ~470 KB | (dosya toplamı) |
-| En büyük dosya | `customer_dashboard_view.dart` ~81 KB / ~2100 satır | 🚨 Kısmen bölündü ama hala büyük (P6.1) |
-| Ortalama dosya boyutu | ~3.4 KB | sağlıklı |
-| Test dosyası sayısı | 14 | models + repositories + providers + utils + widgets |
-| Passing test | **187** | `flutter test --no-pub` ✅ 10 sn |
-| `debugPrint` çağrısı | 220 | Tümü release'te basılıyor → merkezi logger (P4) |
-| Hardcoded `Colors.grey.shade*` | 193 yerde | Design system ihlali → `AppColors.textMuted*` (P5) |
-| `TODO/FIXME/XXX/HACK` | 1 (`customer_profile_menu.dart` NetworkImage TODO) | |
-| Firebase API anahtarı (client'ta) | 4 platform (web/android/ios/windows) | App Check / SHA-1 pinning ile korunmalı (Faz 22) |
-| `analysis_options.yaml` özel kurallar | 0 | Sıkılaştırılmalı (P10) |
-| `pubspec.yaml` description | "A new Flutter project." | Placeholder, değiştir |
-| CI/CD pipeline | ❌ | PR lint+test gating yok (Faz 15.4) |
-| `FirestoreService` facade | 472 satır / ~100 delegate | `@Deprecated` ile sunset (P12) |
-| Anonim giriş throttle | ❌ | Sınırsız hesap açılabilir (P7) |
-
----
-
-## 🧭 2026-07-10 ARA DURUM NOTU
-
-> Çalışma ağacındaki güncel değişikliklere göre eklendi. Bu bölüm commit/deploy sonrası tekrar kesinleştirilmeli.
-
-### Bir Sonraki Sprint Odakları
-1. P8 Firestore rules değişikliklerini test et, ardından rules/index deploy durumunu kesinleştir.
-2. P7 auth lifecycle içinde davet kodu rollback temizliğini manuel senaryolarla doğrula; anonim throttle ve email regex başlıklarını ayrı küçük PR'a böl.
-3. Cloud Functions motivasyon bildirimi debug kayıtlarını build/deploy sonrası gerçek cihaz token'ı ile doğrula.
-
-### Deploy Durumu
-| Bileşen | Durum | Not |
-|---|---|---|
-| Firestore rules | ⏳ Bekliyor | Davet kodu bağlantı kuralı ve eski kayıt fallback'i deploy öncesi test edilmeli |
-| Firestore indexes | ⏳ Bekliyor | Rules deploy ile birlikte tekrar kontrol edilmeli |
-| Cloud Functions | ⏳ Build/deploy bekliyor | `notification_debug` ve FCM payload değişiklikleri doğrulanmalı |
-| Flutter app | ⏳ Test bekliyor | Auth, tarif kartı ve müşteri silme akışları manuel kontrol edilmeli |
-
-### Riskler / Dikkat Edilecekler
-- [ ] Firestore rules değişiklikleri deploy edilmeden P8 tamamlandı sayılmamalı.
-- [ ] `functions/src/index.ts` dosyasında encoding/BOM kaynaklı build riski kontrol edilmeli.
-- [ ] Çalışma ağacındaki silinmiş geçici script ve Stitch görsellerinin bilinçli temizlik olup olmadığı commit öncesi doğrulanmalı.
-- [ ] Hesap silme akışında hataların artık üst katmana taşınması UI'da beklenmeyen hata mesajı üretebilir; kullanıcı deneyimi kontrol edilmeli.
-- [ ] `notification_debug` koleksiyonunun kalıcı mı geçici mi olacağına karar verilmeli; kalıcı olacaksa rules/retention stratejisi yazılmalı.
-
-### Devam Eden Güvenlik ve Akış İyileştirmeleri
-- [x] Davet kodu ile kayıt akışında başarısız senaryoda kısmen oluşturulan Firebase Auth kullanıcısını temizleme eklendi (`AuthProvider._deletePartiallyCreatedUser`).
-- [x] Mevcut kullanıcıyı davet koduyla distribütöre bağlama akışı için repository/facade parametresi genişletildi (`existingUser` desteği).
-- [x] Firestore kurallarında müşteri profilinin davet kodu kullanıldıktan sonra distribütöre bağlanabilmesi için kontrollü update kapısı eklendi.
-- [x] Davet kodu kullanım kuralı eski verilerle daha uyumlu hale getirildi: `status` ve `expiresAt` olmayan kayıtlarda `createdAt + 7 gün` fallback'i destekleniyor.
-- [x] Müşteri silme akışında planlanmış takip kayıtları hem CRM müşteri ID'si hem bağlı kullanıcı ID'si üzerinden temizlenecek şekilde genişletildi.
-- [x] Hesap silme/alt koleksiyon temizleme kodunda hataları yutmak yerine üst katmana taşıyan daha görünür hata davranışına geçildi.
-
-### Bildirim ve Tarif Deneyimi
-- [x] Cloud Functions motivasyon bildirimi akışına `notification_debug` kayıtları eklendi; profil yok, token yok, bildirim kapalı, gönderildi ve hata durumları izlenebilir hale geldi.
-- [x] FCM bildirim başlıklarından emoji kaldırıldı; Android channel ve APNs sound/category alanları daha net ayarlandı.
-- [x] Tarif kartlarında açıklamanın ilk cümlesi gösterilmeye başlandı; grid oranı uzun açıklamalara yer açacak şekilde ayarlandı.
-
-### Doğrulama Bekleyenler
-- [ ] `flutter test --no-pub`
-- [ ] Firestore rules test/deploy doğrulaması
-- [ ] Cloud Functions lint/build ve deploy doğrulaması
-- [ ] Davet kodu ile yeni kullanıcı ve mevcut kullanıcı bağlama manuel senaryo testi
-- [ ] Tarif grid'i için dar ekran görsel kontrolü
-
-### Manuel Test Checklist
-- [ ] Yeni müşteri geçerli davet koduyla kayıt olur ve `assignedDistributorId` doğru atanır.
-- [ ] Kayıt sırasında geçersiz davet kodu girilirse oluşturulan Firebase Auth kullanıcısı temizlenir.
-- [ ] Mevcut müşteri kullanılan davet koduyla distribütöre bağlanır.
-- [ ] Expired, kullanılmış veya hatalı davet kodu bağlantı akışında reddedilir.
-- [ ] Distribütör müşteri silince ilgili `scheduled_follow_ups` kayıtları hem CRM müşteri ID'si hem bağlı kullanıcı ID'si için temizlenir.
-- [ ] Motivasyon mesajı gönderiminde `notification_debug` dokümanı doğru `status` ile oluşur.
-- [ ] FCM token olmayan kullanıcıda bildirim akışı hata yerine `skipped_missing_token` olarak kaydedilir.
-- [ ] Tarif kartları küçük ekran grid görünümünde taşma yapmadan açıklama ilk cümlesini gösterir.
-
-### Bugünkü Kararlar / Varsayımlar
-- Davet kodu bağlantısı iki adımlı kabul ediliyor: önce `inviteCodes` belgesi `used` olur, ardından müşteri profili kontrollü şekilde distribütöre bağlanır.
-- `expiresAt` alanı olmayan eski davet kodlarında geçerlilik hesabı için `createdAt + 7 gün` fallback'i kullanılacak.
-- `notification_debug` şimdilik gözlem ve hata ayıklama aracı olarak tutulacak; üretim öncesi veri saklama ve erişim kuralı ayrıca netleştirilecek.
-
----
-
 ## 🗺️ SÜRÜM YOL HARİTASI (MILESTONE)
 
 | Sürüm | Tema | İçerdiği Fazlar | Durum |
 |---|---|---|---|
-| **v1.0** | Production Hazırlık | 11 (perf) · 12 (a11y) · 13 (test) · 14 (FCM client) · 15 (release) · 16 (GDPR) | ✅ Tamamlandı |
+| **v1.0** | Production Hazırlık | 11 (perf) · 12 (a11y) · 13 (test) · 14 (FCM client) · 15 (release) · 16 (GDPR) | 🔄 Devam ediyor |
 | **v1.1** | Beslenme & AI | 17 (kalori Firestore) · 18 (AI yemek tahmin) · 19 (egzersiz) | ✅ Tamamlandı |
 | **v1.2** | Sosyal & İletişim | 21 (sohbet) · 22 (meydan okuma) · 23 (bildirim merkezi) · 30.1 (Çoklu Dil) | 🔄 Aktif odak |
 | **v2.0** | AI Premium | 26 (AI vücut dönüşümü) · 27 (AI koç sohbet) · 28 (fotoğraf bulut yedek) | 📋 Planlandı |
 | **Deneysel** | Belirsiz öncelik | 29 (takvim) · 30 (çoklu dil/tema) · 31 (ana ekran widget) · 32 (QR davet) | 🤔 Karar bekliyor |
-
-> Her fazın başında **Hedef Sürüm**, **Bağımlılıklar** ve (uygulanabilirse) **Açık Sorular** bloğu vardır.
 
 ---
 
@@ -315,8 +228,6 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [x] Egzersiz tamamlama durumu ve DailySuccessRing entegrasyonu
 - [x] Egzersiz geçmişi ve istatistik görünümü
 
-> Tam aktivite/hareket takibi (adım sayar, HealthKit/Google Fit) **Faz 19** altında.
-
 ### 5.4 — Ana Sayfa Widget'ları
 - [x] `HomeScreen` — rol bazlı içerik (müşteri vs distribütör)
 - [x] `HomeProvider` — ana sayfa veri yönetimi
@@ -378,8 +289,6 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [ ] Cihaz değiştiğinde fotoğraf kaybı riski uyarı metni
 - [ ] Web platformu kısıtlama bildirimi
 - [ ] Resim sıkıştırma optimizasyonu (`flutter_image_compress`)
-
-> `firebase_storage: ^13.4.2` paketi pubspec'te zaten var; bulut yedekleme planı **Faz 28** altında.
 
 ---
 
@@ -498,11 +407,6 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [x] **Stitch UI tasarımı** (parallax SliverAppBar, yeşil noktalı malzeme listesi, ipucu kutusu, 4'lü besin değerleri matrisi)
 - [x] **Cloudinary ve Video Player entegrasyonu** (`CloudinaryHelper` optimizasyonu, videoPoster thumbnail ve dahili video oynatıcı)
 
-> **v1.1+ backlog'a taşındı:**
-> - Tariflerin Firestore'a taşınması (distribütör özel tarif ekleyebilsin)
-> - Çoklu ürüne özel tarif eşleştirmesi (şu an tüm tarifler `formul1_id` mock'una bağlı; yeni ürünlere tarif eklenince her bir tarifin gerçek `productId`'si girilmeli)
-> - Tarif favorileme (müşteri tarafı)
-
 ---
 
 ## FAZ 10 — GÜVENLİK VE FİRESTORE KURALLARI ✅
@@ -543,6 +447,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [x] **Resim sıkıştırma optimizasyonu** ✅ — `image_picker`'ın built-in `maxWidth: 1080, maxHeight: 1080, imageQuality: 80` parametreleri 7 `pickImage` çağrısında standartlaştırıldı (yeni paket eklenmedi)
 - [x] **Memory leak kontrolü** ✅ — Tüm StreamSubscription/AnimationController dispose'ları temiz; dialog helper'larındaki 7 yetim `TextEditingController` dispose eklendi (home/calorie/water)
 - [x] **Uygulama boyutu optimizasyonu** ✅ — Kullanılmayan `assets/logo/logo_new.png` (1.4 MB) ve `assets/logo/image.png` (661 KB) silindi (~2 MB bundle tasarrufu). Tree shaking varsayılan açık.
+- [x] **Splash bekleme süresi kısaltıldı** ✅ — Animasyon 3 sn'den 650 ms'ye indirildi; animasyon sonrası 500 ms sabit bekleme kaldırıldı.
 - [ ] Lazy loading ve sayfalama (büyük listeler için: müşteri listesi, ölçüm geçmişi)
 - [ ] Soğuk başlatma süresi ölçümü ve hedefe çekme (< 2 sn)
 
@@ -792,8 +697,6 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 - [ ] Otomatik adım/kalori/uyku verisi çekme
 - [ ] Wearable cihaz desteği (akıllı saat verisi)
 
-> Egzersiz seviyesi `WaterCalculationEngine`'i besler — entegrasyon noktası mevcut.
-
 ---
 
 ## FAZ 20 — UYKU TAKİBİ 📋
@@ -838,8 +741,6 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 - [ ] Mesaj şablonları (sabah motivasyonu, akşam hatırlatma)
 - [ ] Zamanlanmış mesaj gönderimi
 - [ ] Mesaj istatistikleri (kaç kişi okudu)
-
-> Distribütör → müşteri **motivasyon mesajı** (günlük, asenkron) için Faz 8.4'e bakın — sohbet farklı bir kanaldır.
 
 ---
 
@@ -923,8 +824,6 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 
 > **Hedef Sürüm:** v1.2
 > **Bağımlılıklar:** —
-> **Not:** `careerRoadmap` koleksiyonu Firestore'da zaten mevcut.
-
 - [ ] Distribütör seviyeleri tanımlama (Member → Senior → Success Builder → Qualified → Supervisor vb.)
 - [ ] Mevcut seviye gösterimi (rozet/ikon ile)
 - [ ] Bir sonraki seviyeye kalan VP hesaplama
@@ -1019,8 +918,6 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 
 > **Hedef Sürüm:** v2.0
 > **Bağımlılıklar:** —
-> **Not:** `firebase_storage: ^13.4.2` pubspec'te zaten var; integrasyon kalmış.
-
 - [ ] Firebase Storage entegrasyonu (paket hazır)
 - [ ] Fotoğraf yükleme / indirme / silme servisi
 - [ ] Resim sıkıştırma (1080px max, JPEG %80 — `flutter_image_compress`)
@@ -1034,8 +931,6 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 ---
 
 # 🤔 DENEYSEL / BELİRSİZ ÖNCELİK
-
-> Bu fazlar uzun vadeli vizyon — bir milestone'a bağlanmadan önce karar bekliyor.
 
 ## FAZ 29 — TAKVIM GÖRÜNÜMÜ 🤔
 
@@ -1149,13 +1044,9 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | 21 | 🟢 Düşük | `AppColors`'a `textMuted*` eklenip 193 `Colors.grey.shade*` çağrısı değiştirilmeli (P5) | birçok dosya |
 | 22 | 🟢 Düşük | `pubspec.yaml` description placeholder ("A new Flutter project.") — 4 yıldır değişmemiş | `pubspec.yaml:2` |
 
-> **Kapanan eski bug'lar:** ~~products koleksiyonu açık~~ (P0 ile düzeltildi), ~~firestore_service.dart 37 KB~~ (P2.10 ile 9 repository'ye bölündü), ~~Google Sign-In uçtan uca test edilmedi~~ (Faz 2.1 ile kapatıldı), ~~CalorieProvider Firestore kaydı yok~~ (Faz 5.2 ile kapatıldı — `/users/{uid}/calorieLogs/` koleksiyonu + auth-aware ProxyProvider), ~~Mango üzeri beyaz yazı kontrast sorunu~~ (Faz 12 ile `mangoDeep` eklenerek kapatıldı).
-
 ---
 
 ## 🔧 PLANLANAN / ÖNERİLEN KALİTE SERİLERİ
-
-> 2026-06-27 güvenlik/kalite analizi sonucu oluşturulan seriler. Faz yapısına bağlı değil; v1.0 öncesi tamamlanması planlanıyor.
 
 | Seri | Kapsam | Öncelik | Durum |
 |---|---|---|---|
@@ -1174,8 +1065,6 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 
 ## 🎯 AÇIK STRATEJİK SORULAR
 
-> Yol haritası kararlarını etkileyecek, henüz cevaplanmamış sorular:
-
 1. **Monetizasyon modeli:** Distribütöre satılan B2B SaaS aboneliği mi (aylık/yıllık), müşteri tarafında freemium mu, yoksa hibrit mi?
 2. **AI maliyet eşiği:** Gemini API'nin kullanıcı başına aylık maliyeti ne kadar olursa premium feature gerekli hale gelir?
 3. **Web tarafının önemi:** Distribütör CRM için PWA / desktop optimize UI ne kadar öncelikli? (şu an mobile-first)
@@ -1189,8 +1078,6 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 ---
 
 ## 💡 FİKİR KUTUSU
-
-> Henüz faz olmaya aday olmayan fikirler. Faz tablosunda zaten bulunan maddeler buradan çıkarıldı.
 
 ### 🤖 Yapay Zeka & Akıllı Özellikler
 - [ ] Doğal dil ile besin ekleme ("2 yumurta ve 1 dilim ekmek yedim")

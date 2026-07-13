@@ -3,38 +3,12 @@ import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:herbaformix/core/logger.dart';
 
-/// Gemini Flash modeline yemek adı verip tahmini kalori bilgisini alır.
-///
-/// Yerel `food_database.json` listesinde bulunmayan yemekler için kullanıcının
-/// "AI ile tahmin et" akışında çağrılır.
-///
-/// **API anahtarı yönetimi** — `--dart-define=GEMINI_API_KEY=...` ile compile
-/// zamanı inject edilir:
-/// ```
-/// flutter run --dart-define=GEMINI_API_KEY=AIza...
-/// ```
-/// Google Cloud Console'da bu anahtara Android package name + SHA-1
-/// kısıtlaması mutlaka koyulmalıdır — APK decompile edilse bile farklı bir
-/// uygulamadan kullanılamasın.
-///
-/// **Free tier**: Gemini Flash dakikada 15, günde 1500 ücretsiz istek.
-/// Üzeri Google'ın faturalandırma kurallarına tabidir.
+/// Gemini ile bir metindeki birden fazla yemeği ayrı kalori kayıtlarına ayırır.
 class FoodEstimationService {
   static const String _apiKey = String.fromEnvironment(
     'GEMINI_API_KEY',
     defaultValue: '',
   );
-
-  /// Gemini Flash — hızlı, ucuz, kalori tahmini için fazlasıyla yeterli.
-  /// `gemini-2.5-flash` Eylül 2025 sonrası kullanılabilen en yeni stabil
-  /// model; daha eski `1.5-flash` ve `1.0` aileleri deprecate edildi.
-  ///
-  /// Build sırasında değiştirmek için:
-  /// `--dart-define=GEMINI_MODEL=gemini-2.0-flash`
-  ///
-  /// Free tier kota hatası alırsan:
-  /// - 5 sn bekleyip tekrar dene (RPM aşımı normal)
-  /// - veya Google Cloud Console'da billing'i aktive et (paid tier limit yok denecek kadar geniş)
   static const String _modelName = String.fromEnvironment(
     'GEMINI_MODEL',
     defaultValue: 'gemini-2.5-flash',
@@ -42,7 +16,6 @@ class FoodEstimationService {
 
   GenerativeModel? _model;
 
-  /// API anahtarı set edilmiş mi? UI butonu disable etmek için kontrol eder.
   static bool get isConfigured => _apiKey.isNotEmpty;
 
   GenerativeModel _ensureModel() {
@@ -52,6 +25,7 @@ class FoodEstimationService {
         '`flutter run --dart-define=GEMINI_API_KEY=...` ile başlat.',
       );
     }
+
     return _model ??= GenerativeModel(
       model: _modelName,
       apiKey: _apiKey,
@@ -60,55 +34,54 @@ class FoodEstimationService {
         responseMimeType: 'application/json',
         responseSchema: Schema.object(
           properties: {
-            'name': Schema.string(description: 'Yemeğin temiz, düzgün adı'),
-            'servingDesc': Schema.string(
-              description: '1 porsiyon, 100g, 1 bardak gibi tipik porsiyon',
-            ),
-            'calories': Schema.integer(
-              description: 'Belirtilen porsiyon için tahmini kalori (kcal)',
-            ),
-            'confidence': Schema.string(
-              description: '"high", "medium" veya "low"',
+            'items': Schema.array(
+              description: 'Tarifteki ayrı yemekler, en fazla sekiz öğe',
+              items: Schema.object(
+                properties: {
+                  'name': Schema.string(description: 'Yemeğin Türkçe adı'),
+                  'servingDesc': Schema.string(
+                    description: '1 porsiyon, 100 g, 1 bardak gibi porsiyon',
+                  ),
+                  'calories': Schema.integer(
+                    description: 'Bu porsiyonun kcal değeri',
+                  ),
+                  'confidence': Schema.string(
+                    description: 'high, medium veya low',
+                  ),
+                },
+                requiredProperties: ['name', 'servingDesc', 'calories'],
+              ),
             ),
           },
-          requiredProperties: ['name', 'servingDesc', 'calories'],
+          requiredProperties: ['items'],
         ),
       ),
       systemInstruction: Content.system(
-        'Sen bir Türk mutfağı beslenme uzmanısın. Kullanıcı bir yemek adı '
-        'verdiğinde, tipik bir porsiyon için ortalama kalori tahmini '
-        'yaparsın. Yanıt KESİNLİKLE JSON şemasına uymalı. Türkçe yanıtla. '
-        'Yemek tanınmıyorsa veya yiyecek olarak anlamsızsa, name="bilinmiyor" '
-        've calories=0 dön. Tahminin sapma payı ±%25 civarında olmalı; çok '
-        'genel veya çok abartılı sayılar verme. servingDesc kısa olsun '
-        '(örn: "1 porsiyon", "100 gram", "1 bardak", "1 dilim").',
+        'Sen Türk mutfağı konusunda uzman bir beslenme asistanısın. '
+        'Kullanıcının tarifindeki her ayrı yemeği items listesine tek tek koy; '
+        'ana yemek, pilav veya makarna, çorba, salata, tatlı ve içecekleri '
+        'birbirine birleştirme. Porsiyon belirtilmemişse Türkiye’de yaygın ev '
+        'porsiyonunu kullan. Mantı, dolma, kısır, menemen, kuru fasulye-pilav, '
+        'gözleme ve benzeri yerel yemekleri Türkçe adlandır. Belirsizlikte '
+        'confidence="low" dön. Yanıt yalnızca şemaya uygun Türkçe JSON olmalı. '
+        'Tanımsız veya yiyecek olmayan bir ifade için tek item olarak '
+        'name="bilinmiyor", calories=0 ve confidence="low" döndür.',
       ),
     );
   }
 
-  /// Verilen yemek tanımını Gemini'ye gönderip tahmini kalori sonucunu döner.
-  ///
-  /// Throws [FoodEstimationException] eğer:
-  /// - API anahtarı yapılandırılmamışsa
-  /// - Gemini erişilemez/timeout
-  /// - Yanıt parse edilemezse
-  /// - Yemek "bilinmiyor" döner (UI bunu farklı handle eder)
   Future<FoodEstimate> estimate(String foodDescription) async {
     final query = foodDescription.trim();
     if (query.isEmpty) {
-      throw const FoodEstimationException('Lütfen bir yemek adı yaz.');
+      throw const FoodEstimationException('Lütfen bir yemek tanımı yaz.');
     }
 
-    int attempt = 0;
-    const maxRetries = 3;
     final model = _ensureModel();
-
-    while (attempt < maxRetries) {
+    for (var attempt = 1; attempt <= 3; attempt++) {
       try {
         final response = await model
             .generateContent([Content.text(query)])
             .timeout(const Duration(seconds: 20));
-
         final text = response.text;
         if (text == null || text.trim().isEmpty) {
           throw const FoodEstimationException(
@@ -116,56 +89,84 @@ class FoodEstimationService {
           );
         }
 
-        final json = jsonDecode(text) as Map<String, dynamic>;
-        final estimate = FoodEstimate.fromJson(json);
-
-        if (estimate.calories <= 0 ||
-            estimate.name.toLowerCase().contains('bilinmiyor')) {
+        final estimate = FoodEstimate.fromJson(
+          jsonDecode(text) as Map<String, dynamic>,
+        );
+        if (estimate.items.isEmpty || estimate.totalCalories <= 0) {
           throw const FoodEstimationException(
-            'Bu yemek tanınamadı. Yemeği farklı ifade etmeyi dene veya elle ekle.',
+            'Bu yemek tanınamadı. Yemeği farklı ifade et veya elle ekle.',
           );
         }
-
         return estimate;
       } on FoodEstimationException {
-        // Beklenen/iş mantığı hatalarını (Yemek tanınmadı vb.) tekrar denemeye gerek yok.
         rethrow;
-      } catch (e) {
-        attempt++;
-        if (attempt >= maxRetries) {
-          AppLogger.error('[FoodEstimationService] hata (retry failed): $e', tag: 'FoodEstimationService', error: e);
-          throw FoodEstimationException(
-            'Tahmin başarısız (Ağ veya sunucu hatası olabilir). Lütfen tekrar deneyin.',
+      } catch (error) {
+        if (attempt == 3) {
+          AppLogger.error(
+            '[FoodEstimationService] retry failed: $error',
+            tag: 'FoodEstimationService',
+            error: error,
+          );
+          throw const FoodEstimationException(
+            'Tahmin başarısız oldu. Bağlantını kontrol edip tekrar dene.',
           );
         }
-        AppLogger.warning('[FoodEstimationService] hata: $e, retry $attempt/$maxRetries', tag: 'FoodEstimationService');
-        await Future.delayed(Duration(seconds: 2 * attempt)); // Exponential-ish backoff
+        AppLogger.warning(
+          '[FoodEstimationService] retry $attempt/3: $error',
+          tag: 'FoodEstimationService',
+        );
+        await Future<void>.delayed(Duration(seconds: 2 * attempt));
       }
     }
-    
     throw const FoodEstimationException('Beklenmeyen hata oluştu.');
   }
 }
 
-/// Gemini'den dönen kalori tahmin sonucu.
 class FoodEstimate {
+  final List<FoodEstimateItem> items;
+
+  const FoodEstimate({required this.items});
+
+  factory FoodEstimate.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    if (rawItems is List) {
+      return FoodEstimate(
+        items: rawItems
+            .whereType<Map>()
+            .map(
+              (item) => FoodEstimateItem.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .where((item) => item.name.isNotEmpty && item.calories > 0)
+            .take(8)
+            .toList(growable: false),
+      );
+    }
+
+    // Eski tek-yemek yanıtlarıyla geriye uyumluluk.
+    return FoodEstimate(items: [FoodEstimateItem.fromJson(json)]);
+  }
+
+  int get totalCalories =>
+      items.fold(0, (total, item) => total + item.calories);
+}
+
+class FoodEstimateItem {
   final String name;
   final String servingDesc;
   final int calories;
-
-  /// "high" / "medium" / "low" — kullanıcıya güven aralığı bilgisi.
-  /// Gemini her zaman dönmeyebilir; eksikse "medium" varsayılır.
   final String confidence;
 
-  const FoodEstimate({
+  const FoodEstimateItem({
     required this.name,
     required this.servingDesc,
     required this.calories,
     required this.confidence,
   });
 
-  factory FoodEstimate.fromJson(Map<String, dynamic> json) {
-    return FoodEstimate(
+  factory FoodEstimateItem.fromJson(Map<String, dynamic> json) {
+    return FoodEstimateItem(
       name: (json['name'] as String? ?? '').trim(),
       servingDesc: (json['servingDesc'] as String? ?? '1 porsiyon').trim(),
       calories: (json['calories'] as num?)?.round() ?? 0,
@@ -173,7 +174,6 @@ class FoodEstimate {
     );
   }
 
-  /// Kullanıcıya gösterilen "Tavuklu Pilav (1 porsiyon)" formatı.
   String get displayName => '$name ($servingDesc)';
 }
 

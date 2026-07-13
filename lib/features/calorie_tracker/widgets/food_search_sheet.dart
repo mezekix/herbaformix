@@ -64,7 +64,9 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
     if (result == null || !mounted) return;
 
     final provider = Provider.of<CalorieProvider>(context, listen: false);
-    await provider.addMeal(result.name, result.calories);
+    for (final meal in result.meals) {
+      await provider.addMeal(meal.name, meal.calories);
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -78,7 +80,9 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
     if (result == null || !mounted) return;
 
     final provider = Provider.of<CalorieProvider>(context, listen: false);
-    await provider.addMeal(result.name, result.calories);
+    for (final meal in result.meals) {
+      await provider.addMeal(meal.name, meal.calories);
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -94,7 +98,9 @@ class _FoodSearchSheetState extends State<FoodSearchSheet> {
     if (result == null || !mounted) return;
 
     final provider = Provider.of<CalorieProvider>(context, listen: false);
-    await provider.addMeal(result.name, result.calories);
+    for (final meal in result.meals) {
+      await provider.addMeal(meal.name, meal.calories);
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -414,7 +420,7 @@ class _PortionSheetState extends State<_PortionSheet> {
     final food = widget.food;
     final calories = food.caloriesFor(_multiplier);
     final servingText = food.servingLabel(_multiplier);
-    Navigator.of(context).pop(_PortionResult(
+    Navigator.of(context).pop(_PortionResult.single(
       name: '${food.name} ($servingText)',
       calories: calories,
     ));
@@ -612,7 +618,7 @@ class _ManualMealSheetState extends State<_ManualMealSheet> {
 
   void _onConfirm() {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.of(context).pop(_PortionResult(
+    Navigator.of(context).pop(_PortionResult.single(
       name: _nameController.text.trim(),
       calories: int.parse(_caloriesController.text.trim()),
     ));
@@ -730,10 +736,19 @@ class _ManualMealSheetState extends State<_ManualMealSheet> {
 }
 
 /// Hem porsiyon sheet'i hem manuel sheet için ortak dönüş tipi.
-class _PortionResult {
+class _MealPortion {
   final String name;
   final int calories;
-  const _PortionResult({required this.name, required this.calories});
+  const _MealPortion({required this.name, required this.calories});
+}
+
+class _PortionResult {
+  final List<_MealPortion> meals;
+  const _PortionResult({required this.meals});
+
+  factory _PortionResult.single({required String name, required int calories}) {
+    return _PortionResult(meals: [_MealPortion(name: name, calories: calories)]);
+  }
 }
 
 /// Yemek adını alır, Gemini Flash'a gönderir, dönen kalori tahminini önizleme
@@ -786,8 +801,10 @@ class _AiEstimateSheetState extends State<_AiEstimateSheet> {
       if (!mounted) return;
       setState(() {
         _estimate = estimate;
-        _editNameController.text = estimate.displayName;
-        _editCaloriesController.text = estimate.calories.toString();
+        if (estimate.items.length == 1) {
+          _editNameController.text = estimate.items.single.displayName;
+          _editCaloriesController.text = estimate.items.single.calories.toString();
+        }
       });
     } on FoodEstimationException catch (e) {
       if (!mounted) return;
@@ -802,13 +819,30 @@ class _AiEstimateSheetState extends State<_AiEstimateSheet> {
   }
 
   void _onConfirm() {
+    final estimate = _estimate;
+    if (estimate != null && estimate.items.length > 1) {
+      Navigator.of(context).pop(
+        _PortionResult(
+          meals: estimate.items
+              .map((item) => _MealPortion(
+                    name: item.displayName,
+                    calories: item.calories,
+                  ))
+              .toList(growable: false),
+        ),
+      );
+      return;
+    }
+
     final name = _editNameController.text.trim();
     final calories = int.tryParse(_editCaloriesController.text.trim());
     if (name.isEmpty || calories == null || calories <= 0) {
       setState(() => _errorMessage = 'Geçerli bir isim ve kalori girilmelidir.');
       return;
     }
-    Navigator.of(context).pop(_PortionResult(name: name, calories: calories));
+    Navigator.of(context).pop(
+      _PortionResult.single(name: name, calories: calories),
+    );
   }
 
   @override
@@ -906,17 +940,18 @@ class _AiEstimateSheetState extends State<_AiEstimateSheet> {
                 if (_estimate != null) ...[
                   const SizedBox(height: 16),
                   _previewBox(_estimate!),
-                  const SizedBox(height: 12),
-                  TextField(
+                  if (_estimate!.items.length == 1) ...[
+                    const SizedBox(height: 12),
+                    TextField(
                     controller: _editNameController,
                     decoration: const InputDecoration(
                       labelText: 'İsim (düzenleyebilirsin)',
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
                     controller: _editCaloriesController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
@@ -924,7 +959,8 @@ class _AiEstimateSheetState extends State<_AiEstimateSheet> {
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
-                  ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Row(
                     children: [
@@ -993,37 +1029,44 @@ class _AiEstimateSheetState extends State<_AiEstimateSheet> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.auto_awesome, color: AppColors.primary, size: 26),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  estimate.displayName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, color: AppColors.primary, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                estimate.items.length > 1
+                    ? '${estimate.items.length} ayrı yemek tanındı'
+                    : 'Yemek tanındı',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              Text(
+                '~${estimate.totalCalories} kcal',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      '~${estimate.calories} kcal',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _confidenceBadge(estimate.confidence),
-                  ],
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...estimate.items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  const Icon(Icons.restaurant_outlined, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(item.displayName)),
+                  Text('${item.calories} kcal'),
+                  const SizedBox(width: 6),
+                  _confidenceBadge(item.confidence),
+                ],
+              ),
             ),
           ),
         ],
