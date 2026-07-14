@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:herbaformix/core/logger.dart';
 import 'package:flutter/foundation.dart';
@@ -118,11 +120,10 @@ class AuthService {
   // Çıkış yap
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
-    try {
-      await _googleSignIn.signOut();
-    } catch (e) {
+    unawaited(_googleSignIn.signOut().catchError((e) {
       AppLogger.error('Google Sign-Out hatası', tag: 'AuthService', error: e);
-    }
+      return null;
+    }));
   }
 
   /// Sadece Google oturumunu kapatır (Firebase oturumuna dokunmaz).

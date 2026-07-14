@@ -27,6 +27,7 @@ import '../features/progress/screens/progress_photos_screen.dart';
 import '../features/progress/screens/measurements_history_screen.dart';
 import '../features/progress/screens/badge_showcase_screen.dart';
 import '../features/water_tracker/screens/water_tracker_screen.dart';
+import '../features/step_tracker/screens/step_tracker_screen.dart';
 import '../models/customer_model.dart';
 import '../models/order_model.dart';
 import '../models/product_model.dart';
@@ -151,6 +152,11 @@ class AppRouter {
             path: WaterTrackerScreen.routeName, // 'water-tracker'
             name: WaterTrackerScreen.routeName,
             builder: (context, state) => const WaterTrackerScreen(),
+          ),
+          GoRoute(
+            path: StepTrackerScreen.routeName,
+            name: StepTrackerScreen.routeName,
+            builder: (context, state) => const StepTrackerScreen(),
           ),
           GoRoute(
             path: CalorieTrackerScreen.routeName, // 'calorie-tracker'

@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>Günlük adım sayınızı takip etmek için hareket verinize erişiyoruz.</string>
 </dict>
 </plist>

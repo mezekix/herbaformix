@@ -678,8 +678,8 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 > **Bağımlılıklar:** Faz 5.3 (günlük egzersiz altyapısı)
 
 ### 19.1 — Adım Sayacı
-- [ ] Telefon sensörleri ile adım sayma (`pedometer` paketi)
-- [ ] Günlük adım hedefi belirleme
+- [x] Telefon sensörleri ile adım sayma (`pedometer` paketi)
+- [x] Günlük adım hedefi belirleme
 - [ ] Adım geçmişi grafikleri (günlük/haftalık/aylık)
 - [ ] Adım bazlı kalori yakma hesaplama
 - [ ] Adım hedefine ulaşınca rozet/bildirim

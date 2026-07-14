@@ -75,6 +75,7 @@ class _MotivationWidgetState extends State<MotivationWidget> {
     }
   }
 
+  // ignore: unused_element
   Future<void> _loadDistributorMessage() async {
     final authProvider = context.read<AuthProvider>();
     final userId = authProvider.userProfile?.id;

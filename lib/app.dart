@@ -21,6 +21,7 @@ import 'features/program/services/notification_service.dart';
 import 'features/progress/providers/progress_provider.dart';
 import 'features/follow_ups/providers/follow_up_dashboard_provider.dart';
 import 'features/water_tracker/providers/water_provider.dart';
+import 'features/step_tracker/providers/step_tracker_provider.dart';
 import 'services/exercise_service.dart';
 import 'services/firestore_service.dart';
 
@@ -364,6 +365,11 @@ class _AppState extends State<App> {
                 });
                 return provider;
               },
+            ),
+            // Adım sensörü giriş akışında başlatılmaz. Kullanıcı Adım Sayar
+            // ekranını açtığında izin ve sensör erişimi istenir.
+            ChangeNotifierProvider<StepTrackerProvider>(
+              create: (_) => StepTrackerProvider(),
             ),
             ChangeNotifierProxyProvider<AuthProvider, CalorieProvider>(
               create: (_) => CalorieProvider(),

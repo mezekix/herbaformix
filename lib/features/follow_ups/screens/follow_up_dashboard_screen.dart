@@ -383,7 +383,7 @@ class _FollowUpDashboardScreenState extends State<FollowUpDashboardScreen> {
     } catch (_) {
       customers = customerProvider.customers;
     }
-    if (!mounted) {
+    if (!context.mounted) {
       titleController.dispose();
       notesController.dispose();
       return;

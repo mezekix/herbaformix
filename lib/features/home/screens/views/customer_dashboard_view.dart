@@ -29,6 +29,8 @@ import '../../../water_tracker/providers/water_provider.dart';
 import '../../../calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../../../calorie_tracker/providers/calorie_provider.dart';
 import '../../../calorie_tracker/widgets/food_search_sheet.dart';
+import '../../../step_tracker/providers/step_tracker_provider.dart';
+import '../../../step_tracker/screens/step_tracker_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/motivation_widget.dart';
@@ -336,6 +338,8 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
               _buildCustomerCalorieTracker(context),
               const SizedBox(height: 10),
               _buildExerciseToggleCard(context),
+              const SizedBox(height: 10),
+              _buildStepTrackerCard(context),
               const SizedBox(height: 10),
               const MotivationWidget(),
               const SizedBox(height: 96),
@@ -2211,6 +2215,58 @@ class _CalorieProgressRing extends StatelessWidget {
       ),
     );
   }
+
+}
+
+Widget _buildStepTrackerCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Consumer<StepTrackerProvider>(
+        builder: (context, tracker, _) {
+          final ready = tracker.isReady;
+          final progressText = ready
+              ? '${NumberFormat.decimalPattern('tr_TR').format(tracker.todaySteps)} / ${NumberFormat.decimalPattern('tr_TR').format(tracker.dailyGoal)} adım'
+              : 'Adımlarını takip etmek için dokun';
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(24),
+              onTap: () => context.pushNamed(StepTrackerScreen.routeName),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1FBF7),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.aqua.withValues(alpha: 0.24)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(color: AppColors.aqua, shape: BoxShape.circle),
+                      child: const Icon(Icons.directions_walk_rounded, color: Colors.white),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Günlük Adımlarım', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.nightSky)),
+                          const SizedBox(height: 3),
+                          Text(progressText, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: AppColors.aqua),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
 }
 
 /// Kritik Aksiyonlar listesindeki satır içi 3 mini buton (Ara / WA / Ertele).

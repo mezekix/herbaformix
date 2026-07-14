@@ -238,8 +238,9 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
       
-      _status = AuthStatus.authenticated;
-      notifyListeners();
+      // Auth durumu, profil Firestore'dan yüklendikten sonra
+      // _onAuthStateChanged tarafından authenticated yapılır. Burada erken
+      // geçiş yapmak dashboard dinleyicilerini profil hazır olmadan başlatır.
       return true;
     } catch (e) {
       AppLogger.error('signIn hatası', tag: 'AuthProvider', error: e);
@@ -418,14 +419,15 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    // Çıkıştan ÖNCE token'ı profilden sil — sonrasında kurallar yazmayı engeller.
+    // FCM temizlikleri çıkış ekranını bekletmemeli. Kullanıcının Firebase
+    // oturumunu önce kapatıp yönlendirmeyi başlatırız.
     final uid = _firebaseUser?.uid;
     if (uid != null) {
-      try {
-        await _firestoreService.userProfile.setFcmToken(uid, null);
-      } catch (e) {
-        AppLogger.error('FCM token silme hatası (signOut)', tag: 'AuthProvider', error: e);
-      }
+      unawaited(
+        _firestoreService.userProfile.setFcmToken(uid, null).catchError((e) {
+          AppLogger.error('FCM token silme hatası (signOut)', tag: 'AuthProvider', error: e);
+        }),
+      );
     }
     
     final isAnonymous = _firebaseUser?.isAnonymous ?? false;
@@ -440,7 +442,7 @@ class AuthProvider with ChangeNotifier {
       }
     }
 
-    await _fcmService.deleteToken();
+    unawaited(_fcmService.deleteToken());
     if (!isAnonymous) {
       await _authService.signOut();
     }

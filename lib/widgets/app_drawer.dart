@@ -17,6 +17,7 @@ import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/program/screens/program_templates_screen.dart';
 import '../features/water_tracker/screens/water_tracker_screen.dart';
+import '../features/step_tracker/screens/step_tracker_screen.dart';
 import '../features/follow_ups/screens/follow_up_dashboard_screen.dart';
 import '../features/follow_ups/providers/follow_up_dashboard_provider.dart';
 import '../models/user_role.dart';
@@ -286,6 +287,13 @@ class AppDrawer extends StatelessWidget {
             title: l.drawerWaterTracker,
             routeName: WaterTrackerScreen.routeName, // 'water-tracker'
             pathSegment: 'water-tracker',
+          ),
+          _buildListTile(
+            context,
+            icon: Icons.directions_walk_outlined,
+            title: 'Adım Sayar',
+            routeName: StepTrackerScreen.routeName,
+            pathSegment: StepTrackerScreen.routeName,
           ),
           _buildListTile(
             context,
