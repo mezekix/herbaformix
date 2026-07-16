@@ -41,6 +41,18 @@ class _CartScreenState extends State<CartScreen> {
     final role = authProvider.userProfile?.role;
     final isCustomer = role == UserRole.customer;
 
+    if (isCustomer &&
+        (authProvider.userProfile?.assignedDistributorId == null ||
+            authProvider.userProfile!.assignedDistributorId!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sipariş talebi göndermek için önce bir yaşam koçuna bağlanmalısınız.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     if (!isCustomer && _selectedCustomer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -57,10 +69,13 @@ class _CartScreenState extends State<CartScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final customerId = isCustomer ? authProvider.firebaseUser!.uid : (_selectedCustomer!.linkedUserId ?? _selectedCustomer!.id);
+      final customerId = isCustomer
+          ? authProvider.firebaseUser!.uid
+          : (_selectedCustomer!.linkedUserId ?? _selectedCustomer!.id);
       final customerName = isCustomer
           ? (authProvider.userProfile?.name ?? 'Müşteri')
-          : '${_selectedCustomer!.firstName} ${_selectedCustomer!.lastName}'.trim();
+          : '${_selectedCustomer!.firstName} ${_selectedCustomer!.lastName}'
+                .trim();
 
       final orderData = OrderModel(
         id: '',
@@ -86,10 +101,16 @@ class _CartScreenState extends State<CartScreen> {
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: Row(
               children: [
-                Icon(Icons.check_circle_outline, color: Colors.green[600], size: 28),
+                Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.green[600],
+                  size: 28,
+                ),
                 const SizedBox(width: 8),
                 const Text('Tebrikler!'),
               ],
@@ -105,7 +126,10 @@ class _CartScreenState extends State<CartScreen> {
                   Navigator.pop(ctx);
                   nav.pop(); // Sepet ekranından çık
                 },
-                child: const Text('Tamam', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Tamam',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
@@ -143,7 +167,10 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Sepetim', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Sepetim',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.nightSky,
@@ -151,72 +178,72 @@ class _CartScreenState extends State<CartScreen> {
       body: _isSubmitting
           ? const Center(child: CircularProgressIndicator())
           : cartProvider.items.isEmpty
-              ? _buildEmptyState(context)
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Distribütör ise Müşteri Seçim Kartı
-                      if (!isCustomer) ...[
-                        _buildCustomerSelectionCard(customerProvider),
-                        const SizedBox(height: 16),
-                      ],
+          ? _buildEmptyState(context)
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Distribütör ise Müşteri Seçim Kartı
+                  if (!isCustomer) ...[
+                    _buildCustomerSelectionCard(customerProvider),
+                    const SizedBox(height: 16),
+                  ],
 
-                      // Sepet Ürünleri Listesi
-                      const Text(
-                        'Sepetteki Ürünler',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.nightSky,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: cartProvider.items.length,
-                        itemBuilder: (context, index) {
-                          final item = cartProvider.items.values.elementAt(index);
-                          return _buildCartItemCard(context, item, cartProvider);
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Ek Bilgiler (Not & Adres)
-                      _buildAdditionalInfoCard(),
-                      const SizedBox(height: 16),
-
-                      // Sipariş Özeti Kartı
-                      _buildSummaryCard(cartProvider, isCustomer),
-                      const SizedBox(height: 24),
-
-                      // Onay Butonu
-                      ElevatedButton(
-                        onPressed: () => _submitOrder(
-                          cartProvider,
-                          orderProvider,
-                          authProvider,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: Text(
-                          isCustomer ? 'Koçuma İstek Gönder' : 'Siparişi Oluştur',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                    ],
+                  // Sepet Ürünleri Listesi
+                  const Text(
+                    'Sepetteki Ürünler',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.nightSky,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: cartProvider.items.length,
+                    itemBuilder: (context, index) {
+                      final item = cartProvider.items.values.elementAt(index);
+                      return _buildCartItemCard(context, item, cartProvider);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Ek Bilgiler (Not & Adres)
+                  _buildAdditionalInfoCard(),
+                  const SizedBox(height: 16),
+
+                  // Sipariş Özeti Kartı
+                  _buildSummaryCard(cartProvider, isCustomer),
+                  const SizedBox(height: 24),
+
+                  // Onay Butonu
+                  ElevatedButton(
+                    onPressed: () =>
+                        _submitOrder(cartProvider, orderProvider, authProvider),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[700],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: Text(
+                      isCustomer ? 'Koçuma İstek Gönder' : 'Siparişi Oluştur',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
     );
   }
 
@@ -242,7 +269,11 @@ class _CartScreenState extends State<CartScreen> {
             const SizedBox(height: 24),
             const Text(
               'Sepetiniz Boş',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.nightSky,
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -258,8 +289,13 @@ class _CartScreenState extends State<CartScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -282,7 +318,10 @@ class _CartScreenState extends State<CartScreen> {
           children: [
             const Text(
               'Müşteri Seçimi*',
-              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.nightSky),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.nightSky,
+              ),
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<CustomerModel>(
@@ -290,7 +329,10 @@ class _CartScreenState extends State<CartScreen> {
               hint: const Text('Sipariş kimin adına?'),
               isExpanded: true,
               decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: AppColors.textMutedLighter),
@@ -316,7 +358,11 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildCartItemCard(BuildContext context, OrderItemModel item, CartProvider cartProvider) {
+  Widget _buildCartItemCard(
+    BuildContext context,
+    OrderItemModel item,
+    CartProvider cartProvider,
+  ) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 0,
@@ -336,7 +382,10 @@ class _CartScreenState extends State<CartScreen> {
                 color: Colors.green.shade50,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.local_pharmacy_outlined, color: AppColors.primary),
+              child: const Icon(
+                Icons.local_pharmacy_outlined,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(width: 12),
             // Ürün Detayı
@@ -346,7 +395,10 @@ class _CartScreenState extends State<CartScreen> {
                 children: [
                   Text(
                     item.productName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.nightSky,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -365,18 +417,27 @@ class _CartScreenState extends State<CartScreen> {
                   tooltip: 'Adeti azalt',
                   icon: const Icon(Icons.remove_circle_outline, size: 20),
                   onPressed: () {
-                    cartProvider.updateQuantity(item.productId, item.quantity - 1);
+                    cartProvider.updateQuantity(
+                      item.productId,
+                      item.quantity - 1,
+                    );
                   },
                 ),
                 Text(
                   '${item.quantity}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
                 IconButton(
                   tooltip: 'Adeti artır',
                   icon: const Icon(Icons.add_circle_outline, size: 20),
                   onPressed: () {
-                    cartProvider.updateQuantity(item.productId, item.quantity + 1);
+                    cartProvider.updateQuantity(
+                      item.productId,
+                      item.quantity + 1,
+                    );
                   },
                 ),
               ],
@@ -401,7 +462,10 @@ class _CartScreenState extends State<CartScreen> {
           children: [
             const Text(
               'Sipariş Notu ve Teslimat Adresi',
-              style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.nightSky),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.nightSky,
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -409,8 +473,11 @@ class _CartScreenState extends State<CartScreen> {
               maxLines: 2,
               decoration: InputDecoration(
                 labelText: 'Sipariş Notu',
-                hintText: 'Örn: Hızlı kargo rica ederim, shake çilekli olsun vb.',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                hintText:
+                    'Örn: Hızlı kargo rica ederim, shake çilekli olsun vb.',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -420,7 +487,9 @@ class _CartScreenState extends State<CartScreen> {
               decoration: InputDecoration(
                 labelText: 'Teslimat Adresi (Opsiyonel)',
                 hintText: 'Siparişin gönderileceği adres bilgisi',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ],
@@ -442,19 +511,30 @@ class _CartScreenState extends State<CartScreen> {
         children: [
           const Text(
             'Sipariş Özeti',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.nightSky,
+            ),
           ),
           const SizedBox(height: 16),
           _buildSummaryRow('Toplam Ürün', '${cart.itemCount} adet'),
           const Divider(height: 24),
-          _buildSummaryRow('Kazanılacak Toplam VP', '${cart.totalVp.toStringAsFixed(1)} VP'),
+          _buildSummaryRow(
+            'Kazanılacak Toplam VP',
+            '${cart.totalVp.toStringAsFixed(1)} VP',
+          ),
           const Divider(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Tahmini Tutar',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.nightSky),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.nightSky,
+                ),
               ),
               Text(
                 '${cart.totalAmount.toStringAsFixed(2)} TL',
@@ -476,7 +556,13 @@ class _CartScreenState extends State<CartScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(color: AppColors.textSecondary)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.nightSky)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.nightSky,
+          ),
+        ),
       ],
     );
   }

@@ -47,8 +47,9 @@ class _StepTrackerScreenState extends State<StepTrackerScreen> {
           }
           if (!tracker.isReady) return _UnavailableView(tracker: tracker);
 
-          final remaining = NumberFormat.decimalPattern('tr_TR')
-              .format(tracker.remainingSteps);
+          final remaining = NumberFormat.decimalPattern(
+            'tr_TR',
+          ).format(tracker.remainingSteps);
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -71,7 +72,10 @@ class _StepTrackerScreenState extends State<StepTrackerScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              _WeeklyChart(records: tracker.lastSevenDays, goal: tracker.dailyGoal),
+              _WeeklyChart(
+                records: tracker.lastSevenDays,
+                goal: tracker.dailyGoal,
+              ),
               const SizedBox(height: 20),
               const _LocalOnlyNote(),
             ],
@@ -83,35 +87,65 @@ class _StepTrackerScreenState extends State<StepTrackerScreen> {
 
   Future<void> _showGoalDialog(BuildContext context) async {
     final tracker = context.read<StepTrackerProvider>();
-    final controller = TextEditingController(text: tracker.dailyGoal.toString());
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Günlük adım hedefi'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: const InputDecoration(suffixText: 'adım'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Vazgeç'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final goal = int.tryParse(controller.text);
-              if (goal == null) return;
-              await tracker.setDailyGoal(goal);
-              if (dialogContext.mounted) Navigator.pop(dialogContext);
-            },
-            child: const Text('Kaydet'),
-          ),
-        ],
-      ),
+      builder: (_) =>
+          _StepGoalDialog(initialGoal: tracker.dailyGoal, tracker: tracker),
     );
-    controller.dispose();
+  }
+}
+
+class _StepGoalDialog extends StatefulWidget {
+  const _StepGoalDialog({required this.initialGoal, required this.tracker});
+
+  final int initialGoal;
+  final StepTrackerProvider tracker;
+
+  @override
+  State<_StepGoalDialog> createState() => _StepGoalDialogState();
+}
+
+class _StepGoalDialogState extends State<_StepGoalDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialGoal.toString());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Günlük adım hedefi'),
+      content: TextField(
+        controller: _controller,
+        keyboardType: TextInputType.number,
+        autofocus: true,
+        decoration: const InputDecoration(suffixText: 'adım'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Vazgeç'),
+        ),
+        FilledButton(
+          onPressed: () async {
+            final goal = int.tryParse(_controller.text);
+            if (goal == null) return;
+            await widget.tracker.setDailyGoal(goal);
+            if (context.mounted) Navigator.pop(context);
+          },
+          child: const Text('Kaydet'),
+        ),
+      ],
+    );
   }
 }
 
@@ -130,15 +164,26 @@ class _ProgressCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.directions_walk_rounded, color: Colors.white, size: 44),
+          const Icon(
+            Icons.directions_walk_rounded,
+            color: Colors.white,
+            size: 44,
+          ),
           const SizedBox(height: 10),
           Text(
             format.format(tracker.todaySteps),
-            style: const TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.w800),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 42,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           Text(
             '/ ${format.format(tracker.dailyGoal)} adım',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 15),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 15,
+            ),
           ),
           const SizedBox(height: 18),
           ClipRRect(
@@ -163,14 +208,19 @@ class _WeeklyChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxSteps = records.fold<int>(goal, (value, item) => item.steps > value ? item.steps : value);
+    final maxSteps = records.fold<int>(
+      goal,
+      (value, item) => item.steps > value ? item.steps : value,
+    );
     return Container(
       height: 175,
       padding: const EdgeInsets.fromLTRB(12, 16, 12, 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.textMutedLighter.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: AppColors.textMutedLighter.withValues(alpha: 0.5),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -191,14 +241,19 @@ class _WeeklyChart extends StatelessWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             color: metGoal ? AppColors.mango : AppColors.aqua,
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(8),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(DateFormat.E('tr_TR').format(record.date).substring(0, 1), style: const TextStyle(fontSize: 11)),
+                  Text(
+                    DateFormat.E('tr_TR').format(record.date).substring(0, 1),
+                    style: const TextStyle(fontSize: 11),
+                  ),
                 ],
               ),
             ),
@@ -215,16 +270,24 @@ class _UnavailableView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final permissionDenied = tracker.status == StepTrackerStatus.permissionDenied;
+    final permissionDenied =
+        tracker.status == StepTrackerStatus.permissionDenied;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.directions_walk_outlined, size: 56, color: AppColors.primary),
+            const Icon(
+              Icons.directions_walk_outlined,
+              size: 56,
+              color: AppColors.primary,
+            ),
             const SizedBox(height: 16),
-            Text(tracker.errorMessage ?? 'Adım sayar kullanılamıyor.', textAlign: TextAlign.center),
+            Text(
+              tracker.errorMessage ?? 'Adım sayar kullanılamıyor.',
+              textAlign: TextAlign.center,
+            ),
             if (permissionDenied) ...[
               const SizedBox(height: 16),
               FilledButton(

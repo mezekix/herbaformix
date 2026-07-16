@@ -15,6 +15,7 @@ import '../features/orders/screens/add_edit_order_screen.dart';
 import '../features/orders/screens/cart_screen.dart';
 import '../features/orders/screens/order_list_screen.dart';
 import '../features/products/screens/add_edit_product_screen.dart';
+import '../features/products/screens/add_shake_recipe_screen.dart';
 import '../features/products/screens/product_detail_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
@@ -40,6 +41,7 @@ import '../features/program/models/program_editor_args.dart';
 import '../features/program/models/program_template_model.dart';
 import 'package:herbaformix/core/logger.dart';
 import '../features/follow_ups/screens/follow_up_dashboard_screen.dart';
+import '../features/favorites/screens/favorites_screen.dart';
 import '../services/fcm_service.dart';
 
 class AppRouter {
@@ -51,7 +53,10 @@ class AppRouter {
 
   void _setupNotificationTapHandler() {
     FcmService().onNotificationTap = (data) {
-      AppLogger.debug('Bildirim tıklandı handler çalıştı: $data', tag: 'AppRouter');
+      AppLogger.debug(
+        'Bildirim tıklandı handler çalıştı: $data',
+        tag: 'AppRouter',
+      );
       final type = data['type'] as String?;
       if (type == null) return;
 
@@ -73,10 +78,10 @@ class AppRouter {
     debugLogDiagnostics: true,
     refreshListenable:
         refreshListenable, // Auth durumu değiştiğinde rotaları yeniden değerlendirir.
-    // Splash geçici olarak devre dışı: uygulama giriş ekranıyla açılır.
-    // Yeniden etkinleştirmek için `LoginScreen.routeName` yerine
-    // `SplashScreen.routeName` kullanın.
-    initialLocation: LoginScreen.routeName,
+    // Oturum durumu ve kullanıcı profili kesinleşene kadar Splash'te kal.
+    // Login ile başlatmak, kalıcı oturumu olan kullanıcılarda profil
+    // yüklenirken giriş ekranının kısa süreliğine görünmesine neden olur.
+    initialLocation: SplashScreen.routeName,
     routes: <RouteBase>[
       GoRoute(
         path: SplashScreen.routeName, // '/splash'
@@ -196,6 +201,11 @@ class AppRouter {
             builder: (context, state) => const FollowUpDashboardScreen(),
           ),
           GoRoute(
+            path: FavoritesScreen.routeName,
+            name: FavoritesScreen.routeName,
+            builder: (context, state) => const FavoritesScreen(),
+          ),
+          GoRoute(
             path: 'products', // '/home/products'
             name: ProductListScreen.routeName.substring(
               1,
@@ -210,6 +220,11 @@ class AppRouter {
                   final product = state.extra as ProductModel?;
                   return AddEditProductScreen(product: product);
                 },
+              ),
+              GoRoute(
+                path: AddShakeRecipeScreen.routeName,
+                name: AddShakeRecipeScreen.routeName,
+                builder: (context, state) => const AddShakeRecipeScreen(),
               ),
               GoRoute(
                 path:
@@ -294,7 +309,10 @@ class AppRouter {
       // Eğer Splash Screen'deysek, Splash kendi yönlendirmesini yapacak.
       if (currentLocation == SplashScreen.routeName ||
           currentPath == SplashScreen.routeName) {
-        AppLogger.debug("[Redirect Decision] Splash'te kalınıyor.", tag: 'Router');
+        AppLogger.debug(
+          "[Redirect Decision] Splash'te kalınıyor.",
+          tag: 'Router',
+        );
         return null;
       }
 
@@ -302,16 +320,23 @@ class AppRouter {
       if (loggedIn) {
         final isCustomer = auth.userProfile?.role == UserRole.customer;
         final isOnboarded = auth.userProfile?.isOnboarded ?? false;
-        final isGoingToOnboarding = currentPath.contains(CustomerOnboardingScreen.routeName) || 
-                                    currentLocation.contains(CustomerOnboardingScreen.routeName);
+        final isGoingToOnboarding =
+            currentPath.contains(CustomerOnboardingScreen.routeName) ||
+            currentLocation.contains(CustomerOnboardingScreen.routeName);
 
         if (isCustomer && !isOnboarded && !isGoingToOnboarding) {
-          AppLogger.debug("[Redirect Decision] Müşteri onboarding tamamlamamış -> Onboarding'e yönlendiriliyor.", tag: 'Router');
+          AppLogger.debug(
+            "[Redirect Decision] Müşteri onboarding tamamlamamış -> Onboarding'e yönlendiriliyor.",
+            tag: 'Router',
+          );
           return '${HomeScreen.routeName}/${CustomerOnboardingScreen.routeName}';
         }
 
         if (isCustomer && isOnboarded && isGoingToOnboarding) {
-          AppLogger.debug("[Redirect Decision] Müşteri onboarding tamamlamış ama onboarding'e gitmeye çalışıyor -> Ana Sayfa'ya yönlendiriliyor.", tag: 'Router');
+          AppLogger.debug(
+            "[Redirect Decision] Müşteri onboarding tamamlamış ama onboarding'e gitmeye çalışıyor -> Ana Sayfa'ya yönlendiriliyor.",
+            tag: 'Router',
+          );
           return HomeScreen.routeName;
         }
 

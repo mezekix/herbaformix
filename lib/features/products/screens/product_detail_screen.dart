@@ -12,6 +12,7 @@ import 'add_edit_product_screen.dart';
 import '../../../widgets/cached_product_image.dart';
 import 'product_image_viewer_screen.dart';
 import '../providers/recipe_provider.dart';
+import '../../favorites/providers/favorites_provider.dart';
 import '../widgets/recipe_card.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -65,18 +66,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       );
       setState(() {
         _product = product;
-        
+
         const visibleCategories = {'İç Beslenme', 'Dış Beslenme'};
         // Benzer ürünleri hazırla (kendisi hariç, müşteri ise sadece izinli kategoriler, karıştırılmış ve ilk 6 ürün)
-        _relatedProducts = productProvider.products
-            .where((p) => p.id != product.id)
-            .where((p) => !isCustomer || (p.category != null && visibleCategories.contains(p.category)))
-            .toList()
-          ..shuffle();
+        _relatedProducts =
+            productProvider.products
+                .where((p) => p.id != product.id)
+                .where(
+                  (p) =>
+                      !isCustomer ||
+                      (p.category != null &&
+                          visibleCategories.contains(p.category)),
+                )
+                .toList()
+              ..shuffle();
         if (_relatedProducts.length > 6) {
           _relatedProducts = _relatedProducts.sublist(0, 6);
         }
-        
+
         _isLoading = false;
       });
     } catch (e) {
@@ -225,6 +232,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
       ),
       // Üst bar'da title YOK — isim FlexibleSpaceBar.title'da
       actions: [
+        if (isCustomer)
+          Consumer<FavoritesProvider>(
+            builder: (context, favorites, _) => IconButton(
+              tooltip: favorites.isFavorite(FavoriteType.product, _product!.id)
+                  ? 'Favorilerden çıkar'
+                  : 'Favorilere ekle',
+              icon: Icon(
+                favorites.isFavorite(FavoriteType.product, _product!.id)
+                    ? Icons.favorite
+                    : Icons.favorite_outline,
+                color: AppColors.error,
+              ),
+              onPressed: () =>
+                  favorites.toggle(FavoriteType.product, _product!.id),
+            ),
+          ),
         if (!isCustomer)
           IconButton(
             icon: const Icon(Icons.edit_outlined),
@@ -288,7 +311,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
     );
   }
 
-
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
@@ -325,7 +347,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen>
   }
 
   Widget _buildRecipeSuggestions() {
-    final recipes = context.watch<RecipeProvider>().getRecipesForProduct(_product!);
+    final recipes = context.watch<RecipeProvider>().getRecipesForProduct(
+      _product!,
+    );
     if (recipes.isEmpty) return const SizedBox.shrink();
 
     return Column(

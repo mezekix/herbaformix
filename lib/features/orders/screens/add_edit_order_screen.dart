@@ -239,6 +239,13 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
   Widget build(BuildContext context) {
     final customerProvider = Provider.of<CustomerProvider>(context);
     final productProvider = Provider.of<ProductProvider>(context);
+    final customersById = {
+      for (final customer in customerProvider.customers) customer.id: customer,
+    };
+    final selectedCustomerId = _selectedCustomer != null &&
+            customersById.containsKey(_selectedCustomer!.id)
+        ? _selectedCustomer!.id
+        : null;
     // final orderProvider = Provider.of<OrderProvider>(context, listen: false); // Bu satır burada gerekli değil, onPressed içinde çağrılacak.
 
     return Scaffold(
@@ -247,6 +254,28 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
           _isEditing ? 'Siparişi Görüntüle/Düzenle' : 'Yeni Sipariş Oluştur',
         ),
         actions: [
+          if (_isEditing && widget.order != null)
+            IconButton(
+              tooltip: 'Siparişi kalıcı sil',
+              icon: const Icon(Icons.delete_forever),
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Siparişi sil'),
+                    content: const Text('Bu işlem geri alınamaz. Siparişi kalıcı olarak silmek istiyor musunuz?'),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç')),
+                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sil')),
+                    ],
+                  ),
+                );
+                if (confirmed != true || !context.mounted) return;
+                final success = await context.read<OrderProvider>().deleteOrder(widget.order!.id);
+                if (!context.mounted) return;
+                if (success) context.pop();
+              },
+            ),
           if (_isEditing &&
               widget.order != null) // Silme butonu sadece düzenleme modunda
             IconButton(
@@ -299,16 +328,16 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Müşteri Seçimi
-                    DropdownButtonFormField<CustomerModel>(
-                      initialValue: _selectedCustomer,
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedCustomerId,
                       hint: const Text('Müşteri Seçin*'),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.person_search_outlined),
                       ),
-                      items: customerProvider.customers.map((customer) {
-                        return DropdownMenuItem<CustomerModel>(
-                          value: customer,
+                      items: customersById.values.map((customer) {
+                        return DropdownMenuItem<String>(
+                          value: customer.id,
                           child: Text(
                             '${customer.firstName} ${customer.lastName}'.trim(),
                           ),
@@ -316,7 +345,7 @@ class _AddEditOrderScreenState extends State<AddEditOrderScreen> {
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
-                          _selectedCustomer = value;
+                          _selectedCustomer = value == null ? null : customersById[value];
                         });
                       },
                       validator: (value) =>

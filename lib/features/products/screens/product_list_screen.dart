@@ -9,6 +9,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../orders/providers/cart_provider.dart';
 import '../providers/product_provider.dart';
 import './add_edit_product_screen.dart'; // AddEditProductScreen'i import et
+import './add_shake_recipe_screen.dart';
 import './product_detail_screen.dart'; // ProductDetailScreen'i import et
 import './recipes_list_screen.dart';
 import '../../../widgets/cached_product_image.dart';
@@ -138,6 +139,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   tooltip: 'Yeni Ürün Ekle',
                   onPressed: () {
                     context.goNamed(AddEditProductScreen.routeName);
+                  },
+                ),
+              if (!isCustomer)
+                IconButton(
+                  icon: const Icon(Icons.blender_outlined),
+                  tooltip: 'Shake Tarifi Ekle',
+                  onPressed: () {
+                    context.goNamed(AddShakeRecipeScreen.routeName);
                   },
                 ),
             ],

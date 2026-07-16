@@ -36,8 +36,11 @@ class OrderProvider with ChangeNotifier {
   void _initializeOrders() {
     if (_currentUserId != null) {
       final role = _authProvider.userProfile?.role;
-      final assignedDistributorId = _authProvider.userProfile?.assignedDistributorId;
-      if (role == UserRole.customer && assignedDistributorId != null && assignedDistributorId.isNotEmpty) {
+      final assignedDistributorId =
+          _authProvider.userProfile?.assignedDistributorId;
+      if (role == UserRole.customer &&
+          assignedDistributorId != null &&
+          assignedDistributorId.isNotEmpty) {
         fetchOrders(assignedDistributorId, filterCustomerId: _currentUserId);
       } else {
         fetchOrders(_currentUserId!);
@@ -114,7 +117,10 @@ class OrderProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            AppLogger.error("OrderProvider Hata (fetchOrders): $error", tag: 'OrderProvider');
+            AppLogger.error(
+              "OrderProvider Hata (fetchOrders): $error",
+              tag: 'OrderProvider',
+            );
             _isLoading = false;
             _orders = [];
             notifyListeners();
@@ -128,8 +134,12 @@ class OrderProvider with ChangeNotifier {
     notifyListeners();
     try {
       final role = _authProvider.userProfile?.role;
-      final assignedDistributorId = _authProvider.userProfile?.assignedDistributorId;
-      final targetUserId = (role == UserRole.customer && assignedDistributorId != null && assignedDistributorId.isNotEmpty)
+      final assignedDistributorId =
+          _authProvider.userProfile?.assignedDistributorId;
+      final targetUserId =
+          (role == UserRole.customer &&
+              assignedDistributorId != null &&
+              assignedDistributorId.isNotEmpty)
           ? assignedDistributorId
           : _currentUserId!;
 
@@ -141,8 +151,14 @@ class OrderProvider with ChangeNotifier {
         items: order.items,
         orderDate: order.orderDate,
         status: order.status,
-        totalAmount: order.items.fold(0.0, (total, item) => total + item.totalPrice),
-        totalVpEarned: order.items.fold(0.0, (total, item) => total + item.totalVp),
+        totalAmount: order.items.fold(
+          0.0,
+          (total, item) => total + item.totalPrice,
+        ),
+        totalVpEarned: order.items.fold(
+          0.0,
+          (total, item) => total + item.totalVp,
+        ),
         notes: order.notes,
         shippingAddress: order.shippingAddress,
       );
@@ -150,7 +166,9 @@ class OrderProvider with ChangeNotifier {
 
       // Yeni sipariş direkt "Teslim Edildi" olarak oluşturulduysa takip planı oluştur
       if (order.status == OrderStatus.delivered) {
-        final CustomerModel? customer = await _customerProvider.getCustomerById(order.customerId);
+        final CustomerModel? customer = await _customerProvider.getCustomerById(
+          order.customerId,
+        );
         if (customer != null) {
           await _createStandardFollowUpSchedule(customer, items: order.items);
         }
@@ -160,7 +178,11 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger.error("OrderProvider Hata (addOrder): $e", tag: 'OrderProvider', error: e);
+      AppLogger.error(
+        "OrderProvider Hata (addOrder): $e",
+        tag: 'OrderProvider',
+        error: e,
+      );
       _isLoading = false;
       notifyListeners();
       return false;
@@ -177,8 +199,12 @@ class OrderProvider with ChangeNotifier {
 
     try {
       final role = _authProvider.userProfile?.role;
-      final assignedDistributorId = _authProvider.userProfile?.assignedDistributorId;
-      final targetUserId = (role == UserRole.customer && assignedDistributorId != null && assignedDistributorId.isNotEmpty)
+      final assignedDistributorId =
+          _authProvider.userProfile?.assignedDistributorId;
+      final targetUserId =
+          (role == UserRole.customer &&
+              assignedDistributorId != null &&
+              assignedDistributorId.isNotEmpty)
           ? assignedDistributorId
           : _currentUserId!;
 
@@ -215,7 +241,11 @@ class OrderProvider with ChangeNotifier {
       notifyListeners(); // isLoading durumu için
       return true;
     } catch (e) {
-      AppLogger.error("OrderProvider Hata (updateOrder): $e", tag: 'OrderProvider', error: e);
+      AppLogger.error(
+        "OrderProvider Hata (updateOrder): $e",
+        tag: 'OrderProvider',
+        error: e,
+      );
       _isLoading = false;
       notifyListeners();
       return false;
@@ -235,7 +265,10 @@ class OrderProvider with ChangeNotifier {
   }
 
   /// Standart bir takip planı oluşturup veritabanına ekler.
-  Future<void> _createStandardFollowUpSchedule(CustomerModel customer, {List<OrderItemModel>? items}) async {
+  Future<void> _createStandardFollowUpSchedule(
+    CustomerModel customer, {
+    List<OrderItemModel>? items,
+  }) async {
     if (_currentUserId == null) return;
 
     // consultantId boşsa mevcut kullanıcıyı kullan
@@ -252,7 +285,9 @@ class OrderProvider with ChangeNotifier {
       return;
     }
 
-    final firstItemName = (items != null && items.isNotEmpty) ? items.first.productName : '';
+    final firstItemName = (items != null && items.isNotEmpty)
+        ? items.first.productName
+        : '';
     final now = DateTime.now();
     final scheduleDays = [1, 3, 7, 15, 30];
     final List<ScheduledFollowUpModel> followUpBatch = [];
@@ -284,7 +319,11 @@ class OrderProvider with ChangeNotifier {
         tag: 'OrderProvider',
       );
     } catch (e) {
-      AppLogger.error("HATA: Takip planı oluşturulurken hata: $e", tag: 'OrderProvider', error: e);
+      AppLogger.error(
+        "HATA: Takip planı oluşturulurken hata: $e",
+        tag: 'OrderProvider',
+        error: e,
+      );
     }
   }
 
@@ -300,7 +339,11 @@ class OrderProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger.error("OrderProvider Hata (deleteOrder): $e", tag: 'OrderProvider', error: e);
+      AppLogger.error(
+        "OrderProvider Hata (deleteOrder): $e",
+        tag: 'OrderProvider',
+        error: e,
+      );
       _isLoading = false;
       notifyListeners();
       return false;

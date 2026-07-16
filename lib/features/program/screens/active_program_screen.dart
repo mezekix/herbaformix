@@ -9,9 +9,11 @@ import '../../../core/app_colors.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/products/providers/product_provider.dart';
 import '../../../features/products/providers/recipe_provider.dart';
+import '../../../features/products/screens/recipes_list_screen.dart';
 import '../../../features/products/widgets/recipe_card.dart';
 import '../../../models/daily_routine_model.dart';
 import '../../../models/product_model.dart';
+import '../../../models/user_role.dart';
 import '../../../services/routine_service.dart';
 import '../models/program_model.dart';
 import '../providers/program_provider.dart';
@@ -19,8 +21,96 @@ import '../services/notification_service.dart';
 import '../screens/create_program_screen.dart';
 import '../widgets/water_step_tile.dart';
 
-class ActiveProgramScreen extends StatelessWidget {
+class ActiveProgramScreen extends StatefulWidget {
   const ActiveProgramScreen({super.key});
+
+  @override
+  State<ActiveProgramScreen> createState() => _ActiveProgramScreenState();
+}
+
+class _ActiveProgramScreenState extends State<ActiveProgramScreen> {
+  RecipeProvider? _recipeProvider;
+  bool _isCheckingNewRecipes = false;
+  bool _hasShownRecipeDialog = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<RecipeProvider>();
+    if (!identical(_recipeProvider, provider)) {
+      _recipeProvider?.removeListener(_onRecipesChanged);
+      _recipeProvider = provider..addListener(_onRecipesChanged);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkNewRecipes());
+  }
+
+  void _onRecipesChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkNewRecipes());
+  }
+
+  Future<void> _checkNewRecipes() async {
+    final recipeProvider = _recipeProvider;
+    if (!mounted ||
+        recipeProvider == null ||
+        !recipeProvider.hasCompletedOnlineSync ||
+        _isCheckingNewRecipes ||
+        _hasShownRecipeDialog) {
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.firebaseUser?.uid ?? '';
+    if (authProvider.userProfile?.role != UserRole.customer || userId.isEmpty) {
+      return;
+    }
+
+    _isCheckingNewRecipes = true;
+    final newRecipeCount =
+        await recipeProvider.countUnseenOnlineRecipes(userId);
+    _isCheckingNewRecipes = false;
+    if (!mounted || newRecipeCount == 0) return;
+
+    _hasShownRecipeDialog = true;
+    await recipeProvider.markAllRecipesSeen(userId);
+    if (!mounted) return;
+
+    final showRecipes = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Yeni shake tarifleri!'),
+        content: Text(
+          newRecipeCount == 1
+              ? 'Shake tariflerine yeni bir tarif eklendi.'
+              : 'Shake tariflerine $newRecipeCount yeni tarif eklendi.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Daha Sonra'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Tarifleri Gör'),
+          ),
+        ],
+      ),
+    );
+
+    if (showRecipes == true && mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const RecipesListScreen(),
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _recipeProvider?.removeListener(_onRecipesChanged);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

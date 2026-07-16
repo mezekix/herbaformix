@@ -20,6 +20,8 @@ import 'features/program/providers/program_template_provider.dart';
 import 'features/program/services/notification_service.dart';
 import 'features/progress/providers/progress_provider.dart';
 import 'features/follow_ups/providers/follow_up_dashboard_provider.dart';
+import 'features/favorites/providers/favorites_provider.dart';
+import 'models/user_role.dart';
 import 'features/water_tracker/providers/water_provider.dart';
 import 'features/step_tracker/providers/step_tracker_provider.dart';
 import 'services/exercise_service.dart';
@@ -301,8 +303,18 @@ class _AppState extends State<App> {
                 authProvider: context.read<AuthProvider>(),
               ),
             ),
-            ChangeNotifierProvider<RecipeProvider>(
-              create: (context) => RecipeProvider()..loadRecipes(),
+            ChangeNotifierProxyProvider<AuthProvider, RecipeProvider>(
+              create: (_) => RecipeProvider()..loadRecipes(),
+              update: (_, auth, previous) {
+                final provider = previous ?? RecipeProvider()
+                  ..loadRecipes();
+                if (auth.status == AuthStatus.authenticated) {
+                  provider.startOnlineSync();
+                } else {
+                  provider.stopOnlineSync();
+                }
+                return provider;
+              },
             ),
             ChangeNotifierProvider<CustomerProvider>(
               create: (context) => CustomerProvider(
@@ -336,8 +348,8 @@ class _AppState extends State<App> {
               create: (context) =>
                   WaterProvider(context.read<FirestoreService>()),
               update: (context, auth, previous) {
-                final provider = previous ??
-                    WaterProvider(context.read<FirestoreService>());
+                final provider =
+                    previous ?? WaterProvider(context.read<FirestoreService>());
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (auth.status == AuthStatus.authenticated &&
                       auth.firebaseUser?.uid != null &&
@@ -366,6 +378,19 @@ class _AppState extends State<App> {
                 return provider;
               },
             ),
+            ChangeNotifierProxyProvider<AuthProvider, FavoritesProvider>(
+              create: (_) => FavoritesProvider(),
+              update: (_, auth, provider) {
+                final favorites = provider ?? FavoritesProvider();
+                favorites.updateUser(
+                  auth.status == AuthStatus.authenticated &&
+                          auth.userProfile?.role == UserRole.customer
+                      ? auth.firebaseUser?.uid
+                      : null,
+                );
+                return favorites;
+              },
+            ),
             // Adım sensörü giriş akışında başlatılmaz. Kullanıcı Adım Sayar
             // ekranını açtığında izin ve sensör erişimi istenir.
             ChangeNotifierProvider<StepTrackerProvider>(
@@ -388,17 +413,15 @@ class _AppState extends State<App> {
               },
             ),
             ChangeNotifierProvider<ProgramProvider>(
-              create: (context) => ProgramProvider(
-                notificationService: NotificationService(),
-              ),
+              create: (context) =>
+                  ProgramProvider(notificationService: NotificationService()),
             ),
             ChangeNotifierProvider<ProgramTemplateProvider>(
               create: (context) => ProgramTemplateProvider(),
             ),
             ChangeNotifierProvider<ProgressProvider>(
-              create: (context) => ProgressProvider(
-                context.read<FirestoreService>(),
-              ),
+              create: (context) =>
+                  ProgressProvider(context.read<FirestoreService>()),
             ),
           ],
           child: child,
@@ -407,4 +430,3 @@ class _AppState extends State<App> {
     );
   }
 }
-

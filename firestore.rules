@@ -1,5 +1,22 @@
 rules_version = '2';
 
+// ===============================================================
+// Assumed Data Model - recipes
+// ===============================================================
+// Collection: recipes
+// Document ID: stable recipe id (1..160 characters)
+// Fields used by the client:
+//   productId, title, description: string
+//   imageUrl, videoUrl, tips: optional string/null
+//   prepTimeMin, calories: int
+//   goals, tags, ingredients, steps: list
+//   nutritionInfo: optional map/null
+//   isRecommended: bool
+// Recipe documents contain public catalog content and no user PII.
+// Signed-in users read the catalog. Distributor roles may create new recipes;
+// Console/Admin SDK retains full administrative access.
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -466,6 +483,68 @@ service cloud.firestore {
         data.musteri_id == request.auth.uid;
     }
 
+    function isOptionalRecipeUrl(data, field) {
+      return !(field in data) || data[field] == null ||
+        (data[field] is string && data[field].size() <= 2048 &&
+          (data[field].matches('^https://.*') || data[field].matches('^http://.*')));
+    }
+
+    function isOptionalRecipeText(data, field, maxLength) {
+      return !(field in data) || data[field] == null ||
+        (data[field] is string && data[field].size() <= maxLength);
+    }
+
+    function isValidRecipe(data, recipeId) {
+      return recipeId.size() > 0 && recipeId.size() <= 160 &&
+        data.keys().hasOnly([
+          'productId', 'title', 'description', 'imageUrl', 'videoUrl',
+          'prepTimeMin', 'calories', 'goals', 'tags', 'ingredients', 'steps',
+          'nutritionInfo', 'tips', 'isRecommended'
+        ]) &&
+        data.keys().hasAll([
+          'productId', 'title', 'description', 'prepTimeMin', 'calories',
+          'goals', 'tags', 'ingredients', 'steps', 'isRecommended'
+        ]) &&
+        data.productId == 'formul1_id' &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
+        data.description is string && data.description.size() > 0 && data.description.size() <= 1000 &&
+        data.prepTimeMin is int && data.prepTimeMin > 0 && data.prepTimeMin <= 240 &&
+        data.calories is int && data.calories >= 0 && data.calories <= 3000 &&
+        data.goals is list && data.goals.size() > 0 && data.goals.size() <= 3 &&
+        data.tags is list && data.tags.size() <= 12 &&
+        data.ingredients is list && data.ingredients.size() > 0 && data.ingredients.size() <= 30 &&
+        data.steps is list && data.steps.size() > 0 && data.steps.size() <= 20 &&
+        data.isRecommended is bool &&
+        isOptionalRecipeUrl(data, 'imageUrl') &&
+        isOptionalRecipeUrl(data, 'videoUrl') &&
+        isOptionalRecipeText(data, 'tips', 1000) &&
+        (!("nutritionInfo" in data) || data.nutritionInfo == null ||
+          (data.nutritionInfo is map &&
+            data.nutritionInfo.keys().hasOnly(['protein', 'carbs', 'fat', 'fiber']) &&
+            data.nutritionInfo.keys().hasAll(['protein', 'carbs', 'fat', 'fiber']) &&
+            data.nutritionInfo.protein is int && data.nutritionInfo.protein >= 0 && data.nutritionInfo.protein <= 500 &&
+            data.nutritionInfo.carbs is int && data.nutritionInfo.carbs >= 0 && data.nutritionInfo.carbs <= 500 &&
+            data.nutritionInfo.fat is int && data.nutritionInfo.fat >= 0 && data.nutritionInfo.fat <= 500 &&
+            data.nutritionInfo.fiber is int && data.nutritionInfo.fiber >= 0 && data.nutritionInfo.fiber <= 500));
+    }
+
+    function isValidFavorite(data, favoriteId) {
+      return data.keys().hasOnly(['type', 'itemId', 'createdAt']) &&
+        data.keys().hasAll(['type', 'itemId', 'createdAt']) &&
+        data.type in ['product', 'recipe'] &&
+        data.itemId is string && data.itemId.size() > 0 && data.itemId.size() <= 160 &&
+        favoriteId == data.type + '_' + data.itemId &&
+        data.createdAt is timestamp && data.createdAt == request.time;
+    }
+
+    match /recipes/{recipeId} {
+      // Gercek zamanli tarif katalogu: yalnizca oturum acmis kullanicilar okur.
+      // Sadece distribütör rolleri, sıkı şema denetimiyle yeni tarif ekleyebilir.
+      allow read: if signedIn();
+      allow create: if isDistributor() && isValidRecipe(request.resource.data, recipeId);
+      allow update, delete: if false;
+    }
+
     match /products/{productId} {
       // Ürün kataloğu giriş yapmış herkes okuyabilir, sadece distribütörler yazabilir.
       allow read: if isDistributor() || (signedIn() && isCustomerVisibleProduct());
@@ -539,6 +618,13 @@ service cloud.firestore {
             || request.resource.data.assignedDistributorId == request.auth.uid
           )
         );
+
+      match /favorites/{favoriteId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidFavorite(request.resource.data, favoriteId);
+        allow update: if false;
+        allow delete: if isOwner(userId);
+      }
     }
 
     match /inviteCodes/{codeId} {

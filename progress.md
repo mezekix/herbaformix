@@ -1,6 +1,6 @@
 # HERBAFORMIX — Proje İlerleme Takibi (Progress)
 
-> **Son Güncelleme:** 2026-07-12
+> **Son Güncelleme:** 2026-07-14
 > **Mevcut Sürüm:** v1.2.0
 > **Genel İlerleme:** ~%88 (Production seviyesi)
 > **Bir sonraki kilometre taşı:** v2.0 AI Premium (Faz 26–28)
@@ -353,7 +353,7 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 - [x] Takip tipleri: Telefon, WhatsApp, E-posta, Yüz Yüze
 - [x] Takip durumları: Tamamlandı, Eylem Gerekiyor
 - [x] `ScheduledFollowUpModel` — zamanlanmış takipler
-- [ ] Zamanlanmış takip hatırlatma bildirimleri (Faz 14 FCM ile birlikte)
+- [x] Zamanlanmış takip hatırlatma bildirimleri (Faz 14 FCM ile birlikte)
 
 ### 8.4 — Distribütör → Müşteri Motivasyon Sistemi ✅
 - [x] `MotivationRepository` — `/motivations/{customerId}/daily_messages/`
@@ -503,16 +503,16 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 **Widget testleri (`test/widgets/`):**
 - [x] `DailySuccessRing` — hasProgram=false boş render, hasProgram=true etiket, legend yüzdeleri, prop güncellemesi
 
-### 13.2 — Eksik test alanları ❌
+### 13.2 — Test kapsamı durumu 🔄
 
-- [ ] **Firestore Emulator + `firebase_rules_test`** ile güvenlik kuralı testleri
+- [x] **Firestore Emulator + `@firebase/rules-unit-testing`** ile güvenlik kuralı testleri
 - [ ] `AuthProvider`, `CustomerProvider`, `ProgramProvider`, `ProgressProvider`, `CalorieProvider` (Firebase init bağımlılığı kırılmalı)
 - [ ] `AuthService` / `FcmService` (mock'lanabilir hale getirilmeli)
 - [ ] `FoodEstimationService` (mock Gemini client)
 - [ ] Widget testleri: `WeightChartWidget`, `AddMeasurementSheet`, `login_screen.dart`, `customer_onboarding_screen.dart`, `progress_dashboard_screen.dart`
 - [ ] Integration testleri: Onboarding akışı, Program oluşturma, Su ekleme, Ölçüm girişi
-- [ ] Yeni eklenen extension'lar: `user_profile_bmi.dart` (P13)
-- [ ] CI pipeline (GitHub Actions ile otomatik test koşturma)
+- [x] Yeni eklenen extension'lar: `user_profile_bmi.dart` (P13)
+- [x] CI pipeline (GitHub Actions ile otomatik test koşturma)
 
 ### 13.3 — Çalıştırma
 
@@ -655,7 +655,7 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 
 ---
 
-## FAZ 18 — AI YEMEK & KALORİ TAHMİNİ (GEMINI) ✅
+## FAZ 18 — AI YEMEK & KALORİ TAHMİNİ (GEMINI) 🔄
 
 > **Hedef Sürüm:** v1.1
 > **Bağımlılıklar:** Faz 17 (kalori DB)
@@ -666,9 +666,9 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 - [x] API anahtarının derleme zamanı `--dart-define` ile injection ve güvenliği
 - [x] Sistem yönergesi (systemInstruction) ile sapma payının ±%25 tutulması ve graceful fallback
 
-- [ ] Birden fazla yemek içeren tabakta ayrı ayrı tanıma
+- [x] Birden fazla yemek içeren tabakta ayrı ayrı tanıma
 - [ ] Tanıma geçmişi ve doğruluk istatistikleri
-- [ ] Türk mutfağı için prompt engineering
+- [x] Türk mutfağı için prompt engineering
 
 ---
 
@@ -941,15 +941,15 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 - [ ] Haftalık/aylık özet kartı
 - [ ] Distribütör: danışan takvimi görüntüleme
 
-## FAZ 30 — ÇOKLU DİL & TEMA DESTEĞİ 🤔
+## FAZ 30 — ÇOKLU DİL & TEMA DESTEĞİ 🔄
 
 ### 30.1 — Çoklu Dil (i18n)
-- [ ] Flutter intl/arb dosyaları ile lokalizasyon altyapısı
+- [x] Flutter intl/arb dosyaları ile lokalizasyon altyapısı
 - [ ] Türkçe (varsayılan) tam destek
 - [ ] İngilizce çeviri
 - [ ] Almanca çeviri (yurtdışı distribütörler)
-- [ ] Dil seçimi ayar ekranında
-- [ ] Tarih/sayı formatı dile göre otomatik ayarlama
+- [x] Dil seçimi ayar ekranında
+- [x] Tarih/sayı formatı dile göre otomatik ayarlama
 
 ### 30.2 — Dark Mode
 - [ ] `ThemeData` dark mode tanımı (`AppColors` dark varyantları)
@@ -994,13 +994,13 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | 10 | Güvenlik Kuralları | — | ✅ | %95 |
 | **11** | **Performans Optimizasyonu** | **v1.0** | ✅ | %90 |
 | **12** | **Erişilebilirlik** | **v1.0** | ✅ | %95 |
-| **13** | **Test Altyapısı** | **v1.0** | 🔄 | %55 |
-| **14** | **Push Bildirimleri (FCM)** | **v1.0** | 🔄 | %60 |
+| **13** | **Test Altyapısı** | **v1.0** | 🔄 | %65 |
+| **14** | **Push Bildirimleri (FCM)** | **v1.0** | 🔄 | %70 |
 | **15** | **Üretim Çıkış Hazırlığı** | **v1.0** | ❌ | %0 |
 | **16** | **KVKK Uyumluluğu** | **v1.0** | 🔄 | %40 |
 | 17 | Gelişmiş Kalori & Beslenme | v1.1 | ✅ | %90 |
-| 18 | AI Yemek & Kalori Tahmini | v1.1 | ✅ | %90 |
-| 19 | Aktivite ve Hareket Takibi | v1.1 | 📋 | %0 |
+| 18 | AI Yemek & Kalori Tahmini | v1.1 | 🔄 | %90 |
+| 19 | Aktivite ve Hareket Takibi | v1.1 | 🔄 | %15 |
 | 20 | Uyku Takibi | v1.1 | 📋 | %0 |
 | 21 | İç İletişim Sohbet | v1.2 | 📋 | %0 |
 | 22 | Grup Meydan Okumaları | v1.2 | 📋 | %0 |
@@ -1011,7 +1011,7 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | 27 | AI Koç Sohbet Botu | v2.0 | 📋 | %0 |
 | 28 | Fotoğraf Bulut Yedekleme | v2.0 | 📋 | %0 |
 | 29 | Takvim Görünümü | Deneysel | 🤔 | %0 |
-| 30 | Çoklu Dil & Tema | Deneysel | 🤔 | %0 |
+| 30 | Çoklu Dil & Tema | Deneysel | 🔄 | %25 |
 | 31 | Ana Ekran Widget'ları | Deneysel | 🤔 | %0 |
 | 32 | QR Kod & Gelişmiş Davet | Deneysel | 🤔 | %0 |
 
@@ -1059,7 +1059,7 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | **P10 — Lint hardening** | `analysis_options.yaml`'a `prefer_const_constructors`, `unawaited_futures`, `avoid_dynamic_calls` | 🟡 Orta | 📋 Planlandı |
 | **P11 — Gemini retry + rate limit** | Exponential backoff (1s/2s/4s) + UI-side debounce | 🟡 Orta | 📋 Planlandı |
 | **P12 — FirestoreService facade sunset** | `@Deprecated('Use XRepository directly')` işaretle, 6 ay sonra sil | 🟡 Orta | 📋 Planlandı |
-| **P13 — BMI extension + dedup** | `lib/core/extensions/user_profile_bmi.dart` + `progress_provider.dart` 2 yerdeki duplicate blok tek satıra | 🟢 Düşük | ✅ Kod tamam, test bekliyor |
+| **P13 — BMI extension + dedup** | `lib/core/extensions/user_profile_bmi.dart` + `progress_provider.dart` 2 yerdeki duplicate blok tek satıra | 🟢 Düşük | ✅ Kod ve unit test tamam |
 
 ---
 
@@ -1080,7 +1080,7 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 ## 💡 FİKİR KUTUSU
 
 ### 🤖 Yapay Zeka & Akıllı Özellikler
-- [ ] Doğal dil ile besin ekleme ("2 yumurta ve 1 dilim ekmek yedim")
+- [x] Doğal dil ile besin ekleme ("2 yumurta ve 1 dilim ekmek yedim")
 - [ ] AI destekli risk tahmini (hangi danışan bırakma riski taşıyor)
 - [ ] Sesli komut desteği ("250 ml su ekle", "bugün 72 kiloyum")
 - [ ] AI ile uyku-beslenme-egzersiz korelasyon analizi

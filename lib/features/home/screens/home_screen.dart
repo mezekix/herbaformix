@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
@@ -10,6 +11,8 @@ import '../../customers/providers/customer_provider.dart';
  // Navigasyon için
 
 import '../../products/screens/product_list_screen.dart';
+import '../../orders/providers/order_provider.dart';
+import '../../../models/order_model.dart';
 
 import '../providers/home_provider.dart';
 import '../../../models/user_role.dart';
@@ -36,6 +39,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Stream<List<DailyRoutineModel>>? _routinesStream;
   String? _lastUserId;
   DateTime? _lastSeenActivations;
+  final Set<String> _knownPendingOrderIds = {};
+  bool _hasLoadedOrders = false;
+  bool _isOrderDialogVisible = false;
 
   @override
   void initState() {
@@ -62,6 +68,50 @@ class _HomeScreenState extends State<HomeScreen> {
         _lastSeenActivations = now;
       });
     }
+  }
+
+  void _checkForNewOrders(List<OrderModel> orders) {
+    final pending = orders
+        .where((order) => order.status == OrderStatus.pending)
+        .toList();
+    final pendingIds = pending.map((order) => order.id).toSet();
+    if (!_hasLoadedOrders) {
+      _knownPendingOrderIds
+        ..clear()
+        ..addAll(pendingIds);
+      _hasLoadedOrders = true;
+      return;
+    }
+    final newOrders = pending.where((order) => !_knownPendingOrderIds.contains(order.id)).toList();
+    _knownPendingOrderIds
+      ..clear()
+      ..addAll(pendingIds);
+    if (newOrders.isEmpty || _isOrderDialogVisible || !mounted) return;
+    _isOrderDialogVisible = true;
+    final order = newOrders.first;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Yeni sipariş geldi'),
+          content: Text('${order.customerName} yeni bir sipariş talebi oluşturdu.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Tamam'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                context.go('/home/orders');
+              },
+              child: const Text('Siparişe git'),
+            ),
+          ],
+        ),
+      ).whenComplete(() => _isOrderDialogVisible = false);
+    });
   }
 
   /// Özel gün, streak ve saate göre selamlama metni döndürür.
@@ -104,6 +154,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final bool isCustomer = userProfile.role == UserRole.customer ||
         (userProfile.role == UserRole.distributor && authProvider.isCustomerModeActive);
+    final orderProvider = context.watch<OrderProvider>();
+    if (!isCustomer) {
+      _checkForNewOrders(orderProvider.orders);
+    }
 
     return Scaffold(
       drawer: isCustomer ? null : const AppDrawer(),
@@ -161,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (activated == null) return false;
                       return activated.isAfter(_lastSeenActivations!);
                     }).toList();
-                    final notificationCount = newActivations.length;
+                    final notificationCount = newActivations.length + orderProvider.pendingOrdersCount;
                     return Center(
                       child: Badge(
                         isLabelVisible: notificationCount > 0,
@@ -177,6 +231,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: IconButton(
                           icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
                           onPressed: () {
+                            if (orderProvider.pendingOrdersCount > 0) {
+                              context.go('/home/orders');
+                              return;
+                            }
                             if (notificationCount > 0) {
                               _markActivationsAsSeen();
                             }

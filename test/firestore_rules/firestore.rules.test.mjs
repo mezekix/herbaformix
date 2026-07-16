@@ -9,8 +9,10 @@ import {
   initializeTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   deleteDoc,
@@ -57,6 +59,26 @@ function scheduledFollowUp(overrides = {}) {
   };
 }
 
+function recipeDocument(overrides = {}) {
+  return {
+    productId: 'formul1_id',
+    title: 'Distribütör Shake',
+    description: 'Test için yayınlanan shake tarifi.',
+    imageUrl: null,
+    videoUrl: null,
+    prepTimeMin: 5,
+    calories: 200,
+    goals: ['healthy_living'],
+    tags: ['shake'],
+    ingredients: [{ name: 'Formül 1', amount: '2 ölçek', note: null }],
+    steps: ['Malzemeleri karıştırın.'],
+    nutritionInfo: null,
+    tips: null,
+    isRecommended: false,
+    ...overrides,
+  };
+}
+
 async function seedBaseData() {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
@@ -84,6 +106,18 @@ async function seedBaseData() {
     await setDoc(doc(db, 'careerRoadmap', 'level-1'), {
       title: 'Baslangic',
       vpRequired: 0,
+    });
+    await setDoc(doc(db, 'recipes', 'online-shake'), {
+      productId: 'formul1_id',
+      title: 'Online Shake',
+      description: 'Test tarifi',
+      prepTimeMin: 5,
+      calories: 200,
+      goals: ['healthy_living'],
+      tags: ['shake'],
+      ingredients: [],
+      steps: ['Karistir'],
+      isRecommended: true,
     });
   });
 }
@@ -204,6 +238,47 @@ await runTest('careerRoadmap is signed-in read only', async () => {
     setDoc(doc(authDb(consultantUid), 'careerRoadmap', 'level-2'), {
       title: 'Malicious',
       vpRequired: 1,
+    }),
+  );
+});
+
+await runTest('recipes are signed-in read only', async () => {
+  await assertFails(getDoc(doc(unauthDb(), 'recipes', 'online-shake')));
+  const snapshot = await assertSucceeds(
+    getDocs(collection(authDb(linkedCustomerUid), 'recipes')),
+  );
+  assert.equal(snapshot.size, 1);
+  await assertFails(
+    setDoc(doc(authDb(consultantUid), 'recipes', 'client-write'), {
+      title: 'Unauthorized recipe',
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(authDb(consultantUid), 'recipes', 'online-shake'), {
+      title: 'Changed',
+    }),
+  );
+  await assertFails(
+    deleteDoc(doc(authDb(consultantUid), 'recipes', 'online-shake')),
+  );
+});
+
+await runTest('only distributors can create a valid recipe', async () => {
+  await assertSucceeds(
+    setDoc(doc(authDb(consultantUid), 'recipes', 'distributor-created'), recipeDocument()),
+  );
+  await assertFails(
+    setDoc(doc(authDb(linkedCustomerUid), 'recipes', 'customer-created'), recipeDocument()),
+  );
+  await assertFails(
+    setDoc(
+      doc(authDb(consultantUid), 'recipes', 'invalid-recipe'),
+      recipeDocument({ calories: -1 }),
+    ),
+  );
+  await assertFails(
+    updateDoc(doc(authDb(consultantUid), 'recipes', 'online-shake'), {
+      title: 'Değiştirilemez',
     }),
   );
 });

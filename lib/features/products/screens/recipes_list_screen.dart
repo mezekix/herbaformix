@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
 import '../../../models/recipe_model.dart';
+import '../../favorites/providers/favorites_provider.dart';
 import '../providers/recipe_provider.dart';
 import '../widgets/recipe_card.dart';
 
@@ -20,6 +21,7 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
   List<RecipeModel> _shuffledRecipes = [];
 
   final List<Map<String, String>> _goals = [
+    {'key': 'favorites', 'label': 'Favoriler'},
     {'key': 'all', 'label': 'Tüm Tarifler'},
     {'key': 'weight_loss', 'label': 'Kilo Verme'},
     {'key': 'weight_gain', 'label': 'Kilo Alma'},
@@ -54,6 +56,7 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
   Widget build(BuildContext context) {
     final recipeProvider = context.watch<RecipeProvider>();
     final isLoading = recipeProvider.isLoading;
+    final favoriteIds = context.watch<FavoritesProvider>().favoriteIds(FavoriteType.recipe);
 
     // Karıştırılmış liste boşsa (henüz initState'te shuffle olmadıysa) provider'dan al
     final recipes = _shuffledRecipes.isNotEmpty
@@ -64,7 +67,9 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
     var filteredRecipes = recipes;
 
     // Hedef Filtreleme
-    if (_selectedGoal != 'all') {
+    if (_selectedGoal == 'favorites') {
+      filteredRecipes = filteredRecipes.where((recipe) => favoriteIds.contains(recipe.id)).toList();
+    } else if (_selectedGoal != 'all') {
       filteredRecipes = filteredRecipes.where((r) => r.goals.contains(_selectedGoal)).toList();
     }
 
@@ -147,7 +152,16 @@ class _RecipesListScreenState extends State<RecipesListScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 8, bottom: 4),
                   child: FilterChip(
-                    label: Text(goal['label']!),
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (goal['key'] == 'favorites') ...[
+                          Icon(Icons.favorite, size: 16, color: isSelected ? Colors.white : AppColors.error),
+                          const SizedBox(width: 5),
+                        ],
+                        Text(goal['label']!),
+                      ],
+                    ),
                     selected: isSelected,
                     onSelected: (selected) {
                       setState(() {

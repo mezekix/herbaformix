@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/app_colors.dart';
 import '../../../../core/utils/cloudinary_helper.dart';
 import '../../../../models/recipe_model.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../../favorites/providers/favorites_provider.dart';
+import '../../../../models/user_role.dart';
 import 'recipe_detail_sheet.dart'; // RecipeDetailPage burada tanımlı
 
 class RecipeCard extends StatelessWidget {
@@ -21,9 +25,7 @@ class RecipeCard extends StatelessWidget {
 
   void _showDetail(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => RecipeDetailPage(recipe: recipe),
-      ),
+      MaterialPageRoute(builder: (context) => RecipeDetailPage(recipe: recipe)),
     );
   }
 
@@ -34,6 +36,24 @@ class RecipeCard extends StatelessWidget {
     final sentenceEnd = description.indexOf(RegExp(r'[.!?]'));
     if (sentenceEnd == -1) return description;
     return description.substring(0, sentenceEnd + 1).trim();
+  }
+
+  Widget _favoriteButton(BuildContext context) {
+    final isCustomer =
+        context.read<AuthProvider>().userProfile?.role == UserRole.customer;
+    if (!isCustomer) return const SizedBox.shrink();
+    return Consumer<FavoritesProvider>(
+      builder: (context, favorites, _) => IconButton(
+        tooltip: 'Favori',
+        icon: Icon(
+          favorites.isFavorite(FavoriteType.recipe, recipe.id)
+              ? Icons.favorite
+              : Icons.favorite_outline,
+          color: AppColors.error,
+        ),
+        onPressed: () => favorites.toggle(FavoriteType.recipe, recipe.id),
+      ),
+    );
   }
 
   @override
@@ -76,11 +96,13 @@ class RecipeCard extends StatelessWidget {
                 color: AppColors.background,
               ),
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
                 child: _buildThumb(),
               ),
             ),
-            
+
             // İçerik Alanı
             Padding(
               padding: const EdgeInsets.all(12),
@@ -100,18 +122,32 @@ class RecipeCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.timer_outlined, size: 14, color: AppColors.grey600),
+                      Icon(
+                        Icons.timer_outlined,
+                        size: 14,
+                        color: AppColors.grey600,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${recipe.prepTimeMin} dk',
-                        style: TextStyle(fontSize: 12, color: AppColors.grey600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.grey600,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      Icon(Icons.local_fire_department_outlined, size: 14, color: Colors.orange.shade400),
+                      Icon(
+                        Icons.local_fire_department_outlined,
+                        size: 14,
+                        color: Colors.orange.shade400,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${recipe.calories} kcal',
-                        style: TextStyle(fontSize: 12, color: AppColors.grey600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.grey600,
+                        ),
                       ),
                     ],
                   ),
@@ -131,17 +167,29 @@ class RecipeCard extends StatelessWidget {
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 4,
-                    children: recipe.tags.take(2).map((tag) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withAlpha(25),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        tag,
-                        style: const TextStyle(fontSize: 10, color: AppColors.primary, fontWeight: FontWeight.bold),
-                      ),
-                    )).toList(),
+                    children: recipe.tags
+                        .take(2)
+                        .map(
+                          (tag) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withAlpha(25),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              tag,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
@@ -156,7 +204,7 @@ class RecipeCard extends StatelessWidget {
     final hasVideo = recipe.videoUrl != null && recipe.videoUrl!.isNotEmpty;
     final thumbUrl = hasVideo
         ? CloudinaryHelper.videoPoster(recipe.videoUrl) ??
-            CloudinaryHelper.optimizeImage(recipe.imageUrl, width: 480)
+              CloudinaryHelper.optimizeImage(recipe.imageUrl, width: 480)
         : CloudinaryHelper.optimizeImage(recipe.imageUrl, width: 480);
 
     if (thumbUrl == null || thumbUrl.isEmpty) {
@@ -168,12 +216,18 @@ class RecipeCard extends StatelessWidget {
         CachedNetworkImage(
           imageUrl: thumbUrl,
           fit: BoxFit.contain,
-          placeholder: (_, _) => const Center(child: CircularProgressIndicator()),
-          errorWidget: (_, _, _) => const Icon(Icons.blender, color: AppColors.primary, size: 40),
+          placeholder: (_, _) =>
+              const Center(child: CircularProgressIndicator()),
+          errorWidget: (_, _, _) =>
+              const Icon(Icons.blender, color: AppColors.primary, size: 40),
         ),
         if (hasVideo)
           const Center(
-            child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 36),
+            child: Icon(
+              Icons.play_circle_fill,
+              color: Colors.white70,
+              size: 36,
+            ),
           ),
       ],
     );
@@ -198,12 +252,19 @@ class RecipeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Kare görsel
-            AspectRatio(
-              aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: _buildSquareThumb(),
-              ),
+            Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: _buildSquareThumb(),
+                  ),
+                ),
+                Positioned(top: 4, right: 4, child: _favoriteButton(context)),
+              ],
             ),
             // İçerik
             Padding(
@@ -225,18 +286,32 @@ class RecipeCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.timer_outlined, size: 12, color: AppColors.grey600),
+                      Icon(
+                        Icons.timer_outlined,
+                        size: 12,
+                        color: AppColors.grey600,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         '${recipe.prepTimeMin} dk',
-                        style: TextStyle(fontSize: 11, color: AppColors.grey600),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.grey600,
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.local_fire_department_outlined, size: 12, color: Colors.orange.shade400),
+                      Icon(
+                        Icons.local_fire_department_outlined,
+                        size: 12,
+                        color: Colors.orange.shade400,
+                      ),
                       const SizedBox(width: 3),
                       Text(
                         '${recipe.calories} kcal',
-                        style: TextStyle(fontSize: 11, color: AppColors.grey600),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.grey600,
+                        ),
                       ),
                     ],
                   ),
@@ -266,7 +341,7 @@ class RecipeCard extends StatelessWidget {
     final hasVideo = recipe.videoUrl != null && recipe.videoUrl!.isNotEmpty;
     final thumbUrl = hasVideo
         ? CloudinaryHelper.videoPoster(recipe.videoUrl) ??
-            CloudinaryHelper.optimizeImage(recipe.imageUrl, width: 480)
+              CloudinaryHelper.optimizeImage(recipe.imageUrl, width: 480)
         : CloudinaryHelper.optimizeImage(recipe.imageUrl, width: 480);
 
     if (thumbUrl == null || thumbUrl.isEmpty) {
@@ -291,12 +366,20 @@ class RecipeCard extends StatelessWidget {
           errorWidget: (_, _, _) => Container(
             color: AppColors.primary.withAlpha(15),
             alignment: Alignment.center,
-            child: const Icon(Icons.blender, color: AppColors.primary, size: 44),
+            child: const Icon(
+              Icons.blender,
+              color: AppColors.primary,
+              size: 44,
+            ),
           ),
         ),
         if (hasVideo)
           const Center(
-            child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 40),
+            child: Icon(
+              Icons.play_circle_fill,
+              color: Colors.white70,
+              size: 40,
+            ),
           ),
       ],
     );
@@ -321,7 +404,11 @@ class RecipeCard extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.blender, color: AppColors.primary, size: 24),
+              child: const Icon(
+                Icons.blender,
+                color: AppColors.primary,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

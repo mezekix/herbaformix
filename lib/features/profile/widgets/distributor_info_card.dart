@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/app_colors.dart';
@@ -98,10 +99,7 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
       await authProvider.refreshProfile();
 
       if (mounted) {
-        setState(() {
-          _successMessage = 'Danışmanınıza başarıyla bağlandınız!';
-          _codeController.clear();
-        });
+        context.go('/home');
       }
     } catch (e) {
       if (mounted) {

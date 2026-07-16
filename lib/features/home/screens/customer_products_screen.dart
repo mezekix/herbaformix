@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/app_colors.dart';
 import '../../../models/product_model.dart';
 import '../../orders/providers/cart_provider.dart';
+import '../../favorites/providers/favorites_provider.dart';
 import '../../products/providers/product_provider.dart';
 import '../../products/screens/product_detail_screen.dart';
 import '../../products/screens/recipes_list_screen.dart';
@@ -39,19 +40,30 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
     super.dispose();
   }
 
-  List<ProductModel> _getFilteredProducts(List<ProductModel> all) {
-    var filtered = all.where((p) =>
-      p.category == null || _visibleCategories.contains(p.category),
-    ).toList();
+  List<ProductModel> _getFilteredProducts(
+    List<ProductModel> all,
+    Set<String> favoriteIds,
+  ) {
+    var filtered = all
+        .where(
+          (p) => p.category == null || _visibleCategories.contains(p.category),
+        )
+        .toList();
 
-    if (_selectedCategory != 'Tümü') {
-      filtered = filtered.where((p) => p.category == _selectedCategory).toList();
+    if (_selectedCategory == 'Favoriler') {
+      filtered = filtered.where((p) => favoriteIds.contains(p.id)).toList();
+    } else if (_selectedCategory != 'Tümü') {
+      filtered = filtered
+          .where((p) => p.category == _selectedCategory)
+          .toList();
     }
 
     if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((p) =>
-        p.name.toLowerCase().contains(_searchQuery.toLowerCase()),
-      ).toList();
+      filtered = filtered
+          .where(
+            (p) => p.name.toLowerCase().contains(_searchQuery.toLowerCase()),
+          )
+          .toList();
     }
 
     return filtered;
@@ -61,9 +73,12 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
   Widget build(BuildContext context) {
     final products = context.watch<ProductProvider>().products;
     final isLoading = context.watch<ProductProvider>().isLoading;
-    final filtered = _getFilteredProducts(products);
+    final favoriteIds = context.watch<FavoritesProvider>().favoriteIds(
+      FavoriteType.product,
+    );
+    final filtered = _getFilteredProducts(products, favoriteIds);
 
-    final categories = ['Tümü', ..._visibleCategories];
+    final categories = ['Tümü', 'Favoriler', ..._visibleCategories];
 
     return SafeArea(
       child: Column(
@@ -112,7 +127,10 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                         ),
                         child: IconButton(
                           tooltip: 'Sepete git',
-                          icon: const Icon(Icons.shopping_cart, color: AppColors.primary),
+                          icon: const Icon(
+                            Icons.shopping_cart,
+                            color: AppColors.primary,
+                          ),
                           onPressed: () {
                             context.push('/home/cart');
                           },
@@ -161,9 +179,7 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
             child: GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const RecipesListScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const RecipesListScreen()),
                 );
               },
               child: Container(
@@ -248,17 +264,26 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Ürün ara...',
-                  hintStyle: TextStyle(color: AppColors.textMutedLight, fontSize: 14),
-                  prefixIcon: Icon(Icons.search, color: AppColors.textMutedLight),
+                  hintStyle: TextStyle(
+                    color: AppColors.textMutedLight,
+                    fontSize: 14,
+                  ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: AppColors.textMutedLight,
+                  ),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        tooltip: 'Aramayı temizle',
-                        icon: const Icon(Icons.clear, size: 20),
-                        onPressed: () => _searchController.clear(),
-                      )
-                    : null,
+                      ? IconButton(
+                          tooltip: 'Aramayı temizle',
+                          icon: const Icon(Icons.clear, size: 20),
+                          onPressed: () => _searchController.clear(),
+                        )
+                      : null,
                 ),
               ),
             ),
@@ -280,24 +305,54 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
                   child: GestureDetector(
                     onTap: () => setState(() => _selectedCategory = cat),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected ? AppColors.primary : Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.backgroundMuted,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.backgroundMuted,
                         ),
                         boxShadow: isSelected
-                          ? [BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 2))]
-                          : null,
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
                       ),
-                      child: Text(
-                        cat,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : AppColors.grey600,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (cat == 'Favoriler') ...[
+                            Icon(
+                              Icons.favorite,
+                              size: 16,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.error,
+                            ),
+                            const SizedBox(width: 5),
+                          ],
+                          Text(
+                            cat,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppColors.grey600,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -310,46 +365,54 @@ class _CustomerProductsScreenState extends State<CustomerProductsScreen> {
           // Ürün listesi
           Expanded(
             child: isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : filtered.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.inventory_2_outlined, size: 48, color: AppColors.textMutedLighter),
-                      const SizedBox(height: 12),
-                      Text(
-                        products.isEmpty
-                          ? 'Henüz ürün eklenmemiş'
-                          : 'Ürün bulunamadı',
-                        style: TextStyle(fontSize: 15, color: AppColors.grey600),
-                      ),
-                    ],
+                ? const Center(child: CircularProgressIndicator())
+                : filtered.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 48,
+                          color: AppColors.textMutedLighter,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          products.isEmpty
+                              ? 'Henüz ürün eklenmemiş'
+                              : 'Ürün bulunamadı',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.grey600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : _isGridView
+                ? GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.82,
+                        ),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final product = filtered[index];
+                      return _ProductGridCard(product: product);
+                    },
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final product = filtered[index];
+                      return _ProductCard(product: product);
+                    },
                   ),
-                )
-              : _isGridView
-              ? GridView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.82,
-                  ),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final product = filtered[index];
-                    return _ProductGridCard(product: product);
-                  },
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final product = filtered[index];
-                    return _ProductCard(product: product);
-                  },
-                ),
           ),
         ],
       ),
@@ -371,119 +434,129 @@ class _ProductCard extends StatelessWidget {
         ),
       ),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Ürün görseli
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: CachedProductImage(
-                imageUrl: product.imageUrl,
-                fit: BoxFit.cover,
-                width: 56,
-                height: 56,
+          ],
+        ),
+        child: Row(
+          children: [
+            // Ürün görseli
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: CachedProductImage(
+                  imageUrl: product.imageUrl,
+                  fit: BoxFit.cover,
+                  width: 56,
+                  height: 56,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 14),
-          // Ürün bilgileri
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.nightSky,
+            const SizedBox(width: 14),
+            // Ürün bilgileri
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.nightSky,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                if (product.category != null)
+                  const SizedBox(height: 4),
+                  if (product.category != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: product.category == 'İç Beslenme'
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : Colors.purple.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        product.category!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: product.category == 'İç Beslenme'
+                              ? AppColors.primary
+                              : Colors.purple.shade600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // VP & Add to Cart
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (product.vp > 0)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: product.category == 'İç Beslenme'
-                        ? AppColors.primary.withValues(alpha: 0.1)
-                        : Colors.purple.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.backgroundMutedLighter,
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      product.category!,
+                      '${product.vp.toStringAsFixed(0)} VP',
                       style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: product.category == 'İç Beslenme'
-                          ? AppColors.primary
-                          : Colors.purple.shade600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.grey600,
                       ),
                     ),
                   ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Sepete ekle',
+                  icon: const Icon(
+                    Icons.add_shopping_cart,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    context.read<CartProvider>().addItem(product);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('${product.name} sepete eklendi!'),
+                        backgroundColor: AppColors.primary,
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
-          ),
-          // VP & Add to Cart
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (product.vp > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.backgroundMutedLighter,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${product.vp.toStringAsFixed(0)} VP',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.grey600,
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'Sepete ekle',
-                icon: const Icon(Icons.add_shopping_cart, color: AppColors.primary, size: 20),
-                onPressed: () {
-                  context.read<CartProvider>().addItem(product);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${product.name} sepete eklendi!'),
-                      backgroundColor: AppColors.primary,
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    ), // Container
+          ],
+        ),
+      ), // Container
     ); // GestureDetector
   }
 }
@@ -586,11 +659,14 @@ class _ProductGridCard extends StatelessWidget {
                 if (product.category != null)
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: product.category == 'İç Beslenme'
-                          ? AppColors.primary.withValues(alpha: 0.1)
-                          : Colors.purple.shade50,
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : Colors.purple.shade50,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -599,8 +675,8 @@ class _ProductGridCard extends StatelessWidget {
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: product.category == 'İç Beslenme'
-                            ? AppColors.primary
-                            : Colors.purple.shade600,
+                              ? AppColors.primary
+                              : Colors.purple.shade600,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -635,7 +711,11 @@ class _ProductGridCard extends StatelessWidget {
                       color: AppColors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.add_shopping_cart, size: 16, color: AppColors.primary),
+                    child: const Icon(
+                      Icons.add_shopping_cart,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ],
