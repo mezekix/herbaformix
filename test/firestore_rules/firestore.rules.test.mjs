@@ -34,6 +34,7 @@ const consultantUid = 'consultant-uid';
 const otherConsultantUid = 'other-consultant-uid';
 const customerDocId = 'customer-doc-id';
 const linkedCustomerUid = 'linked-customer-uid';
+const unlinkedCustomerUid = 'unlinked-customer-uid';
 
 function authDb(uid) {
   return testEnv.authenticatedContext(uid).firestore();
@@ -79,6 +80,22 @@ function recipeDocument(overrides = {}) {
   };
 }
 
+function orderDocument(overrides = {}) {
+  return {
+    userId: consultantUid,
+    customerId: linkedCustomerUid,
+    customerName: 'Customer',
+    items: [{ productId: 'formula-1', productName: 'Formula 1', quantity: 1 }],
+    orderDate: Timestamp.fromDate(new Date('2026-07-16T09:00:00Z')),
+    status: 'OrderStatus.pending',
+    totalAmount: 500,
+    totalVpEarned: 10,
+    notes: '',
+    shippingAddress: '',
+    ...overrides,
+  };
+}
+
 async function seedBaseData() {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
@@ -97,6 +114,11 @@ async function seedBaseData() {
       role: 'customer',
       name: 'Customer',
       assignedDistributorId: consultantUid,
+    });
+    await setDoc(doc(db, 'userProfiles', unlinkedCustomerUid), {
+      email: 'guest@example.com',
+      role: 'customer',
+      name: 'Guest',
     });
     await setDoc(doc(db, 'users', consultantUid, 'customers', customerDocId), {
       firstName: 'Ayse',
@@ -293,6 +315,46 @@ await runTest('assigned consultant can disconnect linked customer profile', asyn
     updateDoc(doc(authDb(otherConsultantUid), 'userProfiles', linkedCustomerUid), {
       assignedDistributorId: deleteField(),
     }),
+  );
+});
+
+await runTest('linked customer can create a pending order only for an active assigned coach', async () => {
+  await assertSucceeds(
+    setDoc(
+      doc(authDb(linkedCustomerUid), 'users', consultantUid, 'orders', 'customer-order'),
+      orderDocument(),
+    ),
+  );
+});
+
+await runTest('unlinked guest cannot create an order in their own area', async () => {
+  await assertFails(
+    setDoc(
+      doc(authDb(unlinkedCustomerUid), 'users', unlinkedCustomerUid, 'orders', 'orphan-order'),
+      orderDocument({
+        userId: unlinkedCustomerUid,
+        customerId: unlinkedCustomerUid,
+        customerName: 'Guest',
+      }),
+    ),
+  );
+});
+
+await runTest('customer cannot send an order to a missing coach profile', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'userProfiles', linkedCustomerUid), {
+      email: 'customer@example.com',
+      role: 'customer',
+      name: 'Customer',
+      assignedDistributorId: 'missing-coach',
+    });
+  });
+
+  await assertFails(
+    setDoc(
+      doc(authDb(linkedCustomerUid), 'users', 'missing-coach', 'orders', 'stale-coach-order'),
+      orderDocument({ userId: 'missing-coach' }),
+    ),
   );
 });
 

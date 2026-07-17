@@ -20,6 +20,7 @@ class OrderProvider with ChangeNotifier {
 
   List<OrderModel> _orders = [];
   bool _isLoading = false;
+  String? _lastAddOrderError;
   StreamSubscription<List<OrderModel>>? _ordersSubscription;
   String? _currentUserId;
 
@@ -60,6 +61,12 @@ class OrderProvider with ChangeNotifier {
 
   List<OrderModel> get orders => _orders;
   bool get isLoading => _isLoading;
+  String? get lastAddOrderError => _lastAddOrderError;
+
+  bool _isCoachRole(UserRole role) =>
+      role == UserRole.distributor ||
+      role == UserRole.supervisor ||
+      role == UserRole.successCreator;
 
   // Bu ay kazanılan toplam VP'yi hesapla (Teslim edildi veya Kargolandı durumundaki siparişlerden)
   double get totalVpEarnedThisMonth {
@@ -130,12 +137,36 @@ class OrderProvider with ChangeNotifier {
 
   Future<bool> addOrder(OrderModel order) async {
     if (_currentUserId == null) return false;
+    _lastAddOrderError = null;
+
+    final profile = _authProvider.userProfile;
+    final role = profile?.role;
+    final assignedDistributorId = profile?.assignedDistributorId;
+
+    // Müşteri siparişi yalnızca aktif bir yaşam koçuna gönderilebilir. Bu
+    // kontrolün burada da yapılması, web arayüzü eski bir profil gösterse bile
+    // siparişin müşterinin kendi alanına veya silinmiş bir koçun alanına
+    // yazılmasını önler.
+    if (role == UserRole.customer) {
+      if (assignedDistributorId == null || assignedDistributorId.isEmpty) {
+        _lastAddOrderError =
+            'Sipariş talebi göndermek için önce bir yaşam koçuna bağlanmalısınız.';
+        return false;
+      }
+
+      final distributor = await _firestoreService.getDistributorProfile(
+        assignedDistributorId,
+      );
+      if (distributor == null || !_isCoachRole(distributor.role)) {
+        _lastAddOrderError =
+            'Bağlı yaşam koçunuz bulunamadı. Lütfen profilinizden geçerli bir davet koduyla yeniden bağlanın.';
+        return false;
+      }
+    }
+
     _isLoading = true;
     notifyListeners();
     try {
-      final role = _authProvider.userProfile?.role;
-      final assignedDistributorId =
-          _authProvider.userProfile?.assignedDistributorId;
       final targetUserId =
           (role == UserRole.customer &&
               assignedDistributorId != null &&

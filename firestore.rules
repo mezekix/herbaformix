@@ -139,6 +139,8 @@ service cloud.firestore {
 
     function isAssignedCustomerOrder(distributorId, data) {
       return signedIn() &&
+        exists(/databases/$(database)/documents/userProfiles/$(distributorId)) &&
+        get(/databases/$(database)/documents/userProfiles/$(distributorId)).data.role in ['distributor', 'supervisor', 'successCreator'] &&
         myProfile().data.assignedDistributorId == distributorId &&
         data.customerId == request.auth.uid;
     }
@@ -734,7 +736,7 @@ service cloud.firestore {
         allow read: if isOwner(userId) ||
           isAssignedCustomerOrder(userId, resource.data);
         allow create: if (
-          isOwner(userId) &&
+          isOwner(userId) && isDistributor() &&
           isValidOrder(request.resource.data, userId)
         ) || (
           isAssignedCustomerOrder(userId, request.resource.data) &&
@@ -742,7 +744,7 @@ service cloud.firestore {
           request.resource.data.status == 'OrderStatus.pending'
         );
         allow update: if (
-          isOwner(userId) &&
+          isOwner(userId) && isDistributor() &&
           isValidOrder(request.resource.data, userId)
         ) || (
           isAssignedCustomerOrder(userId, resource.data) &&
@@ -752,7 +754,7 @@ service cloud.firestore {
             .hasOnly(['notes', 'shippingAddress']) &&
           isValidOrder(request.resource.data, userId)
         );
-        allow delete: if isOwner(userId);
+        allow delete: if isOwner(userId) && isDistributor();
       }
 
       match /progressEntries/{entryId} {

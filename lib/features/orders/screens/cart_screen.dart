@@ -136,8 +136,11 @@ class _CartScreenState extends State<CartScreen> {
         );
       } else {
         scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Sipariş kaydedilirken bir hata oluştu.'),
+          SnackBar(
+            content: Text(
+              orderProvider.lastAddOrderError ??
+                  'Sipariş kaydedilirken bir hata oluştu.',
+            ),
             backgroundColor: AppColors.error,
           ),
         );
@@ -158,7 +161,7 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     final cartProvider = context.watch<CartProvider>();
     final orderProvider = context.read<OrderProvider>();
-    final authProvider = context.read<AuthProvider>();
+    final authProvider = context.watch<AuthProvider>();
     final customerProvider = context.watch<CustomerProvider>();
 
     final role = authProvider.userProfile?.role;
