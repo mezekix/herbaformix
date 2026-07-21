@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../models/customer_model.dart';
+import '../../../models/user_role.dart';
 import '../../../services/firestore_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import 'package:herbaformix/core/logger.dart';
@@ -16,6 +17,8 @@ class CombinedCustomerEntry {
   final String? userProfileId;
   final CustomerModel? customerRecord;
   final bool isLinkedCustomer;
+  final String? distributorRequestStatus;
+  final UserRole? role;
 
   const CombinedCustomerEntry({
     required this.id,
@@ -25,15 +28,18 @@ class CombinedCustomerEntry {
     this.userProfileId,
     this.customerRecord,
     this.isLinkedCustomer = false,
+    this.distributorRequestStatus,
+    this.role,
   });
 
   Timestamp? get activatedAt => customerRecord?.activatedAt;
 
   bool get isRecentlyActivated {
     final activated = activatedAt?.toDate();
-    return activated != null &&
-        DateTime.now().difference(activated).inDays < 7;
+    return activated != null && DateTime.now().difference(activated).inDays < 7;
   }
+
+  bool get isDistributor => role == UserRole.distributor;
 }
 
 class CustomerProvider with ChangeNotifier {
@@ -81,8 +87,9 @@ class CustomerProvider with ChangeNotifier {
           now.difference(activated).inDays < 7;
     }).toList();
     list.sort(
-      (a, b) => (b.activatedAt ?? Timestamp(0, 0))
-          .compareTo(a.activatedAt ?? Timestamp(0, 0)),
+      (a, b) => (b.activatedAt ?? Timestamp(0, 0)).compareTo(
+        a.activatedAt ?? Timestamp(0, 0),
+      ),
     );
     return list;
   }
@@ -98,8 +105,9 @@ class CustomerProvider with ChangeNotifier {
   int get activeCustomersCount {
     final newIds = recentlyActivatedCustomers.map((c) => c.id).toSet();
     return _customers
-        .where((c) =>
-            c.linkedUserId != null && c.isActive && !newIds.contains(c.id))
+        .where(
+          (c) => c.linkedUserId != null && c.isActive && !newIds.contains(c.id),
+        )
         .length;
   }
 
@@ -121,19 +129,24 @@ class CustomerProvider with ChangeNotifier {
     notifyListeners();
 
     _customersSubscription?.cancel();
-    _customersSubscription = _firestoreService.getCustomers(userId).listen(
-      (customersData) {
-        _customers = customersData;
-        _isLoading = false;
-        notifyListeners();
-      },
-      onError: (error) {
-        AppLogger.error("CustomerProvider Hata (fetchCustomers): $error", tag: 'CustomerProvider');
-        _isLoading = false;
-        _customers = [];
-        notifyListeners();
-      },
-    );
+    _customersSubscription = _firestoreService
+        .getCustomers(userId)
+        .listen(
+          (customersData) {
+            _customers = customersData;
+            _isLoading = false;
+            notifyListeners();
+          },
+          onError: (error) {
+            AppLogger.error(
+              "CustomerProvider Hata (fetchCustomers): $error",
+              tag: 'CustomerProvider',
+            );
+            _isLoading = false;
+            _customers = [];
+            notifyListeners();
+          },
+        );
   }
 
   Future<bool> addCustomer(CustomerModel customer) async {
@@ -161,7 +174,11 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger.error("CustomerProvider Hata (addCustomer): $e", tag: 'CustomerProvider', error: e);
+      AppLogger.error(
+        "CustomerProvider Hata (addCustomer): $e",
+        tag: 'CustomerProvider',
+        error: e,
+      );
       _isLoading = false;
       notifyListeners();
       return false;
@@ -180,7 +197,11 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger.error("CustomerProvider Hata (updateCustomer): $e", tag: 'CustomerProvider', error: e);
+      AppLogger.error(
+        "CustomerProvider Hata (updateCustomer): $e",
+        tag: 'CustomerProvider',
+        error: e,
+      );
       _isLoading = false;
       notifyListeners();
       return false;
@@ -197,7 +218,11 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger.error("CustomerProvider Hata (deleteCustomer): $e", tag: 'CustomerProvider', error: e);
+      AppLogger.error(
+        "CustomerProvider Hata (deleteCustomer): $e",
+        tag: 'CustomerProvider',
+        error: e,
+      );
       _isLoading = false;
       notifyListeners();
       return false;
@@ -210,7 +235,10 @@ class CustomerProvider with ChangeNotifier {
     notifyListeners();
     try {
       if (entry.customerRecord != null) {
-        await _firestoreService.deleteCustomer(_currentUserId!, entry.customerRecord!.id);
+        await _firestoreService.deleteCustomer(
+          _currentUserId!,
+          entry.customerRecord!.id,
+        );
       } else if (entry.userProfileId != null) {
         await _firestoreService.disconnectDistributor(entry.userProfileId!);
       }
@@ -218,7 +246,11 @@ class CustomerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger.error("CustomerProvider Hata (deleteCombinedCustomer): $e", tag: 'CustomerProvider', error: e);
+      AppLogger.error(
+        "CustomerProvider Hata (deleteCombinedCustomer): $e",
+        tag: 'CustomerProvider',
+        error: e,
+      );
       _isLoading = false;
       notifyListeners();
       return false;
@@ -230,20 +262,32 @@ class CustomerProvider with ChangeNotifier {
 
     try {
       return _customers.firstWhere(
-        (c) => c.id == customerId || (c.linkedUserId != null && c.linkedUserId == customerId),
+        (c) =>
+            c.id == customerId ||
+            (c.linkedUserId != null && c.linkedUserId == customerId),
       );
     } catch (_) {}
 
     try {
-      final doc = await _firestoreService.getCustomer(_currentUserId!, customerId);
+      final doc = await _firestoreService.getCustomer(
+        _currentUserId!,
+        customerId,
+      );
       if (doc != null) return doc;
     } catch (_) {}
 
     try {
-      final doc = await _firestoreService.getCustomerByLinkedUserId(_currentUserId!, customerId);
+      final doc = await _firestoreService.getCustomerByLinkedUserId(
+        _currentUserId!,
+        customerId,
+      );
       if (doc != null) return doc;
     } catch (e) {
-      AppLogger.error("CustomerProvider Hata (getCustomerById): $e", tag: 'CustomerProvider', error: e);
+      AppLogger.error(
+        "CustomerProvider Hata (getCustomerById): $e",
+        tag: 'CustomerProvider',
+        error: e,
+      );
     }
 
     return null;
@@ -267,13 +311,15 @@ class CustomerProvider with ChangeNotifier {
         return linkedCustomer;
       }
 
-      final profile = await _firestoreService.getUserProfile(entry.userProfileId!);
+      final profile = await _firestoreService.getUserProfile(
+        entry.userProfileId!,
+      );
       if (profile != null) {
-        final createdCustomer =
-            await _firestoreService.createCustomerRecordFromUserProfile(
-          distributorId: _currentUserId!,
-          profile: profile,
-        );
+        final createdCustomer = await _firestoreService
+            .createCustomerRecordFromUserProfile(
+              distributorId: _currentUserId!,
+              profile: profile,
+            );
 
         final existingIndex = _customers.indexWhere(
           (customer) => customer.id == createdCustomer.id,
@@ -289,9 +335,10 @@ class CustomerProvider with ChangeNotifier {
     }
 
     final matchedByPhone = _customers.cast<CustomerModel?>().firstWhere(
-          (customer) => customer != null && customer.phoneNumber == entry.phoneNumber,
-          orElse: () => null,
-        );
+      (customer) =>
+          customer != null && customer.phoneNumber == entry.phoneNumber,
+      orElse: () => null,
+    );
 
     return matchedByPhone;
   }
@@ -302,19 +349,22 @@ class CustomerProvider with ChangeNotifier {
     try {
       final userProfileCustomers = await _firestoreService
           .fetchCustomersByDistributorId(_currentUserId!);
-      final subCollectionCustomers =
-          await _firestoreService.fetchAllCustomers(_currentUserId!);
+      final subCollectionCustomers = await _firestoreService.fetchAllCustomers(
+        _currentUserId!,
+      );
 
       final result = <CombinedCustomerEntry>[];
       final addedIds = <String>{};
       final customerRecordsByLinkedUserId = <String, CustomerModel>{
         for (final customer in subCollectionCustomers)
-          if (customer.linkedUserId != null && customer.linkedUserId!.isNotEmpty)
+          if (customer.linkedUserId != null &&
+              customer.linkedUserId!.isNotEmpty)
             customer.linkedUserId!: customer,
       };
 
       for (final profile in userProfileCustomers) {
-        CustomerModel? customerRecord = customerRecordsByLinkedUserId[profile.id];
+        CustomerModel? customerRecord =
+            customerRecordsByLinkedUserId[profile.id];
         customerRecord ??= await _firestoreService.getCustomerByLinkedUserId(
           _currentUserId!,
           profile.id,
@@ -328,6 +378,8 @@ class CustomerProvider with ChangeNotifier {
             userProfileId: profile.id,
             customerRecord: customerRecord,
             isLinkedCustomer: true,
+            distributorRequestStatus: profile.distributorRequestStatus,
+            role: profile.role,
           ),
         );
         addedIds.add(profile.id);
@@ -355,7 +407,11 @@ class CustomerProvider with ChangeNotifier {
 
       return result;
     } catch (e) {
-      AppLogger.error('CustomerProvider Hata (getCombinedCustomers): $e', tag: 'CustomerProvider', error: e);
+      AppLogger.error(
+        'CustomerProvider Hata (getCombinedCustomers): $e',
+        tag: 'CustomerProvider',
+        error: e,
+      );
       return [];
     }
   }

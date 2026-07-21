@@ -26,8 +26,8 @@ class ProgressProvider with ChangeNotifier {
   // startListening her çağrıldığında reset edilir.
   bool _initialBadgeCheckDone = false;
 
-  // Yeni kazanılan rozetler için callback
-  static Function(String badgeId)? onBadgeEarned;
+  // Yeni kazanılan rozetler için ekranın bağlayabildiği instance callback'i.
+  void Function(String badgeId)? onBadgeEarned;
 
   /// Seri hesabına dahil edilen ek aktivite tarihleri (su, öğün vb.)
   Set<DateTime> _activityDates = {};

@@ -27,16 +27,22 @@ class _InviteCodeSectionState extends State<InviteCodeSection> {
   bool _isCleaningExpired = false;
 
   Future<void> _generateCode() async {
+    // Capture dependencies while this widget is definitely active.  The
+    // Firestore write may finish after the enclosing profile route starts
+    // leaving, when looking up an ancestor through `context` is unsafe.
+    final authProvider = context.read<AuthProvider>();
+    final firestoreService = context.read<FirestoreService>();
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
     setState(() => _isGenerating = true);
     try {
-      final authProvider = context.read<AuthProvider>();
       final distributorId = authProvider.userProfile?.id;
       if (distributorId == null) return;
 
-      await context.read<FirestoreService>().createInviteCode(distributorId);
+      await firestoreService.createInviteCode(distributorId);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger?.showSnackBar(
           const SnackBar(
             content: Text('Yeni davet kodu oluşturuldu'),
             backgroundColor: AppColors.primary,
@@ -92,18 +98,19 @@ class _InviteCodeSectionState extends State<InviteCodeSection> {
   }
 
   Future<void> _cleanExpiredCodes() async {
+    final authProvider = context.read<AuthProvider>();
+    final firestoreService = context.read<FirestoreService>();
+    final messenger = ScaffoldMessenger.maybeOf(context);
+
     setState(() => _isCleaningExpired = true);
     try {
-      final authProvider = context.read<AuthProvider>();
       final distributorId = authProvider.userProfile?.id;
       if (distributorId == null) return;
 
-      final count = await context
-          .read<FirestoreService>()
-          .deleteExpiredInviteCodes(distributorId);
+      final count = await firestoreService.deleteExpiredInviteCodes(distributorId);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger?.showSnackBar(
           SnackBar(
             content: Text(count > 0
                 ? '$count süresi geçmiş kod temizlendi'
@@ -115,7 +122,7 @@ class _InviteCodeSectionState extends State<InviteCodeSection> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger?.showSnackBar(
           SnackBar(content: Text('Hata: $e'), backgroundColor: Colors.red),
         );
       }

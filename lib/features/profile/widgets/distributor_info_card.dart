@@ -40,6 +40,9 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
 
   /// Müşterinin girdiği davet kodunu doğrular ve bağlama işlemini gerçekleştirir.
   Future<void> _redeemInviteCode() async {
+    final firestoreService = context.read<FirestoreService>();
+    final authProvider = context.read<AuthProvider>();
+    final router = GoRouter.of(context);
     final code = _codeController.text.trim().toUpperCase();
     if (code.isEmpty) {
       setState(() => _errorMessage = 'Lütfen bir davet kodu girin.');
@@ -53,8 +56,6 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
     });
 
     try {
-      final firestoreService = context.read<FirestoreService>();
-      final authProvider = context.read<AuthProvider>();
       final uid = authProvider.firebaseUser?.uid;
       final userProfile = authProvider.userProfile;
 
@@ -65,6 +66,7 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
 
       // 1. Kodu doğrula
       final inviteCode = await firestoreService.validateInviteCode(code);
+      if (!mounted) return;
       if (inviteCode == null) {
         setState(() => _errorMessage = 'Geçersiz davet kodu. Lütfen kontrol edip tekrar deneyin.');
         return;
@@ -94,13 +96,13 @@ class _DistributorInfoCardState extends State<DistributorInfoCard> {
         newUserId: uid,
         existingUser: true,
       );
+      if (!mounted) return;
 
       // 4. AuthProvider'daki profili yenile
       await authProvider.refreshProfile();
+      if (!mounted) return;
 
-      if (mounted) {
-        context.go('/home');
-      }
+      router.go('/home');
     } catch (e) {
       if (mounted) {
         final message = e.toString().replaceFirst('Exception: ', '');

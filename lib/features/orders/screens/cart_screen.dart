@@ -46,7 +46,9 @@ class _CartScreenState extends State<CartScreen> {
             authProvider.userProfile!.assignedDistributorId!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Sipariş talebi göndermek için önce bir yaşam koçuna bağlanmalısınız.'),
+          content: Text(
+            'Sipariş talebi göndermek için önce bir yaşam koçuna bağlanmalısınız.',
+          ),
           backgroundColor: AppColors.error,
         ),
       );
@@ -209,7 +211,12 @@ class _CartScreenState extends State<CartScreen> {
                     itemCount: cartProvider.items.length,
                     itemBuilder: (context, index) {
                       final item = cartProvider.items.values.elementAt(index);
-                      return _buildCartItemCard(context, item, cartProvider);
+                      return _buildCartItemCard(
+                        context,
+                        item,
+                        cartProvider,
+                        isCustomer: isCustomer,
+                      );
                     },
                   ),
                   const SizedBox(height: 16),
@@ -364,8 +371,9 @@ class _CartScreenState extends State<CartScreen> {
   Widget _buildCartItemCard(
     BuildContext context,
     OrderItemModel item,
-    CartProvider cartProvider,
-  ) {
+    CartProvider cartProvider, {
+    required bool isCustomer,
+  }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 0,
@@ -405,11 +413,13 @@ class _CartScreenState extends State<CartScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${item.unitPrice.toStringAsFixed(2)} TL  •  ${item.unitVp.toStringAsFixed(0)} VP',
-                    style: TextStyle(fontSize: 12, color: AppColors.grey600),
-                  ),
+                  if (!isCustomer) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '${item.unitPrice.toStringAsFixed(2)} TL  •  ${item.unitVp.toStringAsFixed(0)} VP',
+                      style: TextStyle(fontSize: 12, color: AppColors.grey600),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -512,8 +522,8 @@ class _CartScreenState extends State<CartScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Sipariş Özeti',
+          Text(
+            isCustomer ? 'Seçim Özeti' : 'Sipariş Özeti',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -522,33 +532,35 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 16),
           _buildSummaryRow('Toplam Ürün', '${cart.itemCount} adet'),
-          const Divider(height: 24),
-          _buildSummaryRow(
-            'Kazanılacak Toplam VP',
-            '${cart.totalVp.toStringAsFixed(1)} VP',
-          ),
-          const Divider(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Tahmini Tutar',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.nightSky,
+          if (!isCustomer) ...[
+            const Divider(height: 24),
+            _buildSummaryRow(
+              'Kazanılacak Toplam VP',
+              '${cart.totalVp.toStringAsFixed(1)} VP',
+            ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Tahmini Tutar',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.nightSky,
+                  ),
                 ),
-              ),
-              Text(
-                '${cart.totalAmount.toStringAsFixed(2)} TL',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green,
+                Text(
+                  '${cart.totalAmount.toStringAsFixed(2)} TL',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );

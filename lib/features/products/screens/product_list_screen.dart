@@ -6,6 +6,7 @@ import '../../../core/app_colors.dart';
 import '../../../models/product_model.dart';
 import '../../../models/user_role.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../favorites/providers/favorites_provider.dart';
 import '../../orders/providers/cart_provider.dart';
 import '../providers/product_provider.dart';
 import './add_edit_product_screen.dart'; // AddEditProductScreen'i import et
@@ -55,6 +56,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
     final productProvider = Provider.of<ProductProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
     final isCustomer = authProvider.userProfile?.role == UserRole.customer;
+    final favorites = context.watch<FavoritesProvider>();
+    final favoriteIds = favorites.favoriteIds(FavoriteType.product);
     final allProducts = productProvider.products;
 
     // Kategorileri hesapla
@@ -67,7 +70,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
         .toSet()
         .toList();
     uniqueCategories.sort();
-    final categories = ['Tümü', ...uniqueCategories];
+    final categories = ['Tümü', 'Favoriler', ...uniqueCategories];
 
     // Ürünleri filtrele
     List<ProductModel> filteredProducts = allProducts;
@@ -82,7 +85,11 @@ class _ProductListScreenState extends State<ProductListScreen> {
     }
 
     // 1. Kategoriye göre filtrele
-    if (_selectedCategory != 'Tümü') {
+    if (_selectedCategory == 'Favoriler') {
+      filteredProducts = filteredProducts
+          .where((product) => favoriteIds.contains(product.id))
+          .toList();
+    } else if (_selectedCategory != 'Tümü') {
       filteredProducts = filteredProducts
           .where((product) => product.category == _selectedCategory)
           .toList();
@@ -190,7 +197,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                               color: Colors.white.withAlpha(50),
                               shape: BoxShape.circle,
                             ),
-                            child: const Text('🥤', style: TextStyle(fontSize: 24)),
+                            child: const Text(
+                              '🥤',
+                              style: TextStyle(fontSize: 24),
+                            ),
                           ),
                           const SizedBox(width: 14),
                           const Expanded(
@@ -251,7 +261,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 SizedBox(
                   height: 60,
                   child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     scrollDirection: Axis.horizontal,
                     itemCount: categories.length,
                     itemBuilder: (context, index) {
@@ -298,103 +311,253 @@ class _ProductListScreenState extends State<ProductListScreen> {
               ),
             )
           else if (_isGridView)
-            _buildSliverGridView(filteredProducts)
+            _buildSliverGridView(filteredProducts, isCustomer: isCustomer)
           else
-            _buildSliverListView(filteredProducts),
+            _buildSliverListView(filteredProducts, isCustomer: isCustomer),
         ],
       ),
     );
   }
 
-  Widget _buildSliverListView(List<ProductModel> filteredProducts) {
+  Widget _buildSliverListView(
+    List<ProductModel> filteredProducts, {
+    required bool isCustomer,
+  }) {
     return SliverList(
-      delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          final product = filteredProducts[index];
-          return _buildListItem(product);
-        },
-        childCount: filteredProducts.length,
-      ),
+      delegate: SliverChildBuilderDelegate((context, index) {
+        final product = filteredProducts[index];
+        return _buildListItem(product, isCustomer: isCustomer);
+      }, childCount: filteredProducts.length),
     );
   }
 
-  Widget _buildListItem(ProductModel product) {
+  Widget _buildListItem(ProductModel product, {required bool isCustomer}) {
+    return _buildModernListItem(product, isCustomer: isCustomer);
+  }
+
+  Widget _buildModernListItem(
+    ProductModel product, {
+    required bool isCustomer,
+  }) {
+    final detailText = _customerDetailText(product);
+
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-      elevation: 3,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 5,
+      shadowColor: AppColors.garden.withValues(alpha: 0.16),
+      color: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(12.0),
-        leading: Hero(
-          tag: 'productImage_${product.id}',
-          child: Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [AppColors.backgroundMutedLight, Colors.white],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: ClipOval(
-              child: CachedProductImage(
-                imageUrl: product.imageUrl,
-                width: 60,
-                height: 60,
-                fit: BoxFit.cover,
-              ),
-            ),
+      clipBehavior: Clip.antiAlias,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFFFFF), Color(0xFFF4F8EE)],
           ),
         ),
-        title: Text(
-          product.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        subtitle: Text(
-          'Fiyat: ${(product.price ?? 0).toStringAsFixed(2)} ₺',
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: 'Sepete ekle',
-              icon: const Icon(Icons.add_shopping_cart, color: AppColors.primary),
-              onPressed: () {
-                context.read<CartProvider>().addItem(product);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${product.name} sepete eklendi!'),
-                    backgroundColor: AppColors.primary,
-                    duration: const Duration(seconds: 1),
+        child: InkWell(
+          onTap: () {
+            context.pushNamed(
+              ProductDetailScreen.routeName,
+              pathParameters: {'productId': product.id},
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Hero(
+                  tag: 'productImage_${product.id}',
+                  child: Container(
+                    width: 108,
+                    height: 132,
+                    decoration: BoxDecoration(
+                      gradient: const RadialGradient(
+                        center: Alignment.topCenter,
+                        radius: 1.1,
+                        colors: [Color(0xFFFFFFFF), Color(0xFFEAF3DF)],
+                      ),
+                      borderRadius: BorderRadius.circular(17),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.garden.withValues(alpha: 0.13),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned(
+                          top: 8,
+                          left: 7,
+                          child: Icon(
+                            Icons.eco_outlined,
+                            size: 34,
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 6, 8, 12),
+                          child: CachedProductImage(
+                            imageUrl: product.imageUrl,
+                            width: 100,
+                            height: 120,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              },
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 132),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                product.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 16,
+                                  height: 1.2,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Consumer<FavoritesProvider>(
+                              builder: (context, favorites, _) {
+                                final isFavorite = favorites.isFavorite(
+                                  FavoriteType.product,
+                                  product.id,
+                                );
+                                return IconButton(
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 36,
+                                    height: 36,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  tooltip: isFavorite
+                                      ? 'Favorilerden çıkar'
+                                      : 'Favorilere ekle',
+                                  icon: Icon(
+                                    isFavorite
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
+                                    size: 20,
+                                    color: isFavorite
+                                        ? AppColors.garden
+                                        : AppColors.textSecondary,
+                                  ),
+                                  onPressed: () => favorites.toggle(
+                                    FavoriteType.product,
+                                    product.id,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          detailText,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12.5,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            if (!isCustomer)
+                              Text(
+                                '${(product.price ?? 0).toStringAsFixed(2)} ₺',
+                                style: const TextStyle(
+                                  color: AppColors.garden,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: () {
+                                context.pushNamed(
+                                  ProductDetailScreen.routeName,
+                                  pathParameters: {'productId': product.id},
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.garden,
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              iconAlignment: IconAlignment.end,
+                              icon: const Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 17,
+                              ),
+                              label: const Text(
+                                'Ayrıntıları gör',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
-          ],
+          ),
         ),
-        onTap: () {
-          context.pushNamed(
-            ProductDetailScreen.routeName,
-            pathParameters: {'productId': product.id},
-          );
-        },
       ),
     );
   }
 
-  Widget _buildSliverGridView(List<ProductModel> filteredProducts) {
+  String _customerDetailText(ProductModel product) {
+    final overview = product.overview?.trim();
+    if (overview != null && overview.isNotEmpty) return overview;
+
+    final usageInfo = product.usageInfo?.trim();
+    if (usageInfo != null && usageInfo.isNotEmpty) return usageInfo;
+
+    return 'Ürün özelliklerini ve kullanım önerilerini inceleyin.';
+  }
+
+  Widget _buildSliverGridView(
+    List<ProductModel> filteredProducts, {
+    required bool isCustomer,
+  }) {
     return SliverPadding(
       padding: const EdgeInsets.all(10.0),
       sliver: SliverGrid(
@@ -404,18 +567,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
           mainAxisSpacing: 10.0,
           childAspectRatio: 0.75,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final product = filteredProducts[index];
-            return _buildGridItem(product);
-          },
-          childCount: filteredProducts.length,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final product = filteredProducts[index];
+          return _buildGridItem(product, isCustomer: isCustomer);
+        }, childCount: filteredProducts.length),
       ),
     );
   }
 
-  Widget _buildGridItem(ProductModel product) {
+  Widget _buildGridItem(ProductModel product, {required bool isCustomer}) {
     return GestureDetector(
       onTap: () {
         context.pushNamed(
@@ -469,27 +629,39 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        '${(product.price ?? 0).toStringAsFixed(2)} ₺',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                      if (!isCustomer)
+                        Text(
+                          '${(product.price ?? 0).toStringAsFixed(2)} ₺',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: 'Sepete ekle',
-                        icon: const Icon(Icons.add_shopping_cart, size: 20, color: AppColors.primary),
-                        onPressed: () {
-                          context.read<CartProvider>().addItem(product);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('${product.name} sepete eklendi!'),
-                              backgroundColor: AppColors.primary,
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
+                      Consumer<FavoritesProvider>(
+                        builder: (context, favorites, _) => IconButton(
+                          tooltip:
+                              favorites.isFavorite(
+                                FavoriteType.product,
+                                product.id,
+                              )
+                              ? 'Favorilerden çıkar'
+                              : 'Favorilere ekle',
+                          icon: Icon(
+                            favorites.isFavorite(
+                                  FavoriteType.product,
+                                  product.id,
+                                )
+                                ? Icons.favorite
+                                : Icons.favorite_outline,
+                            size: 20,
+                            color: AppColors.error,
+                          ),
+                          onPressed: () => favorites.toggle(
+                            FavoriteType.product,
+                            product.id,
+                          ),
+                        ),
                       ),
                     ],
                   ),

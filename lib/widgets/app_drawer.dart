@@ -12,6 +12,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../features/calorie_tracker/screens/calorie_tracker_screen.dart';
 import '../features/customers/screens/customer_list_screen.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/inventory/screens/inventory_screen.dart';
 import '../features/orders/screens/order_list_screen.dart';
 import '../features/products/screens/product_list_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
@@ -279,6 +280,14 @@ class AppDrawer extends StatelessWidget {
               title: l.drawerOrderHistory,
               routeName: OrderListScreen.routeName.substring(1),
               pathSegment: 'orders',
+            ),
+          if (userProfile?.role != UserRole.customer)
+            _buildListTile(
+              context,
+              icon: Icons.inventory_2_outlined,
+              title: 'Stok ve Alışlarım',
+              routeName: InventoryScreen.routeName,
+              pathSegment: InventoryScreen.routeName,
             ),
           const Divider(indent: 16, endIndent: 16),
           _buildListTile(

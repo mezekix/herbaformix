@@ -1,6 +1,6 @@
 # HERBAFORMIX — Proje İlerleme Takibi (Progress)
 
-> **Son Güncelleme:** 2026-07-14
+> **Son Güncelleme:** 2026-07-19
 > **Mevcut Sürüm:** v1.2.0
 > **Genel İlerleme:** ~%88 (Production seviyesi)
 > **Bir sonraki kilometre taşı:** v2.0 AI Premium (Faz 26–28)
@@ -409,6 +409,69 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ---
 
+## FAZ 9.5 — DİSTRİBÜTÖR ALIŞ, STOK VE SATIŞ TAKİBİ 📋
+
+> **Öncelik:** Müşteri tarafındaki mevcut işler tamamlandıktan sonra.
+> **Kapsam:** Bu modül online mağaza değil; müşteri memnuniyeti ve referans odağını koruyan, distribütörün satışını, alış maliyetini, fiziksel stoğunu ve kişisel kullanımını takip eden sade bir sistemdir.
+
+### 9.5.1 — Kesin karar kaydı
+
+| Konu | Karar |
+|---|---|
+| Kullanıcı | Stok ve satış işlemlerini yalnızca distribütör/koç yönetir. Müşteri ürün satın alamaz; talep gönderir. |
+| Talep → satış | Müşteri bir veya daha fazla ürünü sepetten talep eder. Talep `bekleyen sipariş` olur; distribütör teslim ettiğinde aynı kayıt satışa dönüşür. |
+| Doğrudan satış | Distribütör, müşteri detayından talep olmadan da doğrudan satış oluşturabilir. |
+| Stok düşümü | Sadece sipariş `teslim edildi` olduğunda fiziksel stok düşer. Ürün teslim edilmiş olsa bile ödeme bekliyor olabilir. |
+| Sonradan değişiklik | Sipariş durumu sonradan değiştirilebilir. Teslim edilmiş sipariş iptal edilir veya ürün iade alınırsa stok otomatik geri eklenir. |
+| Kişisel kullanım | Ayrı bir işlem türüdür; ürün ve adet bazında stoktan düşer, satış sayılmaz. Tarih, not ve maliyeti görülebilir. Porsiyon/ölçek takibi yoktur. |
+| Başlangıç stoğu | Günlük sayım yoktur. İlk kullanımda eldeki ürünler sayılıp adetleri girilir; maliyet için süpervizör fiyatı otomatik önerilir ve değiştirilebilir. |
+| Alış maliyeti | Alış formunda seçili fiyat listesindeki süpervizör fiyatı varsayılan gelir; gerçek alış fiyatı elle düzeltilebilir. |
+| Müşteri fiyatı | Önerilen müşteri satış fiyatı varsayılandır. Müşteri + ürün bazlı özel fiyat kaydedilir ve sonraki satışlarda otomatik uygulanır. Müşteri bu fiyatı uygulamada görmez; fiyatı distribütöründen öğrenir. |
+| Para/KDV | Müşteri satış fiyatı KDV dahil girilir. Maliyet ve satışın karşılaştırılması aynı KDV yaklaşımıyla yapılır. |
+| Maliyet yöntemi | Aynı ürün farklı maliyetlerle alındığında, kişisel kullanım maliyeti ve satış kârı ağırlıklı ortalama maliyetle hesaplanır. |
+| Ödeme | Teslimat ve tahsilat ayrıdır. Ödendi, kısmi ödeme ve bekleyen ödeme; tutar ve ödeme yöntemiyle takip edilir. |
+| Stok farkı | Fiziksel sayım farklıysa neden/not ile stok düzeltmesi yapılabilir; satış ya da kişisel kullanım olarak sayılmaz. |
+| Düşük stok | Bildirim yoktur. Stoğu 3 adetten az olan ürün, stok ekranında düşük stok etiketi taşır. |
+
+### 9.5.2 — İlk sürüm: alış, stok, satış ve kişisel kullanım
+
+- [ ] Distribütöre ait ürün bazlı stok bakiyesi, ortalama maliyet, son hareket tarihi ve düşük stok etiketi.
+- [ ] Başlangıç stok sayımı, alış ekleme ve notlu stok düzeltme ekranları.
+- [ ] Alışta ürün, adet, süpervizör maliyeti, gerçek maliyet, tarih ve isteğe bağlı not kaydı.
+- [ ] **Kişisel Ürün Kullanımım**: ürün, adet, tarih ve not girişi; ilgili maliyetin ve geçmiş kullanımın görüntülenmesi.
+- [ ] Müşteri için çok ürünlü talep sepeti; talebin bekleyen sipariş olarak distribütöre ulaşması.
+- [ ] Distribütörün doğrudan satış oluşturması; talebi/satışı ürün, adet ve müşteri özel fiyatıyla düzenleyebilmesi.
+- [ ] Teslimde stok düşümü; iptal veya müşteri iadesinde stok iadesi; durum değişikliklerinde çift stok hareketini önleyen koruma.
+- [ ] Ödeme durumu, tahsil edilen tutar, kalan alacak ve ödeme yöntemi kaydı.
+- [ ] Müşteri özel fiyatlarının ürün bazında yönetimi; müşteri arayüzünde fiyat gösterilmemesi.
+- [ ] Teslim edilmiş satış, tahsil edilen tutar, kalan alacak, ürün bazlı stok, kişisel kullanım maliyeti ve ağırlıklı ortalama maliyet/kâr raporları.
+- [ ] Stok ekranında 3 adetten az olan ürün için düşük stok etiketi; push bildirim/eşik ayarı yok.
+
+### 9.5.3 — Fiyat listesi ve veri ilkeleri
+
+- [ ] `original.pdf` içindeki **Mart 2025 Distribütör Fiyat Listesi** referans alınarak; ürün stok numarası, VP, önerilen müşteri fiyatı ve süpervizör maliyeti kataloğa aktarılacak/doğrulanacak.
+- [ ] Fiyat listesi sürüm/tarih bilgisi saklanacak; geçmiş alış ve satışlar, işlem anındaki fiyat/maliyet üzerinden değişmeden raporlanacak.
+- [ ] İlk sürümde yeni fiyat listesi güncellemesi manuel yapılacak; PDF’den otomatik ürün-fiyat aktarımı ikinci faza bırakılacak.
+- [ ] Envanter ve hareketler her distribütörün kendi verisidir; başka distribütörler erişemez.
+- [ ] Stok sıfırın altına düşemez. Satış, kişisel kullanım, iade ve düzeltme işlemleri atomik olarak stok bakiyesiyle birlikte kaydedilir.
+
+### 9.5.4 — Sonraki faza bırakılanlar
+
+- [ ] Yeni Herbalife fiyat listelerinin PDF’den otomatik içe aktarımı ve fiyat farkı inceleme ekranı.
+- [ ] Herbalife sitesi üzerinden müşterinin doğrudan alışverişinin entegrasyonu. Bu satışlar distribütörün hanesine yazılır, ancak kendi fiziksel stoğunu etkilemez; ayrı satış kanalı olarak raporlanır.
+- [ ] Müşteriye gösterilen indirimli ürün/promosyon kampanyaları.
+- [ ] Parti/son kullanma tarihi, tedarikçi borcu, fatura ve gelişmiş muhasebe özellikleri.
+
+### 9.5.5 — Kabul senaryoları
+
+- [ ] 10 adet başlangıç/alış stoğu bulunan üründen, teslim edilen 3 adetlik satış ve 2 adet kişisel kullanım sonrası stok 5 görünür.
+- [ ] Aynı satış iptal edilirse veya ürün iade alınırsa stok doğru miktarda geri gelir; teslimat tekrar işlendiğinde çift düşüm oluşmaz.
+- [ ] Teslim edilmiş ama ödemesi bekleyen satış stoktan düşer, alacakta görünür; kısmi tahsilat kalan alacağı doğru günceller.
+- [ ] Aynı ürün için farklı maliyetli alışlardan sonra satış/kullanım maliyeti ağırlıklı ortalamayla hesaplanır.
+- [ ] Stoğu 3 adetten az olan ürün, bildirim göndermeden stok ekranında düşük stok olarak görünür.
+
+---
+
 ## FAZ 10 — GÜVENLİK VE FİRESTORE KURALLARI ✅
 
 > Rol bazlı erişim kontrolü (RBAC) ve veri güvenliği.
@@ -771,17 +834,17 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 
 ---
 
-## FAZ 23 — BİLDİRİM MERKEZİ & UYGULAMA İÇİ BİLDİRİMLER 📋
+## FAZ 23 — BİLDİRİM MERKEZİ & UYGULAMA İÇİ BİLDİRİMLER ✅
 
 > **Hedef Sürüm:** v1.2
 > **Bağımlılıklar:** Faz 14 (FCM)
 
-- [ ] Bildirim merkezi ekranı (tüm bildirimlerin listesi)
-- [ ] Bildirim türleri: Program, Su, Ölçüm, Rozet, Takip, Sipariş, Mesaj, Meydan Okuma, Motivasyon
-- [ ] Okundu/okunmadı durumu
-- [ ] Bildirim filtreleme (türe göre)
-- [ ] Bildirim tercihleri yönetimi (hangi bildirimler açık/kapalı)
-- [ ] AppBar'da bildirim sayacı (badge)
+- [x] Bildirim merkezi ekranı (tüm bildirimlerin listesi)
+- [x] Bildirim türleri: Program, Su, Ölçüm, Rozet, Takip, Sipariş, Mesaj, Meydan Okuma, Motivasyon
+- [x] Okundu/okunmadı durumu
+- [x] Bildirim filtreleme (türe göre)
+- [x] Bildirim tercihleri yönetimi (hangi bildirimler açık/kapalı)
+- [x] AppBar'da bildirim sayacı (badge)
 
 ---
 
@@ -991,6 +1054,7 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | 07 | Rozet ve Oyunlaştırma | — | ✅ | %95 |
 | 08 | CRM ve Müşteri Yönetimi | — | ⚠️ | %95 |
 | 09 | Ürün, Sipariş ve Tarifler | — | ⚠️ | %98 |
+| **9.5** | **Distribütör Alış, Stok ve Satış Takibi** | **Planlandı** | **📋** | **%0** |
 | 10 | Güvenlik Kuralları | — | ✅ | %95 |
 | **11** | **Performans Optimizasyonu** | **v1.0** | ✅ | %90 |
 | **12** | **Erişilebilirlik** | **v1.0** | ✅ | %95 |
@@ -1022,27 +1086,12 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | # | Öncelik | Açıklama | Dosya/Konum |
 |---|---|---|---|
 | 1 | 🟡 Orta | Fotoğraflar yalnızca yerel — cihaz değişince kaybolur | `progress_photos_screen.dart` |
-| ~~2~~ | ✅ Kapandı | ~~`scheduled_follow_ups` ve `careerRoadmap` güvenlik kuralları audit edilmedi~~ → ownership/immutable alanlar audit edildi, emulator rules testleri eklendi | `test/firestore_rules/` |
 | 3 | 🟡 Orta | **iOS Google Sign-In yapılandırması eksik** — `GoogleService-Info.plist` yok, `Info.plist`'te `CFBundleURLSchemes` (REVERSED_CLIENT_ID) tanımlı değil. iOS'ta Firebase de Google Sign-In de çalışmaz. | `ios/Runner/` |
-| 4 | 🟡 Orta | **Login Screen — Apple ve Face/Biometric sosyal butonları işlevsiz** — `onTap` parametresi geçilmemiş, tıklanınca hiçbir şey olmuyor; kullanıcıyı yanıltıyor. Ya implemente edilmeli ya gizlenmeli. | `login_screen.dart:407-421` |
-| ~~5~~ | ✅ Kapandı | ~~Mango sarısı üzerinde beyaz yazı kontrast sorunu~~ → `AppColors.mangoDeep` eklendi + 7 noktada düzeltildi | `app_colors.dart` |
 | 6 | 🟢 Düşük | Test dosyaları eksik (unit/widget/integration) | `test/` dizini |
 | 7 | 🟢 Düşük | Recipes — tüm tarifler `formul1_id` ile mock; gerçek `productId` eşleştirmesi yok | `recipe_provider.dart:38` |
-| ~~8~~ | ✅ Kapandı | ~~Confetti animasyonu rozet kazanılırken devreye girmiyor~~ → `CustomerProgressScreen` içinde `onBadgeEarned` callback'i confetti tetikliyor | `customer_progress_screen.dart` |
 | 9 | 🟢 Düşük | Android SHA-1 hash'inin Firebase Console'a kayıtlı olduğu manuel doğrulanmalı (Google Sign-In Android için kritik) | Firebase Console |
-| 10 | 🔴 Yüksek | `inviteCodes` koleksiyonu **anonim olarak** okunabiliyor → müşteri isim/telefon/e-posta sızıntısı | `firestore.rules:76` |
-| ~~11~~ | ✅ Kapandı | ~~`scheduled_follow_ups` create kuralında `customerId` varlığı doğrulanmıyor~~ → `exists(/users/{consultant}/customers/{customerId})` kuralı emulator testiyle doğrulandı | `firestore.rules`, `test/firestore_rules/` |
-| 12 | 🟡 Orta | `Settings.CACHE_SIZE_UNLIMITED` → düşük depolamalı cihazlarda SQLite şişme riski | `main.dart:36` |
-| 13 | 🟡 Orta | `home_screen.dart` ~123 KB / ~3200 satır → bölünmeli (her sekme kendi `*_tab.dart`'ında) | `features/home/screens/home_screen.dart` |
-| 14 | 🟡 Orta | `AuthProvider` dispose'da `_authStateChanges` subscription iptal edilmiyor → memory leak | `auth_provider.dart:69` |
-| 15 | 🟡 Orta | Anonim giriş düğmesi sınırsız → aynı kullanıcı 50+ hesap açabilir, Firestore çöp birikir | `login_screen.dart:443`, `auth_provider.dart:288` |
-| 16 | 🟢 Düşük | `ProgressProvider.onBadgeEarned` static singleton → instance property + Stream-based refactor | `progress_provider.dart:24` |
-| 17 | 🟢 Düşük | 220 `debugPrint` → merkezi `lib/core/logger.dart`'a taşı (release'te sustur) | birçok dosya |
-| 18 | 🟢 Düşük | **BMI hesabı `addEntry` + `updateEntry`'de duplicate** → `UserProfileBmi` extension'a çıkar | `progress_provider.dart:213,247` ✅ refactor tamam (P13), test bekliyor |
-| 19 | 🟢 Düşük | Gemini yanıtında retry/backoff yok → 429'da anında patlar | `food_estimation_service.dart:104` |
-| 20 | 🟢 Düşük | Login email validasyonu `@` içerik kontrolünden ibaret (`a@`, `@b` geçer) | `login_screen.dart:261` |
-| 21 | 🟢 Düşük | `AppColors`'a `textMuted*` eklenip 193 `Colors.grey.shade*` çağrısı değiştirilmeli (P5) | birçok dosya |
-| 22 | 🟢 Düşük | `pubspec.yaml` description placeholder ("A new Flutter project.") — 4 yıldır değişmemiş | `pubspec.yaml:2` |
+| 10 | 🟡 Orta | PII içermeyen `inviteCodeLookups` modeli ve atomik kurallar hazır; emulator 21/21 geçti. Production'daki mevcut kodlar backfill edilip yeni istemci yayınlandıktan sonra rules deploy edilmeli. | `firestore.rules`, `invite_code_repository.dart`, `docs/P8_FIRESTORE_INVITE_CODE_AUDIT.md` |
+| 21 | 🟢 Düşük | `AppColors.textMuted*` kısmen eklendi; kalan 100 `Colors.grey` kullanımı semantik renklere taşınmalı (P5) | birçok dosya |
 
 ---
 
@@ -1050,14 +1099,14 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 
 | Seri | Kapsam | Öncelik | Durum |
 |---|---|---|---|
-| **P4 — Centralized logger** | `lib/core/logger.dart` yaz, 220 `debugPrint`'i taşı; release'te sustur, kDebugMode'da bas | 🔴 Yüksek | 📋 Planlandı |
-| **P5 — Design system hardening** | `AppColors.textMuted*` (400/500/700) ekle, 193 `Colors.grey.shade*` → `AppColors.*` | 🔴 Yüksek | 📋 Planlandı |
-| **P6 — `home_screen.dart` böl** | IndexedStack + her sekme ayrı `*_tab.dart`; 123 KB → ~8 × 15 KB | 🔴 Yüksek | 📋 Planlandı |
-| **P7 — Auth lifecycle hardening** | (a) AuthProvider dispose, (b) anonim throttle, (c) login email regex, (d) social butonları çöz | 🔴 Yüksek | 🔄 Başladı: davet kaydı rollback temizliği eklendi; diğer başlıklar bekliyor |
-| **P8 — Firestore rules audit** | `inviteCodes` read, `scheduled_follow_ups` create, `orders` create alan doğrulama | 🔴 Yüksek | 🔄 Başladı: davet kodu bağlantı kuralları güncellendi; `scheduled_follow_ups` + `careerRoadmap` emulator testleri geçti, deploy bekliyor |
-| **P9 — Cache bounded** | `CACHE_SIZE_UNLIMITED` → 50 MB + cache temizleme UI | 🟡 Orta | 📋 Planlandı |
+| **P4 — Centralized logger** | `lib/core/logger.dart` yaz, 220 `debugPrint`'i taşı; release'te sustur, kDebugMode'da bas | 🔴 Yüksek | ✅ Tamam — uygulama kodu `AppLogger`'a taşındı; yalnızca logger iç implementasyonu `debugPrint` kullanıyor |
+| **P5 — Design system hardening** | `AppColors.textMuted*` (400/500/700) ekle, 193 `Colors.grey.shade*` → `AppColors.*` | 🔴 Yüksek | 🔄 Kısmi — token'lar eklendi; 100 `Colors.grey` kullanımı kaldı |
+| **P6 — `home_screen.dart` böl** | IndexedStack + her sekme ayrı `*_tab.dart`; 123 KB → ~8 × 15 KB | 🔴 Yüksek | ✅ Tamam — 5 müşteri sekmesi ayrı `customer_*_tab.dart`; state koruyan `IndexedStack` aktif |
+| **P7 — Auth lifecycle hardening** | (a) AuthProvider dispose, (b) anonim throttle, (c) login email regex, (d) social butonları çöz | 🔴 Yüksek | ✅ Tamam — subscription dispose, regex, kalıcı 1 saat throttle; desteklenmeyen Apple butonu kaldırıldı |
+| **P8 — Firestore rules audit** | `inviteCodes` read, `scheduled_follow_ups` create, `orders` create alan doğrulama | 🔴 Yüksek | 🚧 Kod/test tamam — 21/21 emulator geçti; legacy lookup backfill + istemci rollout + production deploy bekliyor |
+| **P9 — Cache bounded** | `CACHE_SIZE_UNLIMITED` → 50 MB + cache temizleme UI | 🟡 Orta | 🔄 Kısmi — 50 MB sınırı aktif; cache temizleme UI bekliyor |
 | **P10 — Lint hardening** | `analysis_options.yaml`'a `prefer_const_constructors`, `unawaited_futures`, `avoid_dynamic_calls` | 🟡 Orta | 📋 Planlandı |
-| **P11 — Gemini retry + rate limit** | Exponential backoff (1s/2s/4s) + UI-side debounce | 🟡 Orta | 📋 Planlandı |
+| **P11 — Gemini retry + rate limit** | Exponential backoff (1s/2s/4s) + UI-side debounce | 🟡 Orta | 🔄 Kısmi — servis retry mevcut; hedef backoff dizisi ve UI debounce bekliyor |
 | **P12 — FirestoreService facade sunset** | `@Deprecated('Use XRepository directly')` işaretle, 6 ay sonra sil | 🟡 Orta | 📋 Planlandı |
 | **P13 — BMI extension + dedup** | `lib/core/extensions/user_profile_bmi.dart` + `progress_provider.dart` 2 yerdeki duplicate blok tek satıra | 🟢 Düşük | ✅ Kod ve unit test tamam |
 

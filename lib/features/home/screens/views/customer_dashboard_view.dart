@@ -32,13 +32,13 @@ import '../../../calorie_tracker/widgets/food_search_sheet.dart';
 import '../../../step_tracker/providers/step_tracker_provider.dart';
 import '../../../step_tracker/screens/step_tracker_screen.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/motivation_widget.dart';
 import '../../widgets/daily_compact_success_card.dart';
 import '../../widgets/animated_water_glass.dart';
 import '../../../../services/exercise_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/utils/cloudinary_helper.dart';
+import '../../../notifications/widgets/notification_bell_button.dart';
 
 class CustomerDashboardView extends StatefulWidget {
   final Stream<List<DailyRoutineModel>>? routinesStream;
@@ -65,8 +65,6 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
   @override
   void initState() {
     super.initState();
-    _loadLastSeenActivations();
-
     // Konfeti controller
     _waterConfettiController = ConfettiController(
       duration: const Duration(seconds: 2),
@@ -88,16 +86,6 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     _pulseController.dispose();
     super.dispose();
   }
-
-  Future<void> _loadLastSeenActivations() async {
-    final prefs = await SharedPreferences.getInstance();
-    final ms = prefs.getInt('last_seen_activations');
-    if (ms != null) {
-      setState(() {
-      });
-    }
-  }
-
 
   /// Özel gün, streak ve saate göre selamlama metni döndürür.
   /// [firstName] boşsa sadece "Merhaba!" döner.
@@ -162,25 +150,31 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
   (String prefix, String rest) _splitGreeting(String greeting) {
     final commaIdx = greeting.indexOf(',');
     if (commaIdx != -1) {
-      return (greeting.substring(0, commaIdx + 1), greeting.substring(commaIdx + 1).trim());
+      return (
+        greeting.substring(0, commaIdx + 1),
+        greeting.substring(commaIdx + 1).trim(),
+      );
     }
     return ('', greeting);
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
     return _buildCustomerDashboard(context);
   }
+
   Widget _buildCustomerDashboard(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final userProfile = authProvider.userProfile;
     final photoUrl = userProfile?.profilePhotoUrl;
     final name = userProfile?.name ?? '';
     final firstName = name.trim().split(' ').first;
-    final initials = name.trim().split(' ').take(2).map((w) => w.isNotEmpty ? w[0].toUpperCase() : '').join();
+    final initials = name
+        .trim()
+        .split(' ')
+        .take(2)
+        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+        .join();
 
     return CustomScrollView(
       slivers: [
@@ -204,21 +198,39 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                       height: 44,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 2),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 4)],
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 4,
+                          ),
+                        ],
                       ),
                       child: ClipOval(
-                        child: _buildHeaderAvatar(photoUrl, initials, userProfile?.id, userProfile?.profilePhotoUpdatedAt),
+                        child: _buildHeaderAvatar(
+                          photoUrl,
+                          initials,
+                          userProfile?.id,
+                          userProfile?.profilePhotoUpdatedAt,
+                        ),
                       ),
                     ),
                     Positioned(
-                      bottom: 0, right: 0,
+                      bottom: 0,
+                      right: 0,
                       child: Container(
-                        width: 12, height: 12,
+                        width: 12,
+                        height: 12,
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary, width: 2),
+                          border: Border.all(
+                            color: AppColors.primary,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -231,18 +243,33 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                   onTap: () => context.goNamed(ProfileScreen.routeName),
                   child: Builder(
                     builder: (context) {
-                      final greeting = _getAppBarGreeting(firstName, userProfile: userProfile);
+                      final greeting = _getAppBarGreeting(
+                        firstName,
+                        userProfile: userProfile,
+                      );
                       final (prefix, rest) = _splitGreeting(greeting);
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (prefix.isNotEmpty)
-                            Text(prefix, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 11, fontWeight: FontWeight.w500)),
+                            Text(
+                              prefix,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           Text(
                             prefix.isNotEmpty ? rest : greeting,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                            overflow: TextOverflow.ellipsis, maxLines: 1,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ],
                       );
@@ -253,7 +280,8 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
             ],
           ),
           actions: [
-            if (userProfile?.role == UserRole.distributor && authProvider.isCustomerModeActive)
+            if (userProfile?.role == UserRole.distributor &&
+                authProvider.isCustomerModeActive)
               Container(
                 width: 40,
                 height: 40,
@@ -266,61 +294,18 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                   onPressed: () {
                     authProvider.toggleCustomerMode();
                   },
-                  icon: const Icon(Icons.admin_panel_settings_outlined, color: Colors.white, size: 22),
+                  icon: const Icon(
+                    Icons.admin_panel_settings_outlined,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                   tooltip: 'Distribütör Paneli',
                   padding: EdgeInsets.zero,
                 ),
               ),
-            StreamBuilder<List<DailyRoutineModel>>(
-              stream: widget.routinesStream ?? const Stream.empty(),
-              builder: (context, snapshot) {
-                final routines = snapshot.data ?? [];
-                final now = DateTime.now();
-                
-                // Sadece saati gelmiş veya geçmiş tamamlanmamış rutinler
-                final hasDueIncomplete = routines.any((r) =>
-                    !r.isCompleted &&
-                    r.scheduledTime.isBefore(now.add(const Duration(minutes: 15))));
-                
-                final waterProgress = context.watch<WaterProvider>().progress;
-                // Su düşükse ve en az bir su adımının saati geldiyse uyarı ver
-                final hasDueWaterStep = routines.any((r) =>
-                    r.isWaterStep && !r.isCompleted &&
-                    r.scheduledTime.isBefore(now.add(const Duration(minutes: 15))));
-                final hasWaterAlert = waterProgress < 0.5 && hasDueWaterStep;
-                
-                final showBadge = hasDueIncomplete || hasWaterAlert;
-
-                return Stack(
-                  children: [
-                    Container(
-                      width: 40, height: 40,
-                      margin: const EdgeInsets.only(right: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        onPressed: () => _showNotificationPanel(context, routines),
-                        icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
-                        padding: EdgeInsets.zero,
-                      ),
-                    ),
-                    if (showBadge)
-                      Positioned(
-                        right: 18, top: 8,
-                        child: Container(
-                          width: 8, height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade500,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                        ),
-                      ),
-                  ],
-                );
-              },
+            NotificationBellButton(
+              backgroundColor: Colors.white.withValues(alpha: 0.2),
+              margin: const EdgeInsets.only(right: 16),
             ),
           ],
         ),
@@ -350,28 +335,42 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     );
   }
 
-  Widget _buildHeaderAvatar(String? photoUrl, String initials, String? userId, DateTime? photoUpdatedAt) {
+  Widget _buildHeaderAvatar(
+    String? photoUrl,
+    String initials,
+    String? userId,
+    DateTime? photoUpdatedAt,
+  ) {
     final bgColor = AvatarColorHelper.forUser(userId);
     final textColor = AvatarColorHelper.textColorFor(bgColor);
 
     // 90 gün sarı halka kontrolü
-    final isStale = photoUrl != null &&
+    final isStale =
+        photoUrl != null &&
         photoUrl.isNotEmpty &&
         photoUpdatedAt != null &&
         DateTime.now().difference(photoUpdatedAt).inDays > 90;
 
     Widget avatar;
     if (photoUrl != null && photoUrl.isNotEmpty) {
-      if ((photoUrl.startsWith('/') || photoUrl.startsWith('file://')) && !kIsWeb) {
+      if ((photoUrl.startsWith('/') || photoUrl.startsWith('file://')) &&
+          !kIsWeb) {
         avatar = Image.file(
           File(photoUrl.replaceFirst('file://', '')),
-          fit: BoxFit.cover, width: 44, height: 44,
-          errorBuilder: (context, error, stackTrace) => _buildInitialsWidget(initials, bgColor, textColor),
+          fit: BoxFit.cover,
+          width: 44,
+          height: 44,
+          errorBuilder: (context, error, stackTrace) =>
+              _buildInitialsWidget(initials, bgColor, textColor),
         );
       } else if (!photoUrl.startsWith('/') && !photoUrl.startsWith('file://')) {
         avatar = Image.network(
-          photoUrl, fit: BoxFit.cover, width: 44, height: 44,
-          errorBuilder: (context, error, stackTrace) => _buildInitialsWidget(initials, bgColor, textColor),
+          photoUrl,
+          fit: BoxFit.cover,
+          width: 44,
+          height: 44,
+          errorBuilder: (context, error, stackTrace) =>
+              _buildInitialsWidget(initials, bgColor, textColor),
         );
       } else {
         avatar = _buildInitialsWidget(initials, bgColor, textColor);
@@ -424,7 +423,6 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     );
   }
 
-
   /// Kritik aksiyonlar listesindeki müşteri satırı için
   /// isimden üretilen renkli baş harf avatar'ı.
 
@@ -442,7 +440,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
           final completedCount = routines.where((r) => r.isCompleted).length;
           final totalCount = routines.length;
           final hasProgram = totalCount > 0;
-          final productProgress = hasProgram ? completedCount / totalCount : 0.0;
+          final productProgress = hasProgram
+              ? completedCount / totalCount
+              : 0.0;
 
           // Su ilerleme oranı
           final waterProgress = context.watch<WaterProvider>().progress;
@@ -452,7 +452,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
 
           // Streak ve Günlük yorum
           final streak = context.watch<HomeProvider>().completionStreak;
-          final dailyComment = _getDailyComment(userProfile: userProfile, streak: streak);
+          final dailyComment = _getDailyComment(
+            userProfile: userProfile,
+            streak: streak,
+          );
 
           // Gün sayısı: programStartDate'ten itibaren
           final startDate = userProfile?.programStartDate;
@@ -461,7 +464,8 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
               : 1;
 
           // Program yoksa teşvik kartı göster
-          if (!hasProgram && snapshot.connectionState != ConnectionState.waiting) {
+          if (!hasProgram &&
+              snapshot.connectionState != ConnectionState.waiting) {
             return GestureDetector(
               onTap: () => context.goNamed(CreateProgramScreen.routeName),
               child: Container(
@@ -481,12 +485,17 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                 child: Row(
                   children: [
                     Container(
-                      width: 56, height: 56,
+                      width: 56,
+                      height: 56,
                       decoration: BoxDecoration(
                         color: AppColors.primary.withAlpha(25),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.rocket_launch_outlined, color: AppColors.primary, size: 28),
+                      child: const Icon(
+                        Icons.rocket_launch_outlined,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -495,17 +504,28 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                         children: [
                           const Text(
                             'Programını Başlat!',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.nightSky),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.nightSky,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Hedeflerine ulaşmak için programını oluştur.',
-                            style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.primary),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
                   ],
                 ),
               ),
@@ -525,7 +545,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                   GestureDetector(
                     onTap: () => widget.onNavigateToProgram(),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withAlpha(25),
                         borderRadius: BorderRadius.circular(20),
@@ -533,7 +556,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.calendar_today, color: AppColors.primary, size: 14),
+                          const Icon(
+                            Icons.calendar_today,
+                            color: AppColors.primary,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'GÜN $dayNumber',
@@ -623,7 +650,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                 borderRadius: BorderRadius.circular(24),
                 onTap: () => exerciseService.toggleExercise(!isCompleted),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                   child: Row(
                     children: [
                       AnimatedContainer(
@@ -652,7 +682,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isCompleted ? 'Egzersiz Tamamlandı! 🎉' : 'Bugünkü Egzersiz',
+                              isCompleted
+                                  ? 'Egzersiz Tamamlandı! 🎉'
+                                  : 'Bugünkü Egzersiz',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -708,9 +740,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
         stream: widget.routinesStream ?? const Stream.empty(),
         builder: (context, snapshot) {
           final rawRoutines = snapshot.data ?? [];
-          final incompleteRoutines = rawRoutines.where((r) => !r.isCompleted).toList()
-            ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-            
+          final incompleteRoutines =
+              rawRoutines.where((r) => !r.isCompleted).toList()
+                ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+
           // Tüm rutinler tamamlandıysa widget'ı tamamen gizle
           if (rawRoutines.isNotEmpty && incompleteRoutines.isEmpty) {
             return const SizedBox.shrink();
@@ -724,7 +757,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
           final completedCount = rawRoutines.where((r) => r.isCompleted).length;
           final totalCount = rawRoutines.length;
           final activeRoutine = incompleteRoutines.firstOrNull;
-          final activeRoutineTimeStr = activeRoutine != null ? DateFormat('HH:mm').format(activeRoutine.scheduledTime) : null;
+          final activeRoutineTimeStr = activeRoutine != null
+              ? DateFormat('HH:mm').format(activeRoutine.scheduledTime)
+              : null;
 
           final progress = totalCount > 0 ? completedCount / totalCount : 0.0;
 
@@ -745,7 +780,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
               // İlerlemeye göre yoğunlaşan glow
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.06 + progress * 0.12),
+                  color: AppColors.primary.withValues(
+                    alpha: 0.06 + progress * 0.12,
+                  ),
                   blurRadius: 14 + progress * 8,
                   spreadRadius: 1,
                   offset: const Offset(0, 4),
@@ -758,7 +795,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
               ],
               // Glassmorphism border
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.08 + progress * 0.15),
+                color: AppColors.primary.withValues(
+                  alpha: 0.08 + progress * 0.15,
+                ),
               ),
             ),
             child: Column(
@@ -798,14 +837,25 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                           onTap: () async {
                             final newTime = await showTimePicker(
                               context: context,
-                              initialTime: TimeOfDay.fromDateTime(activeRoutine.scheduledTime),
+                              initialTime: TimeOfDay.fromDateTime(
+                                activeRoutine.scheduledTime,
+                              ),
                             );
                             if (!context.mounted || newTime == null) return;
                             final now = DateTime.now();
-                            await context.read<RoutineService>().updateRoutineTime(
-                              userProfile.id, activeRoutine.id,
-                              DateTime(now.year, now.month, now.day, newTime.hour, newTime.minute),
-                            );
+                            await context
+                                .read<RoutineService>()
+                                .updateRoutineTime(
+                                  userProfile.id,
+                                  activeRoutine.id,
+                                  DateTime(
+                                    now.year,
+                                    now.month,
+                                    now.day,
+                                    newTime.hour,
+                                    newTime.minute,
+                                  ),
+                                );
                           },
                           child: Text(
                             activeRoutineTimeStr,
@@ -824,7 +874,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                   const SizedBox(height: 12),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: _buildSegmentedProgressBar(completedCount, totalCount),
+                    child: _buildSegmentedProgressBar(
+                      completedCount,
+                      totalCount,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 14),
@@ -842,7 +895,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                 else if (incompleteRoutines.isEmpty)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: _buildAllCompletedContent(context, rawRoutines.length),
+                    child: _buildAllCompletedContent(
+                      context,
+                      rawRoutines.length,
+                    ),
                   )
                 else
                   _buildStitchChecklistItems(context, routines, userProfile),
@@ -865,7 +921,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
       ),
       child: Column(
         children: [
-          const Icon(Icons.check_circle_outline_rounded, size: 44, color: AppColors.primary),
+          const Icon(
+            Icons.check_circle_outline_rounded,
+            size: 44,
+            color: AppColors.primary,
+          ),
           const SizedBox(height: 12),
           const Text(
             'Tüm Öğünler Tamamlandı! 🎉',
@@ -892,7 +952,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     return Column(
       children: [
         const SizedBox(height: 8),
-        Icon(Icons.event_note_outlined, size: 48, color: AppColors.textMutedLighter),
+        Icon(
+          Icons.event_note_outlined,
+          size: 48,
+          color: AppColors.textMutedLighter,
+        ),
         const SizedBox(height: 12),
         const Text(
           'Bugün için program yok.',
@@ -907,7 +971,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           onPressed: () => context.goNamed(CreateProgramScreen.routeName),
         ),
@@ -934,20 +1000,22 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
             context: context,
             title: 'Su İç (500 ml)',
             isCompleted: routine.isCompleted,
-            isNext: !routine.isCompleted && routines
-                .where((r) => !r.isCompleted)
-                .firstOrNull
-                ?.id == routine.id,
+            isNext:
+                !routine.isCompleted &&
+                routines.where((r) => !r.isCompleted).firstOrNull?.id ==
+                    routine.id,
             isLast: i == routines.length - 1,
             onChanged: (val) async {
               if (val != null) {
                 final routineService = context.read<RoutineService>();
                 final waterProvider = context.read<WaterProvider>();
-                
+
                 await routineService.updateRoutineStatus(
-                  userProfile.id, routine.id, val,
+                  userProfile.id,
+                  routine.id,
+                  val,
                 );
-                
+
                 if (val) {
                   waterProvider.addWater(500);
                 } else {
@@ -963,16 +1031,18 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
             context: context,
             title: _getMealDisplayTitle(routine.productId),
             isCompleted: routine.isCompleted,
-            isNext: !routine.isCompleted && routines
-                .where((r) => !r.isCompleted)
-                .firstOrNull
-                ?.id == routine.id,
+            isNext:
+                !routine.isCompleted &&
+                routines.where((r) => !r.isCompleted).firstOrNull?.id ==
+                    routine.id,
             isLast: i == routines.length - 1,
             onChanged: (val) async {
               if (val != null) {
                 final routineService = context.read<RoutineService>();
                 await routineService.updateRoutineStatus(
-                  userProfile.id, routine.id, val,
+                  userProfile.id,
+                  routine.id,
+                  val,
                 );
               }
             },
@@ -989,7 +1059,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
           RecipeModel? dailyRecipe;
           final isShake = _isShakeMeal(product.name);
           if (isShake) {
-            dailyRecipe = context.read<RecipeProvider>().getRecipeForRoutine(userProfile.userGoal, routine.id);
+            dailyRecipe = context.read<RecipeProvider>().getRecipeForRoutine(
+              userProfile.userGoal,
+              routine.id,
+            );
             if (dailyRecipe != null) {
               recipeImageUrl = dailyRecipe.imageUrl;
             }
@@ -999,95 +1072,118 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
             context: context,
             title: _getMealDisplayTitle(product.name),
             isCompleted: routine.isCompleted,
-            isNext: !routine.isCompleted && routines
-                .where((r) => !r.isCompleted)
-                .firstOrNull
-                ?.id == routine.id,
+            isNext:
+                !routine.isCompleted &&
+                routines.where((r) => !r.isCompleted).firstOrNull?.id ==
+                    routine.id,
             isLast: i == routines.length - 1,
             recipeImageUrl: recipeImageUrl,
             onChanged: (val) async {
               if (val != null) {
                 final routineService = context.read<RoutineService>();
                 await routineService.updateRoutineStatus(
-                  userProfile.id, routine.id, val,
+                  userProfile.id,
+                  routine.id,
+                  val,
                 );
               }
             },
-            onTap: dailyRecipe != null ? () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => RecipeDetailPage(recipe: dailyRecipe!),
-                ),
-              );
-            } : () {
-              // Tarif göster (ürün bilgisi)
-              final instruction = product.instructionsByGoal?[userProfile.userGoal ?? '']
-                  ?? product.usageInfo
-                  ?? 'Kullanım bilgisi bulunamadı.';
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                builder: (ctx) => DraggableScrollableSheet(
-                  expand: false,
-                  initialChildSize: 0.5,
-                  minChildSize: 0.3,
-                  maxChildSize: 0.85,
-                  builder: (_, scrollController) => SingleChildScrollView(
-                    controller: scrollController,
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 40, height: 4,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: AppColors.textMutedLighter,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
+            onTap: dailyRecipe != null
+                ? () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            RecipeDetailPage(recipe: dailyRecipe!),
+                      ),
+                    );
+                  }
+                : () {
+                    // Tarif göster (ürün bilgisi)
+                    final instruction =
+                        product.instructionsByGoal?[userProfile.userGoal ??
+                            ''] ??
+                        product.usageInfo ??
+                        'Kullanım bilgisi bulunamadı.';
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                      ),
+                      builder: (ctx) => DraggableScrollableSheet(
+                        expand: false,
+                        initialChildSize: 0.5,
+                        minChildSize: 0.3,
+                        maxChildSize: 0.85,
+                        builder: (_, scrollController) => SingleChildScrollView(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Center(
+                                child: Container(
+                                  width: 40,
+                                  height: 4,
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.textMutedLighter,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                product.name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.nightSky,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  instruction,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.orange.shade900,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                ),
+                                child: const Text('Anladım'),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(product.name,
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.nightSky),
-                            textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(instruction,
-                              style: TextStyle(fontSize: 15, color: Colors.orange.shade900),
-                              textAlign: TextAlign.center),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                          child: const Text('Anladım'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
+                      ),
+                    );
+                  },
           );
         }
 
         return SizeFadeTransition(
-            sizeFraction: 0.7,
-            curve: Curves.easeInOut,
-            animation: animation,
-            child: child,
-          );
-        },
+          sizeFraction: 0.7,
+          curve: Curves.easeInOut,
+          animation: animation,
+          child: child,
+        );
+      },
     );
   }
 
@@ -1123,8 +1219,12 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w900,
-                          color: isCompleted ? const Color(0xFF8CAF8F) : AppColors.primary,
-                          decoration: isCompleted ? TextDecoration.lineThrough : null,
+                          color: isCompleted
+                              ? const Color(0xFF8CAF8F)
+                              : AppColors.primary,
+                          decoration: isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -1157,18 +1257,31 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(16),
                           child: CachedNetworkImage(
-                            imageUrl: CloudinaryHelper.optimizeImage(recipeImageUrl, width: 200) ?? recipeImageUrl,
+                            imageUrl:
+                                CloudinaryHelper.optimizeImage(
+                                  recipeImageUrl,
+                                  width: 200,
+                                ) ??
+                                recipeImageUrl,
                             fit: BoxFit.cover,
                             placeholder: (_, _) => Container(
                               color: AppColors.primary.withValues(alpha: 0.08),
                               child: const Center(
-                                child: Icon(Icons.blender, color: AppColors.primary, size: 28),
+                                child: Icon(
+                                  Icons.blender,
+                                  color: AppColors.primary,
+                                  size: 28,
+                                ),
                               ),
                             ),
                             errorWidget: (_, _, _) => Container(
                               color: AppColors.primary.withValues(alpha: 0.08),
                               child: const Center(
-                                child: Icon(Icons.blender, color: AppColors.primary, size: 28),
+                                child: Icon(
+                                  Icons.blender,
+                                  color: AppColors.primary,
+                                  size: 28,
+                                ),
                               ),
                             ),
                           ),
@@ -1206,8 +1319,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
   /// Ürün adından akıllı başlık üretir
   String _getMealDisplayTitle(String name) {
     final n = name.toLowerCase();
-    if (n.contains('formül 1') || n.contains('formul 1') ||
-        n.contains('shake') || n.contains('f1') || n.contains('mama')) {
+    if (n.contains('formül 1') ||
+        n.contains('formul 1') ||
+        n.contains('shake') ||
+        n.contains('f1') ||
+        n.contains('mama')) {
       return 'Shake Zamanı';
     }
     if (n.contains('çay') || n.contains('tea') || n.contains('herbal tea')) {
@@ -1219,7 +1335,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     if (n.contains('protein') || n.contains('bar')) {
       return 'Protein Zamanı';
     }
-    if (n.contains('tabak') || n.contains('yemek') || n.contains('öğün') || n.contains('sağlıklı')) {
+    if (n.contains('tabak') ||
+        n.contains('yemek') ||
+        n.contains('öğün') ||
+        n.contains('sağlıklı')) {
       return 'Öğün Zamanı';
     }
     // Bilinmeyen → ürün adı + Zamanı
@@ -1253,15 +1372,14 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(3),
                         gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFF7AC144),
-                            Color(0xFF22C55E),
-                          ],
+                          colors: [Color(0xFF7AC144), Color(0xFF22C55E)],
                         ),
                         boxShadow: value > 0.5
                             ? [
                                 BoxShadow(
-                                  color: const Color(0xFF22C55E).withValues(alpha: 0.3),
+                                  color: const Color(
+                                    0xFF22C55E,
+                                  ).withValues(alpha: 0.3),
                                   blurRadius: 4,
                                   spreadRadius: 0.5,
                                 ),
@@ -1278,6 +1396,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
       }),
     );
   }
+
   Widget _buildCustomerWaterTracker(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -1328,7 +1447,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                   // Su seviyesine göre yoğunlaşan glow
                   boxShadow: [
                     BoxShadow(
-                      color: blueAccent.withValues(alpha: 0.06 + progress * 0.1),
+                      color: blueAccent.withValues(
+                        alpha: 0.06 + progress * 0.1,
+                      ),
                       blurRadius: 16 + progress * 8,
                       spreadRadius: 1,
                       offset: const Offset(0, 4),
@@ -1425,7 +1546,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                                 waterProvider.addWater(200);
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
                                     colors: [
@@ -1445,7 +1569,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.add, color: Colors.white, size: 18),
+                                    Icon(
+                                      Icons.add,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
                                     SizedBox(width: 4),
                                     Text(
                                       '200ml Ekle',
@@ -1463,7 +1591,8 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                           const SizedBox(height: 8),
                           // "Tüm Kayıtlar" text butonu
                           GestureDetector(
-                            onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
+                            onTap: () =>
+                                context.pushNamed(WaterTrackerScreen.routeName),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1476,7 +1605,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                                   ),
                                 ),
                                 SizedBox(width: 2),
-                                Icon(Icons.chevron_right, color: blueAccent, size: 16),
+                                Icon(
+                                  Icons.chevron_right,
+                                  color: blueAccent,
+                                  size: 16,
+                                ),
                               ],
                             ),
                           ),
@@ -1486,7 +1619,8 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                     const SizedBox(width: 16),
                     // Sağ: 3D animasyonlu su bardağı (tıklanabilir)
                     GestureDetector(
-                      onTap: () => context.pushNamed(WaterTrackerScreen.routeName),
+                      onTap: () =>
+                          context.pushNamed(WaterTrackerScreen.routeName),
                       child: AnimatedWaterGlass(progress: progress),
                     ),
                   ],
@@ -1537,7 +1671,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
               final userProfile = context.read<AuthProvider>().userProfile;
               final exerciseLevel =
                   context.read<WaterProvider>().todaySummary?.exerciseLevel ??
-                      'moderate';
+                  'moderate';
               calorie.recomputeIfAuto(
                 profile: userProfile,
                 exerciseLevel: exerciseLevel,
@@ -1552,7 +1686,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
           final accent = overGoal
               ? const Color(0xFFE65100) // koyu turuncu — hedef aşımı
               : const Color(0xFFFE9836); // #fe9836
-          final orangeTextDark = overGoal ? const Color(0xFF7C2D12) : const Color(0xFF9A3412); // Koyu kahve/turuncu tonları
+          final orangeTextDark = overGoal
+              ? const Color(0xFF7C2D12)
+              : const Color(0xFF9A3412); // Koyu kahve/turuncu tonları
 
           return Container(
             padding: const EdgeInsets.all(20),
@@ -1573,7 +1709,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                   offset: const Offset(0, 4),
                 ),
               ],
-              border: Border.all(color: const Color(0xFFFE9836).withValues(alpha: 0.15)),
+              border: Border.all(
+                color: const Color(0xFFFE9836).withValues(alpha: 0.15),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -1585,8 +1723,11 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.local_fire_department,
-                              color: accent, size: 20),
+                          Icon(
+                            Icons.local_fire_department,
+                            color: accent,
+                            size: 20,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             'Kalori Takibi',
@@ -1639,7 +1780,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                         onTap: () => _showCalorieAddDialog(context),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           decoration: BoxDecoration(
                             color: accent,
                             borderRadius: BorderRadius.circular(20),
@@ -1670,21 +1813,21 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                       ),
                       const SizedBox(height: 8),
                       GestureDetector(
-                        onTap: () => context
-                            .pushNamed(CalorieTrackerScreen.routeName),
+                        onTap: () =>
+                            context.pushNamed(CalorieTrackerScreen.routeName),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               'Tüm Kayıtlar',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: accent),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: accent,
+                              ),
                             ),
                             const SizedBox(width: 2),
-                            Icon(Icons.chevron_right,
-                                color: accent, size: 16),
+                            Icon(Icons.chevron_right, color: accent, size: 16),
                           ],
                         ),
                       ),
@@ -1723,9 +1866,6 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     );
   }
 
-
-
-
   // ───── Kritik Aksiyon satır eylemleri ─────────────────────────────────
 
   /// Follow-up satırından "Ara" tıklandığında çağrılır. Müşterinin
@@ -1734,19 +1874,17 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
   /// Follow-up satırından "WhatsApp" tıklandığında çağrılır. Hazır
   /// selamlama mesajıyla wa.me deep link'ini açar.
 
-
   /// Follow-up'ı tamamlanmış olarak işaretler.
-
-
-
 
   /// Tek bir kritik aksiyon satırı: üstte avatar + müşteri + görev,
   /// altta 3 mini aksiyon (Ara / WhatsApp / Ertele).
 
-
-
-
-  void _showNotificationPanel(BuildContext context, List<DailyRoutineModel> routines) {
+  // Eski rutin paneli, yeni bildirim merkezi geçişi boyunca referans için korunur.
+  // ignore: unused_element
+  void _showNotificationPanel(
+    BuildContext context,
+    List<DailyRoutineModel> routines,
+  ) {
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -1784,36 +1922,51 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
     final now = DateTime.now();
     final completedCount = routines.where((r) => r.isCompleted).length;
     final totalCount = routines.length;
-    final dueIncompleteRoutines = routines.where((r) =>
-        !r.isCompleted && r.scheduledTime.isBefore(now.add(const Duration(minutes: 15)))).toList()
-      ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+    final dueIncompleteRoutines =
+        routines
+            .where(
+              (r) =>
+                  !r.isCompleted &&
+                  r.scheduledTime.isBefore(
+                    now.add(const Duration(minutes: 15)),
+                  ),
+            )
+            .toList()
+          ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
     final waterPercent = (waterProgress * 100).round();
-    final hasDueWaterStep = routines.any((r) =>
-        r.isWaterStep && !r.isCompleted &&
-        r.scheduledTime.isBefore(now.add(const Duration(minutes: 15))));
+    final hasDueWaterStep = routines.any(
+      (r) =>
+          r.isWaterStep &&
+          !r.isCompleted &&
+          r.scheduledTime.isBefore(now.add(const Duration(minutes: 15))),
+    );
     final waterLow = waterProgress < 0.5 && hasDueWaterStep;
 
     final List<_NotificationItem> items = [];
 
     if (waterLow) {
-      items.add(_NotificationItem(
-        icon: Icons.water_drop_outlined,
-        color: Colors.blue,
-        title: 'Su içmeyi unutma!',
-        subtitle: 'Bugün hedefinin yalnızca %$waterPercent\'ini tamamladın.',
-        isAlert: true,
-        actionType: NotificationActionType.waterAlert,
-      ));
+      items.add(
+        _NotificationItem(
+          icon: Icons.water_drop_outlined,
+          color: Colors.blue,
+          title: 'Su içmeyi unutma!',
+          subtitle: 'Bugün hedefinin yalnızca %$waterPercent\'ini tamamladın.',
+          isAlert: true,
+          actionType: NotificationActionType.waterAlert,
+        ),
+      );
     }
 
     if (totalCount == 0) {
-      items.add(const _NotificationItem(
-        icon: Icons.event_note_outlined,
-        color: AppColors.textMuted,
-        title: 'Bugün için program yok',
-        subtitle: 'Danışmanın henüz program oluşturmadı.',
-        actionType: NotificationActionType.info,
-      ));
+      items.add(
+        const _NotificationItem(
+          icon: Icons.event_note_outlined,
+          color: AppColors.textMuted,
+          title: 'Bugün için program yok',
+          subtitle: 'Danışmanın henüz program oluşturmadı.',
+          actionType: NotificationActionType.info,
+        ),
+      );
     } else {
       if (dueIncompleteRoutines.isNotEmpty) {
         final shown = dueIncompleteRoutines.take(3).toList();
@@ -1821,7 +1974,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
           final timeFormat = DateFormat('HH:mm');
           NotificationActionType actionType;
           String? titleText;
-          
+
           if (r.isWaterStep) {
             actionType = NotificationActionType.waterRoutine;
             titleText = 'Su İç (500 ml)';
@@ -1838,28 +1991,36 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
           }
 
           final isOverdue = r.scheduledTime.isBefore(now);
-          items.add(_NotificationItem(
-            icon: r.isWaterStep ? Icons.water_drop_outlined : Icons.schedule_outlined,
-            color: r.isWaterStep ? Colors.blue : (isOverdue ? AppColors.error : AppColors.primary),
-            title: titleText,
-            subtitle: isOverdue
-                ? '${timeFormat.format(r.scheduledTime)} saatinde planlanmıştı — gecikmiş!'
-                : '${timeFormat.format(r.scheduledTime)} saatinde planlandı',
-            isAlert: true,
-            actionType: actionType,
-            routineId: r.id,
-            productId: r.productId,
-            routine: r,
-          ));
+          items.add(
+            _NotificationItem(
+              icon: r.isWaterStep
+                  ? Icons.water_drop_outlined
+                  : Icons.schedule_outlined,
+              color: r.isWaterStep
+                  ? Colors.blue
+                  : (isOverdue ? AppColors.error : AppColors.primary),
+              title: titleText,
+              subtitle: isOverdue
+                  ? '${timeFormat.format(r.scheduledTime)} saatinde planlanmıştı — gecikmiş!'
+                  : '${timeFormat.format(r.scheduledTime)} saatinde planlandı',
+              isAlert: true,
+              actionType: actionType,
+              routineId: r.id,
+              productId: r.productId,
+              routine: r,
+            ),
+          );
         }
         if (dueIncompleteRoutines.length > 3) {
-          items.add(_NotificationItem(
-            icon: Icons.more_horiz,
-            color: AppColors.textMuted,
-            title: '+${dueIncompleteRoutines.length - 3} görev daha bekliyor',
-            subtitle: 'Programını görüntülemek için tıkla',
-            actionType: NotificationActionType.info,
-          ));
+          items.add(
+            _NotificationItem(
+              icon: Icons.more_horiz,
+              color: AppColors.textMuted,
+              title: '+${dueIncompleteRoutines.length - 3} görev daha bekliyor',
+              subtitle: 'Programını görüntülemek için tıkla',
+              actionType: NotificationActionType.info,
+            ),
+          );
         }
       }
     }
@@ -1883,40 +2044,46 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                       color: AppColors.nightSky,
                     ),
                   ),
-                if (totalCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+                  if (totalCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$completedCount/$totalCount Tamamlandı',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
+                      ),
                     ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (items.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
                     child: Text(
-                      '$completedCount/$totalCount Tamamlandı',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
+                      'Şu an için bildirim yok. 🎉',
+                      style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 15,
                       ),
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (items.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: Text(
-                    'Şu an için bildirim yok. 🎉',
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 15),
-                  ),
-                ),
-              )
-            else
-              ...items.map((item) => _buildNotificationTile(context, item)),
-            const SizedBox(height: 8),
-          ],
-        ),
+                )
+              else
+                ...items.map((item) => _buildNotificationTile(context, item)),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -1947,7 +2114,8 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
           Row(
             children: [
               Container(
-                width: 40, height: 40,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   color: item.color.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
@@ -1964,7 +2132,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: item.isAlert ? AppColors.nightSky : AppColors.grey700,
+                        color: item.isAlert
+                            ? AppColors.nightSky
+                            : AppColors.grey700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -1980,7 +2150,8 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
               ),
               if (item.isAlert)
                 Container(
-                  width: 8, height: 8,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
                     color: item.color,
                     shape: BoxShape.circle,
@@ -1999,11 +2170,14 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                 TextButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    if (item.actionType == NotificationActionType.waterAlert || item.actionType == NotificationActionType.waterRoutine) {
+                    if (item.actionType == NotificationActionType.waterAlert ||
+                        item.actionType ==
+                            NotificationActionType.waterRoutine) {
                       context.pushNamed(WaterTrackerScreen.routeName);
-                    } else if (item.actionType == NotificationActionType.productRoutine || item.actionType == NotificationActionType.mealRoutine) {
-                      setState(() {
-                      });
+                    } else if (item.actionType ==
+                            NotificationActionType.productRoutine ||
+                        item.actionType == NotificationActionType.mealRoutine) {
+                      setState(() {});
                     }
                   },
                   icon: Icon(Icons.open_in_new, size: 14, color: item.color),
@@ -2016,7 +2190,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                     ),
                   ),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -2026,7 +2203,7 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                 ElevatedButton.icon(
                   onPressed: () async {
                     Navigator.pop(context); // Bildirimi kapat
-                    
+
                     if (item.actionType == NotificationActionType.waterAlert) {
                       context.read<WaterProvider>().addWater(250);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -2035,7 +2212,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                           duration: Duration(seconds: 1),
                         ),
                       );
-                    } else if (item.actionType == NotificationActionType.waterRoutine && item.routineId != null) {
+                    } else if (item.actionType ==
+                            NotificationActionType.waterRoutine &&
+                        item.routineId != null) {
                       final routineService = context.read<RoutineService>();
                       final waterProvider = context.read<WaterProvider>();
                       final messenger = ScaffoldMessenger.of(context);
@@ -2047,7 +2226,9 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                       waterProvider.addWater(500);
                       messenger.showSnackBar(
                         const SnackBar(
-                          content: Text('Su adımı tamamlandı ve 500 ml su eklendi! 💧'),
+                          content: Text(
+                            'Su adımı tamamlandı ve 500 ml su eklendi! 💧',
+                          ),
                           duration: Duration(seconds: 1),
                         ),
                       );
@@ -2080,7 +2261,10 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: item.color,
                     elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(
@@ -2107,7 +2291,6 @@ class _CustomerDashboardViewState extends State<CustomerDashboardView>
 
     return tileContent;
   }
-
 }
 
 // ─── Notification Item Model ─────────────────────────────────────────────────
@@ -2215,58 +2398,81 @@ class _CalorieProgressRing extends StatelessWidget {
       ),
     );
   }
-
 }
 
 Widget _buildStepTrackerCard(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Consumer<StepTrackerProvider>(
-        builder: (context, tracker, _) {
-          final ready = tracker.isReady;
-          final progressText = ready
-              ? '${NumberFormat.decimalPattern('tr_TR').format(tracker.todaySteps)} / ${NumberFormat.decimalPattern('tr_TR').format(tracker.dailyGoal)} adım'
-              : 'Adımlarını takip etmek için dokun';
-          return Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(24),
-              onTap: () => context.pushNamed(StepTrackerScreen.routeName),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1FBF7),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.aqua.withValues(alpha: 0.24)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: const BoxDecoration(color: AppColors.aqua, shape: BoxShape.circle),
-                      child: const Icon(Icons.directions_walk_rounded, color: Colors.white),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Günlük Adımlarım', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.nightSky)),
-                          const SizedBox(height: 3),
-                          Text(progressText, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right_rounded, color: AppColors.aqua),
-                  ],
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Consumer<StepTrackerProvider>(
+      builder: (context, tracker, _) {
+        final ready = tracker.isReady;
+        final progressText = ready
+            ? '${NumberFormat.decimalPattern('tr_TR').format(tracker.todaySteps)} / ${NumberFormat.decimalPattern('tr_TR').format(tracker.dailyGoal)} adım'
+            : 'Adımlarını takip etmek için dokun';
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () => context.pushNamed(StepTrackerScreen.routeName),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1FBF7),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppColors.aqua.withValues(alpha: 0.24),
                 ),
               ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      color: AppColors.aqua,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.directions_walk_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Günlük Adımlarım',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.nightSky,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          progressText,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.aqua,
+                  ),
+                ],
+              ),
             ),
-          );
-        },
-      ),
-    );
+          ),
+        );
+      },
+    ),
+  );
 }
 
 /// Kritik Aksiyonlar listesindeki satır içi 3 mini buton (Ara / WA / Ertele).
@@ -2288,10 +2494,7 @@ class _PulseGlowButton extends StatefulWidget {
   final bool isCompleted;
   final VoidCallback onTap;
 
-  const _PulseGlowButton({
-    required this.isCompleted,
-    required this.onTap,
-  });
+  const _PulseGlowButton({required this.isCompleted, required this.onTap});
 
   @override
   State<_PulseGlowButton> createState() => _PulseGlowButtonState();
@@ -2348,15 +2551,11 @@ class _PulseGlowButtonState extends State<_PulseGlowButton>
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                color: isCompleted
-                    ? AppColors.primary
-                    : Colors.white,
+                color: isCompleted ? AppColors.primary : Colors.white,
                 border: Border.all(
                   color: isCompleted
                       ? AppColors.primary
-                      : AppColors.primary.withValues(
-                          alpha: 0.5 + pulse * 0.5,
-                        ),
+                      : AppColors.primary.withValues(alpha: 0.5 + pulse * 0.5),
                   width: isCompleted ? 1.5 : 1.5 + pulse * 0.5,
                 ),
                 boxShadow: isCompleted
@@ -2393,4 +2592,3 @@ class _PulseGlowButtonState extends State<_PulseGlowButton>
     );
   }
 }
-

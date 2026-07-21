@@ -5,6 +5,7 @@ import '../../../core/app_colors.dart';
 import '../../../core/utils/email_validator.dart';
 import '../../../models/user_role.dart'; // Rol modelini import et
 import '../providers/auth_provider.dart';
+import '../services/anonymous_login_throttle.dart';
 // import 'package:go_router/go_router.dart'; // Gerekirse yönlendirme için
 
 class LoginScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isRegisterMode = false; // Giriş/Kayıt modunu takip etmek için
   bool _obscurePassword = true;
+  final _anonymousLoginThrottle = AnonymousLoginThrottle();
 
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
@@ -59,7 +61,8 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
       if (!success) {
-        final message = authProvider.errorMessage ??
+        final message =
+            authProvider.errorMessage ??
             (_isRegisterMode
                 ? 'Kayıt başarısız. Lütfen tekrar deneyin.'
                 : 'Giriş başarısız. E-posta veya şifre hatalı.');
@@ -85,60 +88,79 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     String? inviteCode;
     if (_isRegisterMode) {
-      inviteCode = _inviteCodeController.text.trim().isEmpty ? null : _inviteCodeController.text.trim();
+      inviteCode = _inviteCodeController.text.trim().isEmpty
+          ? null
+          : _inviteCodeController.text.trim();
     }
-    
+
     // Google ile yeni kaydolan herkes müşteri (customer) olarak başlar.
-    final success = await authProvider.signInWithGoogle(role: UserRole.customer, inviteCode: inviteCode);
+    final success = await authProvider.signInWithGoogle(
+      role: UserRole.customer,
+      inviteCode: inviteCode,
+    );
 
     if (mounted) {
       setState(() {
         _isLoading = false;
       });
       if (!success) {
-        final message = authProvider.errorMessage ?? 'Google ile giriş iptal edildi veya başarısız oldu.';
+        final message =
+            authProvider.errorMessage ??
+            'Google ile giriş iptal edildi veya başarısız oldu.';
         // Hata mesajını göstermeyebiliriz eğer kullanıcı iptal ettiyse (errorMessage null olabilir).
         if (authProvider.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
         }
       }
       // Başarılı giriş durumunda go_router zaten yönlendirme yapacak.
     }
   }
 
-  DateTime? _lastAnonymousLoginAttempt;
-
   Future<void> _submitAnonymousSignIn() async {
     if (_isLoading) return;
 
-    final now = DateTime.now();
-    if (_lastAnonymousLoginAttempt != null && now.difference(_lastAnonymousLoginAttempt!).inSeconds < 10) {
+    final remaining = await _anonymousLoginThrottle.remainingCooldown();
+    if (!mounted) return;
+    if (remaining != null) {
+      final minutes = (remaining.inSeconds / 60).ceil();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Çok fazla istek. Lütfen biraz bekleyin.')),
+        SnackBar(
+          content: Text(
+            'Yeni bir misafir hesabı için yaklaşık $minutes dakika bekleyin.',
+          ),
+        ),
       );
       return;
     }
-    _lastAnonymousLoginAttempt = now;
 
     setState(() {
       _isLoading = true;
     });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final success = await authProvider.signInAnonymously();
+
+    if (success) {
+      await _anonymousLoginThrottle.recordSuccess();
+    }
 
     if (mounted) {
       setState(() {
         _isLoading = false;
       });
       if (!success) {
-        final message = authProvider.errorMessage ?? 'Misafir girişi başarısız oldu.';
+        final message =
+            authProvider.errorMessage ?? 'Misafir girişi başarısız oldu.';
         if (authProvider.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(message)));
         }
       }
     }
@@ -182,7 +204,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final inputBg = isDark ? const Color(0xFF1f261b) : Colors.white;
     final borderColor = isDark ? AppColors.grey700 : stitchBorder;
     final textPrimary = isDark ? Colors.white : stitchTextPrimary;
-    final textSecondary = isDark ? AppColors.textMutedLight : stitchTextSecondary;
+    final textSecondary = isDark
+        ? AppColors.textMutedLight
+        : stitchTextSecondary;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -200,319 +224,357 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: IntrinsicHeight(
                       child: Container(
                         color: cardColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32.0,
+                          vertical: 16.0,
+                        ),
                         child: Form(
                           key: _formKey,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                      const SizedBox(height: 12),
-                      // Logo
-                      SizedBox(
-                        height: 120,
-                        child: Image.asset(
-                          'assets/logo/logo_h.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.spa,
-                              size: 80,
-                              color: stitchPrimary,
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      // Headline
-                      Text(
-                        _isRegisterMode ? 'Aramıza Katılın' : 'Tekrar Hoş Geldiniz',
-                        style: TextStyle(
-                          color: textPrimary,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _isRegisterMode
-                            ? 'Sağlıklı yaşam yolculuğunuza başlayın'
-                            : 'Sağlıklı yaşam yolculuğunuza devam edin',
-                        style: TextStyle(
-                          color: textSecondary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.normal,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      // Email
-                      TextFormField(
-                        controller: _emailController,
-                        style: TextStyle(color: textPrimary),
-                        decoration: InputDecoration(
-                          hintText: 'E-posta veya Kullanıcı Adı',
-                          hintStyle: TextStyle(color: textSecondary),
-                          prefixIcon: Icon(Icons.person_outline, color: textSecondary),
-                          filled: true,
-                          fillColor: inputBg,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 20),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
-                          ),
-                        ),
-                        validator: EmailValidator.validate,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 12),
-                      // Password
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        style: TextStyle(color: textPrimary),
-                        decoration: InputDecoration(
-                          hintText: 'Şifre',
-                          hintStyle: TextStyle(color: textSecondary),
-                          prefixIcon: Icon(Icons.lock_outline, color: textSecondary),
-                          suffixIcon: IconButton(
-                            tooltip: _obscurePassword ? 'Şifreyi göster' : 'Şifreyi gizle',
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                              color: textSecondary,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                          filled: true,
-                          fillColor: inputBg,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 20),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            borderSide: BorderSide(color: borderColor),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(30),
-                            borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty || value.length < 6) {
-                            return 'Şifre en az 6 karakter olmalı.';
-                          }
-                          return null;
-                        },
-                      ),
-                      // Davet Kodu (Sadece kayıt modunda)
-                      if (_isRegisterMode) ...[
-                        const SizedBox(height: 12),
-                        TextFormField(
-                            controller: _inviteCodeController,
-                            style: TextStyle(color: textPrimary),
-                            decoration: InputDecoration(
-                              hintText: 'Distribütörünüzden aldığınız kod (opsiyonel)',
-                              hintStyle: TextStyle(color: textSecondary),
-                              prefixIcon: Icon(Icons.card_giftcard_outlined, color: textSecondary),
-                              filled: true,
-                              fillColor: inputBg,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 20),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(color: borderColor),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide(color: borderColor),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: const BorderSide(color: stitchPrimary, width: 1.5),
-                              ),
-                            ),
-                          ),
-                      ],
-                      // Forgot Password Link
-                      if (!_isRegisterMode) ...[
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: _showForgotPasswordDialog,
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                            ),
-                            child: const Text(
-                              'Şifremi Unuttum?',
-                              style: TextStyle(
-                                color: stitchPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ] else ...[
-                        const SizedBox(height: 20),
-                      ],
-                      
-                      // Login Button
-                      if (_isLoading)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16.0),
-                          child: CircularProgressIndicator(color: stitchPrimary),
-                        )
-                      else
-                        SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: _submitForm,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: stitchPrimary,
-                              foregroundColor: Colors.white,
-                              elevation: 4,
-                              shadowColor: stitchPrimary.withAlpha(64),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child: Text(
-                              _isRegisterMode ? 'Kayıt Ol' : 'Giriş Yap',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        
-                      const SizedBox(height: 16),
-
-                      // Social Login Divider
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: borderColor)),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'veya ile devam et',
-                              style: TextStyle(
-                                color: textSecondary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          Expanded(child: Divider(color: borderColor)),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Social Buttons & Guest
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildSocialButton(
-                            icon: Icons.g_mobiledata, // Google
-                            borderColor: borderColor,
-                            bgColor: inputBg,
-                            iconColor: textPrimary,
-                            iconSize: 36,
-                            onTap: _submitGoogleSignIn,
-                          ),
-                          const SizedBox(width: 24),
-                          _buildSocialButton(
-                            icon: Icons.apple,
-                            borderColor: borderColor,
-                            bgColor: inputBg,
-                            iconColor: textPrimary,
-                            onTap: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Apple ile giriş özelliği yakında eklenecektir.'),
-                                  duration: Duration(seconds: 2),
+                              const SizedBox(height: 12),
+                              // Logo
+                              SizedBox(
+                                height: 120,
+                                child: Image.asset(
+                                  'assets/logo/logo_h.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.spa,
+                                      size: 80,
+                                      color: stitchPrimary,
+                                    );
+                                  },
                                 ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: _submitAnonymousSignIn,
-                        child: const Text(
-                          'Misafir Olarak Devam Et',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: stitchPrimary,
+                              ),
+                              const SizedBox(height: 12),
+                              // Headline
+                              Text(
+                                _isRegisterMode
+                                    ? 'Aramıza Katılın'
+                                    : 'Tekrar Hoş Geldiniz',
+                                style: TextStyle(
+                                  color: textPrimary,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _isRegisterMode
+                                    ? 'Sağlıklı yaşam yolculuğunuza başlayın'
+                                    : 'Sağlıklı yaşam yolculuğunuza devam edin',
+                                style: TextStyle(
+                                  color: textSecondary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 20),
+                              // Email
+                              TextFormField(
+                                controller: _emailController,
+                                style: TextStyle(color: textPrimary),
+                                decoration: InputDecoration(
+                                  hintText: 'E-posta veya Kullanıcı Adı',
+                                  hintStyle: TextStyle(color: textSecondary),
+                                  prefixIcon: Icon(
+                                    Icons.person_outline,
+                                    color: textSecondary,
+                                  ),
+                                  filled: true,
+                                  fillColor: inputBg,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: const BorderSide(
+                                      color: stitchPrimary,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                                validator: EmailValidator.validate,
+                                keyboardType: TextInputType.emailAddress,
+                              ),
+                              const SizedBox(height: 12),
+                              // Password
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                style: TextStyle(color: textPrimary),
+                                decoration: InputDecoration(
+                                  hintText: 'Şifre',
+                                  hintStyle: TextStyle(color: textSecondary),
+                                  prefixIcon: Icon(
+                                    Icons.lock_outline,
+                                    color: textSecondary,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    tooltip: _obscurePassword
+                                        ? 'Şifreyi göster'
+                                        : 'Şifreyi gizle',
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: textSecondary,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  filled: true,
+                                  fillColor: inputBg,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 20,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: BorderSide(color: borderColor),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                    borderSide: const BorderSide(
+                                      color: stitchPrimary,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value == null ||
+                                      value.isEmpty ||
+                                      value.length < 6) {
+                                    return 'Şifre en az 6 karakter olmalı.';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              // Davet Kodu (Sadece kayıt modunda)
+                              if (_isRegisterMode) ...[
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _inviteCodeController,
+                                  style: TextStyle(color: textPrimary),
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'Distribütörünüzden aldığınız kod (opsiyonel)',
+                                    hintStyle: TextStyle(color: textSecondary),
+                                    prefixIcon: Icon(
+                                      Icons.card_giftcard_outlined,
+                                      color: textSecondary,
+                                    ),
+                                    filled: true,
+                                    fillColor: inputBg,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 20,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                      borderSide: BorderSide(
+                                        color: borderColor,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                      borderSide: BorderSide(
+                                        color: borderColor,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(30),
+                                      borderSide: const BorderSide(
+                                        color: stitchPrimary,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              // Forgot Password Link
+                              if (!_isRegisterMode) ...[
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: _showForgotPasswordDialog,
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 8,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Şifremi Unuttum?',
+                                      style: TextStyle(
+                                        color: stitchPrimary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 20),
+                              ],
+
+                              // Login Button
+                              if (_isLoading)
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                                  child: CircularProgressIndicator(
+                                    color: stitchPrimary,
+                                  ),
+                                )
+                              else
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    onPressed: _submitForm,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: stitchPrimary,
+                                      foregroundColor: Colors.white,
+                                      elevation: 4,
+                                      shadowColor: stitchPrimary.withAlpha(64),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _isRegisterMode
+                                          ? 'Kayıt Ol'
+                                          : 'Giriş Yap',
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                              const SizedBox(height: 16),
+
+                              // Social Login Divider
+                              Row(
+                                children: [
+                                  Expanded(child: Divider(color: borderColor)),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: Text(
+                                      'veya ile devam et',
+                                      style: TextStyle(
+                                        color: textSecondary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(child: Divider(color: borderColor)),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Social Buttons & Guest
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildSocialButton(
+                                    icon: Icons.g_mobiledata, // Google
+                                    borderColor: borderColor,
+                                    bgColor: inputBg,
+                                    iconColor: textPrimary,
+                                    iconSize: 36,
+                                    onTap: _submitGoogleSignIn,
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: _submitAnonymousSignIn,
+                                child: const Text(
+                                  'Misafir Olarak Devam Et',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: stitchPrimary,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              // Footer
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _isRegisterMode
+                                        ? 'Zaten bir hesabınız var mı?'
+                                        : 'Henüz hesabınız yok mu?',
+                                    style: TextStyle(
+                                      color: textSecondary,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: _toggleMode,
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      _isRegisterMode
+                                          ? 'Giriş Yapın'
+                                          : 'Kayıt Ol',
+                                      style: const TextStyle(
+                                        color: stitchPrimary,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                            ],
                           ),
                         ),
                       ),
-                      
-                      const SizedBox(height: 8),
-                      
-                      // Footer
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            _isRegisterMode
-                                ? 'Zaten bir hesabınız var mı?'
-                                : 'Henüz hesabınız yok mu?',
-                            style: TextStyle(
-                              color: textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _toggleMode,
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                            ),
-                            child: Text(
-                              _isRegisterMode ? 'Giriş Yapın' : 'Kayıt Ol',
-                              style: const TextStyle(
-                                color: stitchPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
-        );
-      },
-    ),
-  ),
-),
-),
-);
-}
+        ),
+      ),
+    );
+  }
 
   Widget _buildSocialButton({
     required IconData icon,
@@ -543,11 +605,7 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: BorderRadius.circular(28),
           onTap: onTap,
           child: Center(
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: iconSize,
-            ),
+            child: Icon(icon, color: iconColor, size: iconSize),
           ),
         ),
       ),
@@ -578,9 +636,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
       backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF181e14)
           : Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Text('Şifre Sıfırlama'),
       content: Form(
         key: _formKey,
@@ -590,9 +646,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
           decoration: InputDecoration(
             hintText: 'E-posta adresinizi girin',
             prefixIcon: const Icon(Icons.email_outlined),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
           ),
           validator: EmailValidator.validate,
         ),
@@ -606,8 +660,10 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
           onPressed: () async {
             if (!_formKey.currentState!.validate()) return;
 
-            final authProvider =
-                Provider.of<AuthProvider>(context, listen: false);
+            final authProvider = Provider.of<AuthProvider>(
+              context,
+              listen: false,
+            );
             final scaffoldMessenger = ScaffoldMessenger.of(context);
 
             Navigator.of(context).pop();
@@ -622,7 +678,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
                   success
                       ? 'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.'
                       : (authProvider.errorMessage ??
-                          'Şifre sıfırlama bağlantısı gönderilemedi.'),
+                            'Şifre sıfırlama bağlantısı gönderilemedi.'),
                 ),
               ),
             );

@@ -11,6 +11,7 @@ import '../../../models/user_role.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/fcm_service.dart';
 import '../../../services/firestore_service.dart'; // FirestoreService'i import et
+import '../../program/services/notification_service.dart';
 
 enum AuthStatus {
   uninitialized,
@@ -32,6 +33,7 @@ class AuthProvider with ChangeNotifier {
   bool _isProcessingAuth = false; // Aktif bir giriş/kayıt işlemi var mı?
   bool _isDeletingAccount = false; // Hesap silme işlemi devam ediyor mu?
   StreamSubscription<fb_auth.User?>? _authStateSubscription;
+  StreamSubscription<UserProfileModel?>? _profileSubscription;
   Timer? _profileLoadRetryTimer;
   int _profileLoadRetryCount = 0;
   bool _isDisposed = false;
@@ -65,8 +67,11 @@ class AuthProvider with ChangeNotifier {
     });
   }
 
-  AuthProvider(this._authService, this._firestoreService, {FcmService? fcmService})
-      : _fcmService = fcmService ?? FcmService() {
+  AuthProvider(
+    this._authService,
+    this._firestoreService, {
+    FcmService? fcmService,
+  }) : _fcmService = fcmService ?? FcmService() {
     _firebaseUser = _authService.getCurrentUser();
     if (_firebaseUser != null) {
       _status = AuthStatus.authenticating;
@@ -77,15 +82,20 @@ class AuthProvider with ChangeNotifier {
     } else {
       _status = AuthStatus.unauthenticated;
     }
-    _authStateSubscription =
-        _authService.authStateChanges.listen(_onAuthStateChanged);
+    _authStateSubscription = _authService.authStateChanges.listen(
+      _onAuthStateChanged,
+    );
 
     // FCM token yenilendiğinde aktif kullanıcının profiline yaz.
     _fcmService.onTokenRefresh = (token) {
       final uid = _firebaseUser?.uid;
       if (uid == null) return;
       _firestoreService.userProfile.setFcmToken(uid, token).catchError((e) {
-        AppLogger.error('FCM token yenileme yazma hatası', tag: 'AuthProvider', error: e);
+        AppLogger.error(
+          'FCM token yenileme yazma hatası',
+          tag: 'AuthProvider',
+          error: e,
+        );
       });
     };
   }
@@ -95,6 +105,7 @@ class AuthProvider with ChangeNotifier {
     _isDisposed = true;
     _profileLoadRetryTimer?.cancel();
     _authStateSubscription?.cancel();
+    _profileSubscription?.cancel();
     _fcmService.onTokenRefresh = null;
     super.dispose();
   }
@@ -114,7 +125,10 @@ class AuthProvider with ChangeNotifier {
     try {
       final token = await _fcmService.getToken();
       if (token == null || token.isEmpty) {
-        AppLogger.warning('FCM token yok (izin verilmemiş olabilir) — skip', tag: 'AuthProvider');
+        AppLogger.warning(
+          'FCM token yok (izin verilmemiş olabilir) — skip',
+          tag: 'AuthProvider',
+        );
         return;
       }
       if (_userProfile?.fcmToken == token) return; // değişmediyse yazma
@@ -124,7 +138,11 @@ class AuthProvider with ChangeNotifier {
         fcmTokenUpdatedAt: DateTime.now(),
       );
     } catch (e) {
-      AppLogger.error('FCM token senkron hatası', tag: 'AuthProvider', error: e);
+      AppLogger.error(
+        'FCM token senkron hatası',
+        tag: 'AuthProvider',
+        error: e,
+      );
     }
   }
 
@@ -145,6 +163,8 @@ class AuthProvider with ChangeNotifier {
     try {
       if (firebaseUser == null) {
         _profileLoadRetryTimer?.cancel();
+        await _profileSubscription?.cancel();
+        _profileSubscription = null;
         _profileLoadRetryCount = 0;
         if (_firebaseUser == null && _status == AuthStatus.unauthenticated) {
           return;
@@ -159,25 +179,35 @@ class AuthProvider with ChangeNotifier {
           return;
         }
         _firebaseUser = firebaseUser;
-        _status = AuthStatus.authenticating; // Profil çekilirken de bu durumda kalabiliriz
+        _status = AuthStatus
+            .authenticating; // Profil çekilirken de bu durumda kalabiliriz
         notifyListeners();
 
         // Kullanıcı giriş yaptığında veya uygulama açıldığında profilini Firestore'dan çek
-        final profile = await _firestoreService.getUserProfile(firebaseUser.uid);
+        final profile = await _firestoreService.getUserProfile(
+          firebaseUser.uid,
+        );
 
         if (profile != null) {
           _profileLoadRetryTimer?.cancel();
           _profileLoadRetryCount = 0;
           _userProfile = profile;
+          _startProfileListener(firebaseUser.uid);
           // İzin verildiyse FCM token'ı arka planda senkronla.
           unawaited(_syncFcmTokenIfPermitted(firebaseUser.uid));
           _status = AuthStatus.authenticated;
         } else {
           // Firestore'da profil bulunamadı! (Silinmiş veya tutarsız hesap)
           if (_isProcessingAuth) {
-            AppLogger.debug('Firestore\'da profil henüz oluşturulmamış olabilir (signIn/signUp aktif). Oturum kapatılması iptal edildi', tag: 'AuthProvider');
+            AppLogger.debug(
+              'Firestore\'da profil henüz oluşturulmamış olabilir (signIn/signUp aktif). Oturum kapatılması iptal edildi',
+              tag: 'AuthProvider',
+            );
           } else {
-            AppLogger.warning('Firestore\'da profil bulunamadı, oturum kapatılıyor', tag: 'AuthProvider');
+            AppLogger.warning(
+              'Firestore\'da profil bulunamadı, oturum kapatılıyor',
+              tag: 'AuthProvider',
+            );
             _userProfile = null;
             _status = AuthStatus.unauthenticated;
             unawaited(_authService.signOut());
@@ -185,7 +215,11 @@ class AuthProvider with ChangeNotifier {
         }
       }
     } catch (e) {
-      AppLogger.error('_onAuthStateChanged hatası', tag: 'AuthProvider', error: e);
+      AppLogger.error(
+        '_onAuthStateChanged hatası',
+        tag: 'AuthProvider',
+        error: e,
+      );
       _userProfile = null;
       if (firebaseUser != null && _scheduleProfileLoadRetry(firebaseUser)) {
         _status = AuthStatus.authenticating;
@@ -199,6 +233,33 @@ class AuthProvider with ChangeNotifier {
       AppLogger.debug('Durum değişti -> $_status', tag: 'AuthProvider');
       notifyListeners();
     }
+  }
+
+  void _startProfileListener(String uid) {
+    unawaited(_profileSubscription?.cancel());
+    _profileSubscription = _firestoreService
+        .watchUserProfile(uid)
+        .listen(
+          (profile) {
+            if (_isDisposed || profile == null || _firebaseUser?.uid != uid) {
+              return;
+            }
+            _userProfile = profile;
+            if (profile.role == UserRole.customer) {
+              _isCustomerModeActive = false;
+            }
+            _status = AuthStatus.authenticated;
+            notifyListeners();
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            AppLogger.error(
+              'Canlı profil dinleyicisi hatası',
+              tag: 'AuthProvider',
+              error: error,
+              stackTrace: stackTrace,
+            );
+          },
+        );
   }
 
   bool _scheduleProfileLoadRetry(fb_auth.User firebaseUser) {
@@ -230,14 +291,14 @@ class AuthProvider with ChangeNotifier {
         email,
         password,
       );
-      
+
       if (userCredential == null) {
         _status = AuthStatus.unauthenticated;
         _errorMessage = "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.";
         notifyListeners();
         return false;
       }
-      
+
       // Auth durumu, profil Firestore'dan yüklendikten sonra
       // _onAuthStateChanged tarafından authenticated yapılır. Burada erken
       // geçiş yapmak dashboard dinleyicilerini profil hazır olmadan başlatır.
@@ -253,24 +314,29 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> signInWithGoogle({UserRole role = UserRole.customer, String? inviteCode}) async {
+  Future<bool> signInWithGoogle({
+    UserRole role = UserRole.customer,
+    String? inviteCode,
+  }) async {
     _status = AuthStatus.authenticating;
     _errorMessage = null;
     _isProcessingAuth = true;
     notifyListeners();
     try {
       final userCredential = await _authService.signInWithGoogle();
-      
+
       if (userCredential == null) {
         _status = AuthStatus.unauthenticated;
         // User cancelled login or it failed without throwing
         notifyListeners();
         return false;
       }
-      
+
       // Check if user is newly registered by checking if they have a profile
       if (userCredential.user != null) {
-        final existingProfile = await _firestoreService.getUserProfile(userCredential.user!.uid);
+        final existingProfile = await _firestoreService.getUserProfile(
+          userCredential.user!.uid,
+        );
         if (existingProfile == null) {
           final trimmedInviteCode = inviteCode?.trim();
           final hasInviteCode =
@@ -295,7 +361,7 @@ class AuthProvider with ChangeNotifier {
             role: hasInviteCode ? UserRole.customer : role,
             assignedDistributorId: inviteCodeModel?.distributorId,
           );
-          
+
           if (hasInviteCode && inviteCodeModel != null) {
             // Atomik batch yazma: profil oluşturma + davet kodu güncelleme
             await _firestoreService.signUpWithInviteCodeBatch(
@@ -308,10 +374,16 @@ class AuthProvider with ChangeNotifier {
           }
           _userProfile = newProfile;
           notifyListeners();
-          AppLogger.info('Google ile giriş sonrası yeni profil oluşturuldu', tag: 'AuthProvider');
+          AppLogger.info(
+            'Google ile giriş sonrası yeni profil oluşturuldu',
+            tag: 'AuthProvider',
+          );
         } else {
           _userProfile = existingProfile;
-          AppLogger.debug('Google ile giriş sonrası mevcut profil yüklendi', tag: 'AuthProvider');
+          AppLogger.debug(
+            'Google ile giriş sonrası mevcut profil yüklendi',
+            tag: 'AuthProvider',
+          );
         }
         notifyListeners();
       }
@@ -337,15 +409,17 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       final userCredential = await _authService.signInAnonymously();
-      
+
       if (userCredential == null) {
         _status = AuthStatus.unauthenticated;
         notifyListeners();
         return false;
       }
-      
+
       if (userCredential.user != null) {
-        final existingProfile = await _firestoreService.getUserProfile(userCredential.user!.uid);
+        final existingProfile = await _firestoreService.getUserProfile(
+          userCredential.user!.uid,
+        );
         if (existingProfile == null) {
           final newProfile = UserProfileModel(
             id: userCredential.user!.uid,
@@ -353,13 +427,19 @@ class AuthProvider with ChangeNotifier {
             name: "Misafir Kullanıcı",
             role: UserRole.customer,
           );
-          
+
           await _firestoreService.setUserProfile(newProfile);
           _userProfile = newProfile;
-          AppLogger.info('Anonim giriş sonrası yeni profil oluşturuldu', tag: 'AuthProvider');
+          AppLogger.info(
+            'Anonim giriş sonrası yeni profil oluşturuldu',
+            tag: 'AuthProvider',
+          );
         } else {
           _userProfile = existingProfile;
-          AppLogger.debug('Anonim giriş sonrası mevcut profil yüklendi', tag: 'AuthProvider');
+          AppLogger.debug(
+            'Anonim giriş sonrası mevcut profil yüklendi',
+            tag: 'AuthProvider',
+          );
         }
       }
 
@@ -367,7 +447,11 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger.error('signInAnonymously hatası', tag: 'AuthProvider', error: e);
+      AppLogger.error(
+        'signInAnonymously hatası',
+        tag: 'AuthProvider',
+        error: e,
+      );
       _status = AuthStatus.unauthenticated;
       _errorMessage = "Misafir girişi sırasında bir hata oluştu: $e";
       notifyListeners();
@@ -397,7 +481,10 @@ class AuthProvider with ChangeNotifier {
         );
         await _firestoreService.setUserProfile(newProfile);
         _userProfile = newProfile;
-        AppLogger.info('Kayıt sonrası yeni profil oluşturuldu', tag: 'AuthProvider');
+        AppLogger.info(
+          'Kayıt sonrası yeni profil oluşturuldu',
+          tag: 'AuthProvider',
+        );
         notifyListeners();
         _status = AuthStatus.authenticated;
         notifyListeners();
@@ -419,26 +506,52 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    // Program hatırlatıcıları cihazda yerel olarak zamanlanır. Oturum kapansa
+    // bile Android/iOS bu alarmları çalıştırmaya devam eder; bu yüzden çıkış
+    // tamamlanmadan önce tüm bekleyen program bildirimlerini temizliyoruz.
+    try {
+      final notificationService = NotificationService();
+      await notificationService.initialize();
+      await notificationService.cancelAllProgramNotifications();
+    } catch (e) {
+      AppLogger.error(
+        'Program bildirimleri iptal edilemedi (signOut)',
+        tag: 'AuthProvider',
+        error: e,
+      );
+    }
+
     // FCM temizlikleri çıkış ekranını bekletmemeli. Kullanıcının Firebase
     // oturumunu önce kapatıp yönlendirmeyi başlatırız.
     final uid = _firebaseUser?.uid;
     if (uid != null) {
       unawaited(
         _firestoreService.userProfile.setFcmToken(uid, null).catchError((e) {
-          AppLogger.error('FCM token silme hatası (signOut)', tag: 'AuthProvider', error: e);
+          AppLogger.error(
+            'FCM token silme hatası (signOut)',
+            tag: 'AuthProvider',
+            error: e,
+          );
         }),
       );
     }
-    
+
     final isAnonymous = _firebaseUser?.isAnonymous ?? false;
     if (isAnonymous && uid != null) {
       // Anonim (misafir) çıkış yaparsa verileri temizleyelim.
       try {
         await _firestoreService.userProfile.deleteUserProfile(uid);
         await _firebaseUser?.delete();
-        AppLogger.info('Anonim hesap ve profil başarıyla silindi', tag: 'AuthProvider');
+        AppLogger.info(
+          'Anonim hesap ve profil başarıyla silindi',
+          tag: 'AuthProvider',
+        );
       } catch (e) {
-        AppLogger.error('Anonim hesap silinirken hata', tag: 'AuthProvider', error: e);
+        AppLogger.error(
+          'Anonim hesap silinirken hata',
+          tag: 'AuthProvider',
+          error: e,
+        );
       }
     }
 
@@ -459,7 +572,11 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      AppLogger.error('Profil güncelleme hatası', tag: 'AuthProvider', error: e);
+      AppLogger.error(
+        'Profil güncelleme hatası',
+        tag: 'AuthProvider',
+        error: e,
+      );
       _errorMessage = "Profil güncellenemedi: $e";
       notifyListeners();
       return false;
@@ -561,8 +678,9 @@ class AuthProvider with ChangeNotifier {
       }
     }
 
-    final providerIds =
-        _firebaseUser!.providerData.map((p) => p.providerId).toSet();
+    final providerIds = _firebaseUser!.providerData
+        .map((p) => p.providerId)
+        .toSet();
     final isGoogleUser = providerIds.contains('google.com');
     final isPasswordUser = providerIds.contains('password');
 
@@ -586,8 +704,9 @@ class AuthProvider with ChangeNotifier {
           await _firebaseUser!.reauthenticateWithCredential(googleCredential);
         } else {
           throw Exception(
-              'Bu hesap için yeniden onay yöntemi bulunamadı (provider: '
-              '${providerIds.join(", ")}).');
+            'Bu hesap için yeniden onay yöntemi bulunamadı (provider: '
+            '${providerIds.join(", ")}).',
+          );
         }
       }
 
@@ -595,7 +714,11 @@ class AuthProvider with ChangeNotifier {
       try {
         await _fcmService.deleteToken();
       } catch (e) {
-        AppLogger.error('FcmService token silme hatası (deleteAccount)', tag: 'AuthProvider', error: e);
+        AppLogger.error(
+          'FcmService token silme hatası (deleteAccount)',
+          tag: 'AuthProvider',
+          error: e,
+        );
       }
 
       // Hesap siliniyor flag'ini aç, böylece providerlar listenerları durdurur.
@@ -610,7 +733,11 @@ class AuthProvider with ChangeNotifier {
         try {
           await _authService.signOutGoogleOnly();
         } catch (e) {
-          AppLogger.error('Google Sign-Out hatası (deleteAccount)', tag: 'AuthProvider', error: e);
+          AppLogger.error(
+            'Google Sign-Out hatası (deleteAccount)',
+            tag: 'AuthProvider',
+            error: e,
+          );
         }
       }
 
@@ -626,8 +753,8 @@ class AuthProvider with ChangeNotifier {
       await _firebaseUser!.delete();
     } on fb_auth.FirebaseAuthException catch (e) {
       final message = switch (e.code) {
-        'wrong-password' || 'invalid-credential' =>
-          'Şifreniz hatalı. Hesap silinemedi.',
+        'wrong-password' ||
+        'invalid-credential' => 'Şifreniz hatalı. Hesap silinemedi.',
         'user-mismatch' =>
           'Seçtiğiniz Google hesabı mevcut hesabınızla eşleşmiyor.',
         'requires-recent-login' =>
@@ -663,7 +790,11 @@ class AuthProvider with ChangeNotifier {
 
       return destFile.path;
     } catch (e) {
-      AppLogger.error('Profil fotoğrafı kaydetme hatası', tag: 'AuthProvider', error: e);
+      AppLogger.error(
+        'Profil fotoğrafı kaydetme hatası',
+        tag: 'AuthProvider',
+        error: e,
+      );
       return null;
     }
   }
@@ -752,14 +883,22 @@ class AuthProvider with ChangeNotifier {
       return true;
     } on fb_auth.FirebaseAuthException catch (e) {
       await _deletePartiallyCreatedUser(createdUser);
-      AppLogger.error('signUpWithInviteCode FirebaseAuthException', tag: 'AuthProvider', error: e);
+      AppLogger.error(
+        'signUpWithInviteCode FirebaseAuthException',
+        tag: 'AuthProvider',
+        error: e,
+      );
       _status = AuthStatus.unauthenticated;
       _errorMessage = 'Kayıt sırasında bir hata oluştu: ${e.message}';
       notifyListeners();
       return false;
     } catch (e) {
       await _deletePartiallyCreatedUser(createdUser);
-      AppLogger.error('signUpWithInviteCode hatası', tag: 'AuthProvider', error: e);
+      AppLogger.error(
+        'signUpWithInviteCode hatası',
+        tag: 'AuthProvider',
+        error: e,
+      );
       _status = AuthStatus.unauthenticated;
       _errorMessage = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
@@ -794,8 +933,7 @@ class AuthProvider with ChangeNotifier {
       _errorMessage = switch (e.code) {
         'invalid-email' => 'Geçerli bir e-posta adresi girin.',
         'missing-email' => 'Lütfen e-posta adresinizi girin.',
-        'user-not-found' =>
-          'Bu e-posta ile kayıtlı bir kullanıcı bulunamadı.',
+        'user-not-found' => 'Bu e-posta ile kayıtlı bir kullanıcı bulunamadı.',
         _ => e.message ?? 'Şifre sıfırlama bağlantısı gönderilemedi.',
       };
       notifyListeners();

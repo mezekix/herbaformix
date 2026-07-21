@@ -24,7 +24,9 @@ class CustomerProfileMenu extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.05),
               border: Border(
-                bottom: BorderSide(color: AppColors.primary.withValues(alpha: 0.1)),
+                bottom: BorderSide(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                ),
               ),
             ),
             child: Row(
@@ -33,10 +35,16 @@ class CustomerProfileMenu extends StatelessWidget {
                   radius: 36,
                   backgroundColor: AppColors.primary.withValues(alpha: 0.2),
                   backgroundImage: userProfile?.profilePhotoUrl != null
-                      ? NetworkImage(userProfile!.profilePhotoUrl!) // TODO: Handle file:// and initials properly as in HomeScreen
+                      ? NetworkImage(
+                          userProfile!.profilePhotoUrl!,
+                        ) // TODO: Handle file:// and initials properly as in HomeScreen
                       : null,
                   child: userProfile?.profilePhotoUrl == null
-                      ? const Icon(Icons.person, size: 36, color: AppColors.primary)
+                      ? const Icon(
+                          Icons.person,
+                          size: 36,
+                          color: AppColors.primary,
+                        )
                       : null,
                 ),
                 const SizedBox(width: 16),
@@ -67,9 +75,9 @@ class CustomerProfileMenu extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Menu Items
           _buildMenuSection(
             context,
@@ -117,9 +125,9 @@ class CustomerProfileMenu extends StatelessWidget {
                 ? () {}
                 : () => _showDistributorRequestDialog(context, authProvider),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Logout Section
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -128,7 +136,11 @@ class CustomerProfileMenu extends StatelessWidget {
               icon: const Icon(Icons.logout, color: AppColors.error),
               label: const Text(
                 'Çıkış Yap',
-                style: TextStyle(color: AppColors.error, fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: AppColors.error),
@@ -193,7 +205,13 @@ class CustomerProfileMenu extends StatelessWidget {
           color: AppColors.nightSky,
         ),
       ),
-      trailing: trailing ?? const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+      trailing:
+          trailing ??
+          const Icon(
+            Icons.arrow_forward_ios,
+            size: 16,
+            color: AppColors.textMuted,
+          ),
       onTap: onTap,
     );
   }
@@ -203,7 +221,9 @@ class CustomerProfileMenu extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Çıkış Yap'),
-        content: const Text('Uygulamadan çıkış yapmak istediğinizden emin misiniz?'),
+        content: const Text(
+          'Uygulamadan çıkış yapmak istediğinizden emin misiniz?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -230,7 +250,9 @@ class CustomerProfileMenu extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Çıkış yapılamadı: ${e.toString().replaceFirst('Exception: ', '')}'),
+          content: Text(
+            'Çıkış yapılamadı: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -241,6 +263,20 @@ class CustomerProfileMenu extends StatelessWidget {
     BuildContext context,
     AuthProvider authProvider,
   ) async {
+    final profile = authProvider.userProfile;
+    final distributorId = profile?.assignedDistributorId;
+    if (profile == null || distributorId == null || distributorId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Başvuru gönderebilmek için önce bir distribütöre davet koduyla bağlanmalısınız.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -269,7 +305,7 @@ class CustomerProfileMenu extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      final updatedProfile = authProvider.userProfile!.copyWith(
+      final updatedProfile = profile.copyWith(
         distributorRequestStatus: 'pending',
       );
 

@@ -11,6 +11,7 @@ import '../features/customers/screens/add_edit_customer_screen.dart';
 import '../features/customers/screens/customer_detail_screen.dart';
 import '../features/customers/screens/customer_list_screen.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/inventory/screens/inventory_screen.dart';
 import '../features/orders/screens/add_edit_order_screen.dart';
 import '../features/orders/screens/cart_screen.dart';
 import '../features/orders/screens/order_list_screen.dart';
@@ -42,6 +43,7 @@ import '../features/program/models/program_template_model.dart';
 import 'package:herbaformix/core/logger.dart';
 import '../features/follow_ups/screens/follow_up_dashboard_screen.dart';
 import '../features/favorites/screens/favorites_screen.dart';
+import '../features/notifications/screens/notification_center_screen.dart';
 import '../services/fcm_service.dart';
 
 class AppRouter {
@@ -69,6 +71,12 @@ class AppRouter {
           break;
         case 'follow_up':
           router.go('/home/follow-ups');
+          break;
+        case 'distributor_request':
+          router.go('/home/customers');
+          break;
+        case 'role_change':
+          router.go('/home');
           break;
       }
     };
@@ -206,6 +214,11 @@ class AppRouter {
             builder: (context, state) => const FavoritesScreen(),
           ),
           GoRoute(
+            path: NotificationCenterScreen.routeName,
+            name: NotificationCenterScreen.routeName,
+            builder: (context, state) => const NotificationCenterScreen(),
+          ),
+          GoRoute(
             path: 'products', // '/home/products'
             name: ProductListScreen.routeName.substring(
               1,
@@ -273,6 +286,11 @@ class AppRouter {
             path: 'cart', // '/home/cart'
             name: 'cart',
             builder: (context, state) => const CartScreen(),
+          ),
+          GoRoute(
+            path: InventoryScreen.routeName,
+            name: InventoryScreen.routeName,
+            builder: (context, state) => const InventoryScreen(),
           ),
           GoRoute(
             path: 'orders', // '/home/orders'

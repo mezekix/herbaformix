@@ -534,6 +534,25 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(width: 8),
+                Consumer<FavoritesProvider>(
+                  builder: (context, favorites, _) => IconButton(
+                    tooltip:
+                        favorites.isFavorite(FavoriteType.product, product.id)
+                            ? 'Favorilerden çıkar'
+                            : 'Favorilere ekle',
+                    icon: Icon(
+                      favorites.isFavorite(FavoriteType.product, product.id)
+                          ? Icons.favorite
+                          : Icons.favorite_outline,
+                      color: AppColors.error,
+                      size: 20,
+                    ),
+                    onPressed: () => favorites.toggle(
+                      FavoriteType.product,
+                      product.id,
+                    ),
+                  ),
+                ),
                 IconButton(
                   tooltip: 'Sepete ekle',
                   icon: const Icon(
@@ -693,6 +712,22 @@ class _ProductGridCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(width: 6),
+                Consumer<FavoritesProvider>(
+                  builder: (context, favorites, _) => GestureDetector(
+                    onTap: () => favorites.toggle(
+                      FavoriteType.product,
+                      product.id,
+                    ),
+                    child: Icon(
+                      favorites.isFavorite(FavoriteType.product, product.id)
+                          ? Icons.favorite
+                          : Icons.favorite_outline,
+                      size: 20,
+                      color: AppColors.error,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () {

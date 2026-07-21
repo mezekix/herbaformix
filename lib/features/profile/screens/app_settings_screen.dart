@@ -9,6 +9,7 @@ import '../../program/services/notification_service.dart';
 import '../widgets/change_password_dialog.dart';
 import '../../../models/user_role.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../notifications/models/app_notification.dart';
 
 class AppSettingsScreen extends StatelessWidget {
   static const String routeName = 'app-settings';
@@ -21,9 +22,7 @@ class AppSettingsScreen extends StatelessWidget {
     final authProvider = context.watch<AuthProvider>();
     final profile = authProvider.userProfile;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l.appSettingsTitle),
-      ),
+      appBar: AppBar(title: Text(l.appSettingsTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
         children: [
@@ -41,7 +40,11 @@ class AppSettingsScreen extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               subtitle: Text(_currentLanguageLabel(context, l)),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+              trailing: const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppColors.textMuted,
+              ),
               onTap: () => _showLanguagePicker(context),
             ),
           ),
@@ -61,7 +64,11 @@ class AppSettingsScreen extends StatelessWidget {
                 l.appSettingsChangePassword,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+              trailing: const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppColors.textMuted,
+              ),
               onTap: () => ChangePasswordDialog.show(context),
             ),
           ),
@@ -79,14 +86,17 @@ class AppSettingsScreen extends StatelessWidget {
               future: NotificationService().hasPermission(),
               builder: (context, snapshot) {
                 final hasPermission = snapshot.data ?? false;
-                final isLoading = snapshot.connectionState == ConnectionState.waiting;
+                final isLoading =
+                    snapshot.connectionState == ConnectionState.waiting;
 
                 return ListTile(
                   leading: Icon(
                     hasPermission
                         ? Icons.notifications_active
                         : Icons.notifications_off_outlined,
-                    color: hasPermission ? AppColors.primary : AppColors.textMuted,
+                    color: hasPermission
+                        ? AppColors.primary
+                        : AppColors.textMuted,
                   ),
                   title: Text(
                     l.appSettingsNotifications,
@@ -96,35 +106,40 @@ class AppSettingsScreen extends StatelessWidget {
                     isLoading
                         ? l.appSettingsNotificationsChecking
                         : hasPermission
-                            ? l.appSettingsNotificationsOn
-                            : l.appSettingsNotificationsOff,
+                        ? l.appSettingsNotificationsOn
+                        : l.appSettingsNotificationsOff,
                     style: TextStyle(
-                      color: hasPermission ? Colors.green.shade700 : Colors.orange.shade700,
+                      color: hasPermission
+                          ? Colors.green.shade700
+                          : Colors.orange.shade700,
                       fontSize: 12,
                     ),
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.textMuted,
+                  ),
                   onTap: () async {
-                          final service = NotificationService();
-                          final localGranted = await service.requestPermission();
-                          final fcmGranted =
-                              await FcmService().requestPermission();
-                          if (fcmGranted && context.mounted) {
-                            await context.read<AuthProvider>().syncFcmToken();
-                          }
-                          final granted = localGranted || fcmGranted;
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                granted
-                                    ? l.appSettingsNotificationsEnabled
-                                    : l.appSettingsNotificationsDenied,
-                              ),
-                              duration: const Duration(seconds: 5),
-                            ),
-                          );
-                        },
+                    final service = NotificationService();
+                    final localGranted = await service.requestPermission();
+                    final fcmGranted = await FcmService().requestPermission();
+                    if (fcmGranted && context.mounted) {
+                      await context.read<AuthProvider>().syncFcmToken();
+                    }
+                    final granted = localGranted || fcmGranted;
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          granted
+                              ? l.appSettingsNotificationsEnabled
+                              : l.appSettingsNotificationsDenied,
+                        ),
+                        duration: const Duration(seconds: 5),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -136,20 +151,25 @@ class AppSettingsScreen extends StatelessWidget {
               side: BorderSide(color: AppColors.backgroundMuted),
             ),
             child: ListTile(
-              leading: const Icon(Icons.notifications_active_outlined, color: Colors.green),
+              leading: const Icon(
+                Icons.notifications_active_outlined,
+                color: Colors.green,
+              ),
               title: Text(
                 l.appSettingsSendTestNotification,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textMuted),
+              trailing: const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppColors.textMuted,
+              ),
               onTap: () async {
                 final service = NotificationService();
                 await service.showTestNotification();
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l.appSettingsTestNotificationSent),
-                  ),
+                  SnackBar(content: Text(l.appSettingsTestNotificationSent)),
                 );
               },
             ),
@@ -164,48 +184,42 @@ class AppSettingsScreen extends StatelessWidget {
                 side: BorderSide(color: AppColors.backgroundMuted),
               ),
               child: Column(
-                children: [
-                  SwitchListTile(
-                    title: const Text("Yeni Program Bildirimleri"),
-                    subtitle: const Text("Distribütörünüz yeni program atadığında bildirim alın."),
-                    value: profile.notificationSettings['newProgram'] ?? true,
-                    activeThumbColor: AppColors.primary,
-                    onChanged: (val) async {
-                      final updatedSettings = Map<String, bool>.from(profile.notificationSettings);
-                      updatedSettings['newProgram'] = val;
-                      final updatedProfile = profile.copyWith(notificationSettings: updatedSettings);
-                      await authProvider.updateUserProfile(updatedProfile);
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  SwitchListTile(
-                    title: const Text("Günlük Motivasyon Mesajları"),
-                    subtitle: const Text("Distribütörünüzden günlük mesaj geldiğinde bildirim alın."),
-                    value: profile.notificationSettings['dailyMessages'] ?? true,
-                    activeThumbColor: AppColors.primary,
-                    onChanged: (val) async {
-                      final updatedSettings = Map<String, bool>.from(profile.notificationSettings);
-                      updatedSettings['dailyMessages'] = val;
-                      final updatedProfile = profile.copyWith(notificationSettings: updatedSettings);
-                      await authProvider.updateUserProfile(updatedProfile);
-                    },
-                  ),
-                  if (profile.role == UserRole.distributor) ...[
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    SwitchListTile(
-                      title: const Text("Müşteri Takip Hatırlatmaları"),
-                      subtitle: const Text("Müşterilerinizin takip zamanı geldiğinde bildirim alın."),
-                      value: profile.notificationSettings['followUps'] ?? true,
-                      activeThumbColor: AppColors.primary,
-                      onChanged: (val) async {
-                        final updatedSettings = Map<String, bool>.from(profile.notificationSettings);
-                        updatedSettings['followUps'] = val;
-                        final updatedProfile = profile.copyWith(notificationSettings: updatedSettings);
-                        await authProvider.updateUserProfile(updatedProfile);
-                      },
-                    ),
-                  ],
-                ],
+                children: AppNotificationType.values
+                    .where(
+                      (type) =>
+                          type != AppNotificationType.distributorRequest &&
+                          type != AppNotificationType.roleChange &&
+                          (type != AppNotificationType.followUp ||
+                              profile.role != UserRole.customer),
+                    )
+                    .map(
+                      (type) => Column(
+                        children: [
+                          SwitchListTile(
+                            title: Text('${type.label} bildirimleri'),
+                            value:
+                                profile.notificationSettings[type
+                                    .preferenceKey] ??
+                                true,
+                            activeThumbColor: AppColors.primary,
+                            onChanged: (value) async {
+                              final settings = Map<String, bool>.from(
+                                profile.notificationSettings,
+                              );
+                              settings[type.preferenceKey] = value;
+                              await authProvider.updateUserProfile(
+                                profile.copyWith(
+                                  notificationSettings: settings,
+                                ),
+                              );
+                            },
+                          ),
+                          if (type != AppNotificationType.values.last)
+                            const Divider(height: 1, indent: 16, endIndent: 16),
+                        ],
+                      ),
+                    )
+                    .toList(growable: false),
               ),
             ),
           ],
@@ -257,7 +271,9 @@ class AppSettingsScreen extends StatelessWidget {
             ),
             title: Text(label),
             onTap: () async {
-              await localeProvider.setLocale(value == null ? null : Locale(value));
+              await localeProvider.setLocale(
+                value == null ? null : Locale(value),
+              );
               if (ctx.mounted) Navigator.of(ctx).pop();
             },
           );
@@ -271,7 +287,10 @@ class AppSettingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   l.languageSettingsTitle,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               tile(null, l.languageSystem),

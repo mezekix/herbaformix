@@ -7,6 +7,7 @@ import '../../models/customer_model.dart';
 import '../../models/invite_code_model.dart';
 import '../../models/invite_status.dart';
 import '../../models/user_profile_model.dart';
+import '../../core/logger.dart';
 
 /// `/inviteCodes/{codeId}` — distribütör davet kodu yaşam döngüsü.
 ///
@@ -20,7 +21,7 @@ import '../../models/user_profile_model.dart';
 /// transaction-benzeri bir bütünlüğe ihtiyaç duyar.
 class InviteCodeRepository {
   InviteCodeRepository({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance;
+    : _db = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _db;
 
@@ -30,6 +31,24 @@ class InviteCodeRepository {
         fromFirestore: (s, _) => InviteCodeModel.fromMap(s.data()!, s.id),
         toFirestore: (m, _) => m.toMap(),
       );
+
+  CollectionReference<Map<String, dynamic>> get _lookupRef =>
+      _db.collection('inviteCodeLookups');
+
+  Map<String, dynamic> _lookupData(InviteCodeModel inviteCode) {
+    return <String, dynamic>{
+      'code': inviteCode.code,
+      'distributorId': inviteCode.distributorId,
+      'createdAt': Timestamp.fromDate(inviteCode.createdAt),
+      'expiresAt': Timestamp.fromDate(inviteCode.expiresAt),
+      'status': inviteCode.status.toFirestore(),
+      'isUsed': inviteCode.isUsed,
+      if (inviteCode.usedByUserId != null)
+        'usedByUserId': inviteCode.usedByUserId,
+      if (inviteCode.customerRecordId != null)
+        'customerRecordId': inviteCode.customerRecordId,
+    };
+  }
 
   /// 8 karakterli, ABCD...Z0..9 alfabesinden kriptografik rastgele kod.
   @visibleForTesting
@@ -47,7 +66,7 @@ class InviteCodeRepository {
     const maxAttempts = 5;
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       final code = generateCode();
-      final docSnapshot = await ref.doc(code).get();
+      final docSnapshot = await _lookupRef.doc(code).get();
       if (!docSnapshot.exists) return code;
     }
     throw Exception('Benzersiz davet kodu üretilemedi. Lütfen tekrar deneyin.');
@@ -78,14 +97,20 @@ class InviteCodeRepository {
     );
 
     final docRef = ref.doc(code);
-    await docRef.set(model);
+    final batch = _db.batch();
+    // `docRef` is typed as DocumentReference<InviteCodeModel>; pass the model
+    // itself so Firestore invokes the registered converter. Passing toMap()
+    // here makes WriteBatch infer Object and causes a runtime converter cast.
+    batch.set(docRef, model);
+    batch.set(_lookupRef.doc(code), _lookupData(model));
+    await batch.commit();
     final snapshot = await docRef.get();
     return snapshot.data()!;
   }
 
   /// Müşteri kaydını ve davet kodunu **atomik** olarak oluşturur.
   Future<({CustomerModel customer, InviteCodeModel inviteCode})>
-      addCustomerWithInviteCode({
+  addCustomerWithInviteCode({
     required String distributorId,
     required CustomerModel customer,
   }) async {
@@ -134,11 +159,16 @@ class InviteCodeRepository {
     final batch = _db.batch();
     batch.set(customerDocRef, customerToWrite.toMap());
     batch.set(inviteDocRef, inviteToWrite.toMap());
+    batch.set(_lookupRef.doc(code), _lookupData(inviteToWrite));
 
     try {
       await batch.commit();
     } catch (e) {
-      debugPrint('addCustomerWithInviteCode batch hatası: $e');
+      AppLogger.error(
+        'Davet koduyla müşteri ekleme batch hatası',
+        tag: 'InviteCodeRepository',
+        error: e,
+      );
       throw Exception('Müşteri ve davet kodu oluşturulamadı: $e');
     }
 
@@ -181,13 +211,19 @@ class InviteCodeRepository {
 
     final batch = _db.batch();
     batch.update(oldInviteDocRef, {'status': 'expired'});
+    batch.update(_lookupRef.doc(oldInviteCodeId), {'status': 'expired'});
     batch.set(newInviteDocRef, newInvite.toMap());
+    batch.set(_lookupRef.doc(code), _lookupData(newInvite));
     batch.update(customerDocRef, {'inviteCodeId': newInviteDocRef.id});
 
     try {
       await batch.commit();
     } catch (e) {
-      debugPrint('regenerateInviteCode batch hatası: $e');
+      AppLogger.error(
+        'Davet kodu yenileme batch hatası',
+        tag: 'InviteCodeRepository',
+        error: e,
+      );
       throw Exception('Yeni davet kodu üretilemedi: $e');
     }
 
@@ -197,24 +233,13 @@ class InviteCodeRepository {
   /// Geçerli bir davet kodunu doğrular ve [InviteCodeModel]'i döner.
   /// Kullanılmış / süresi geçmiş kodlarda anlamlı hata fırlatır.
   Future<InviteCodeModel?> validateInviteCode(String code) async {
-    // Önce yeni yöntem (id == code) ile doğrudan dökümanı getirmeyi deniyoruz
-    final docSnapshot = await ref.doc(code).get();
-    
-    InviteCodeModel? inviteCode;
-    
-    if (docSnapshot.exists) {
-      inviteCode = docSnapshot.data();
-    } else {
-      // Geriye dönük uyumluluk: Eski UUID tabanlı kodlar için liste sorgusu
-      try {
-        final s = await ref.where('code', isEqualTo: code).limit(1).get();
-        if (s.docs.isNotEmpty) {
-          inviteCode = s.docs.first.data();
-        }
-      } catch (_) {}
-    }
+    final normalizedCode = code.trim().toUpperCase();
+    final docSnapshot = await _lookupRef.doc(normalizedCode).get();
+    if (!docSnapshot.exists) return null;
 
-    if (inviteCode == null) return null;
+    final data = docSnapshot.data();
+    if (data == null) return null;
+    final inviteCode = InviteCodeModel.fromMap(data, normalizedCode);
 
     final effective = inviteCode.effectiveStatus;
 
@@ -241,23 +266,23 @@ class InviteCodeRepository {
     try {
       final batch = _db.batch();
 
-      final userProfileRef =
-          _db.collection('userProfiles').doc(newUserId);
+      final userProfileRef = _db.collection('userProfiles').doc(newUserId);
       if (existingUser) {
         batch.update(userProfileRef, {
           'assignedDistributorId': inviteCode.distributorId,
           'connectionInviteCodeId': inviteCode.id,
         });
       } else {
-        batch.set(
-          userProfileRef,
-          userProfile.toMap(),
-          SetOptions(merge: true),
-        );
+        batch.set(userProfileRef, userProfile.toMap(), SetOptions(merge: true));
       }
 
       final inviteCodeRef = ref.doc(inviteCode.id);
       batch.update(inviteCodeRef, {
+        'isUsed': true,
+        'status': 'used',
+        'usedByUserId': newUserId,
+      });
+      batch.update(_lookupRef.doc(inviteCode.id), {
         'isUsed': true,
         'status': 'used',
         'usedByUserId': newUserId,
@@ -279,7 +304,11 @@ class InviteCodeRepository {
 
       await batch.commit();
     } catch (e) {
-      debugPrint('signUpWithInviteCodeBatch hatası: $e');
+      AppLogger.error(
+        'Davet koduyla kayıt batch hatası',
+        tag: 'InviteCodeRepository',
+        error: e,
+      );
       throw Exception('Kayıt işlemi tamamlanamadı: $e');
     }
   }
@@ -293,9 +322,13 @@ class InviteCodeRepository {
         .snapshots()
         .map((s) => s.docs.map((d) => d.data()).toList())
         .handleError((error) {
-      debugPrint('getInviteCodesForDistributor hatası: $error');
-      return <InviteCodeModel>[];
-    });
+          AppLogger.error(
+            'Distribütör davet kodları alınamadı',
+            tag: 'InviteCodeRepository',
+            error: error,
+          );
+          return <InviteCodeModel>[];
+        });
   }
 
   Future<InviteCodeModel?> getInviteCodeForCustomer(
@@ -310,17 +343,28 @@ class InviteCodeRepository {
       if (s.docs.isEmpty) return null;
       return s.docs.first.data();
     } catch (e) {
-      debugPrint('getInviteCodeForCustomer hatası: $e');
+      AppLogger.error(
+        'Müşteri davet kodu alınamadı',
+        tag: 'InviteCodeRepository',
+        error: e,
+      );
       return null;
     }
   }
 
   Future<void> deleteInviteCode(String inviteCodeId) async {
     try {
-      await _db.collection('inviteCodes').doc(inviteCodeId).delete();
-      debugPrint('deleteInviteCode başarılı: $inviteCodeId');
+      final batch = _db.batch();
+      batch.delete(_db.collection('inviteCodes').doc(inviteCodeId));
+      batch.delete(_lookupRef.doc(inviteCodeId));
+      await batch.commit();
+      AppLogger.info('Davet kodu silindi', tag: 'InviteCodeRepository');
     } catch (e) {
-      debugPrint('deleteInviteCode hatası: $e');
+      AppLogger.error(
+        'Davet kodu silinemedi',
+        tag: 'InviteCodeRepository',
+        error: e,
+      );
       throw Exception('Davet kodu silinemedi: $e');
     }
   }
@@ -342,12 +386,20 @@ class InviteCodeRepository {
       final batch = _db.batch();
       for (final doc in s.docs) {
         batch.delete(doc.reference);
+        batch.delete(_lookupRef.doc(doc.id));
       }
       await batch.commit();
-      debugPrint('deleteExpiredInviteCodes: ${s.docs.length} kod silindi');
+      AppLogger.info(
+        '${s.docs.length} süresi dolmuş davet kodu silindi',
+        tag: 'InviteCodeRepository',
+      );
       return s.docs.length;
     } catch (e) {
-      debugPrint('deleteExpiredInviteCodes hatası: $e');
+      AppLogger.error(
+        'Süresi dolmuş davet kodları silinemedi',
+        tag: 'InviteCodeRepository',
+        error: e,
+      );
       return 0;
     }
   }

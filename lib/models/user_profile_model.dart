@@ -28,7 +28,8 @@ class UserProfileModel {
   final DateTime? programStartDate;
 
   // Yeni eklenen alanlar (Distribütör Takip Aracı)
-  final String? userGoal; // String: weight_loss, healthy_living, weight_gain, skin_care
+  final String?
+  userGoal; // String: weight_loss, healthy_living, weight_gain, skin_care
   final String? wakeTime; // Örn: "07:30"
   final String? lunchTime; // Örn: "13:00"
   final String? sleepTime; // Örn: "23:00"
@@ -51,7 +52,8 @@ class UserProfileModel {
   // Push bildirimleri (Faz 14)
   final String? fcmToken; // Cihazın güncel FCM token'ı
   final DateTime? fcmTokenUpdatedAt; // Son token güncelleme zamanı
-  final Map<String, bool> notificationSettings; // Bildirim tercihleri (newProgram, dailyMessages, followUps)
+  final Map<String, bool>
+  notificationSettings; // Faz 23 bildirim türü tercihleri
 
   const UserProfileModel({
     required this.id,
@@ -88,8 +90,13 @@ class UserProfileModel {
     this.fcmTokenUpdatedAt,
     this.notificationSettings = const {
       'newProgram': true,
+      'water': true,
+      'measurement': true,
+      'badge': true,
       'dailyMessages': true,
       'followUps': true,
+      'order': true,
+      'challenge': true,
     },
   });
 
@@ -255,7 +262,8 @@ class UserProfileModel {
       assignedDistributorId: map['assignedDistributorId'] as String?,
       profilePhotoUrl: map['profilePhotoUrl'] as String?,
       profilePhotoUpdatedAt: _parseDate(map['profilePhotoUpdatedAt']),
-      earnedBadges: (map['earnedBadges'] as List<dynamic>?)
+      earnedBadges:
+          (map['earnedBadges'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           const [],
@@ -269,8 +277,13 @@ class UserProfileModel {
           ? Map<String, bool>.from(map['notificationSettings'] as Map)
           : const {
               'newProgram': true,
+              'water': true,
+              'measurement': true,
+              'badge': true,
               'dailyMessages': true,
               'followUps': true,
+              'order': true,
+              'challenge': true,
             },
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/logger.dart';
 import '../../../models/product_model.dart';
 import '../../../models/user_profile_model.dart';
 import '../models/program_model.dart';
@@ -7,12 +8,7 @@ import '../models/program_template_model.dart';
 import '../services/notification_service.dart';
 import '../services/program_service.dart';
 
-enum ProgramWizardStep {
-  goalSelection,
-  weightInput,
-  mealPlan,
-  summary,
-}
+enum ProgramWizardStep { goalSelection, weightInput, mealPlan, summary }
 
 class ProgramProvider with ChangeNotifier {
   final ProgramService _programService;
@@ -21,8 +17,8 @@ class ProgramProvider with ChangeNotifier {
   ProgramProvider({
     ProgramService? programService,
     NotificationService? notificationService,
-  })  : _programService = programService ?? ProgramService(),
-        _notificationService = notificationService ?? NotificationService();
+  }) : _programService = programService ?? ProgramService(),
+       _notificationService = notificationService ?? NotificationService();
 
   // ── Wizard ────────────────────────────────────────────────────────────────
   ProgramWizardStep _currentStep = ProgramWizardStep.goalSelection;
@@ -96,7 +92,7 @@ class ProgramProvider with ChangeNotifier {
   // ── Hedef ─────────────────────────────────────────────────────────────────
   void setGoal(String goal) {
     _selectedGoal = goal;
-    
+
     // Kullanıcının profilinden gelen kilo verilerini SIFIRLAMIYORUZ.
     if (_currentWeight != null && _targetWeight != null) {
       try {
@@ -107,7 +103,7 @@ class ProgramProvider with ChangeNotifier {
     } else {
       _durationMonths = 1;
     }
-    
+
     _slots = [];
     notifyListeners();
   }
@@ -165,7 +161,11 @@ class ProgramProvider with ChangeNotifier {
 
   /// Slota ürün ekle
   void addProductToSlot(String slotId, MealProduct product) {
-    debugPrint('[Provider] addProductToSlot: slotId=$slotId, product=${product.productName}, mevcut slots=${_slots.map((s) => "${s.id}:${s.products.length}").join(", ")}');
+    AppLogger.debug(
+      'Slota ürün ekleniyor: slotId=$slotId, product=${product.productName}, '
+      'mevcut slots=${_slots.map((s) => "${s.id}:${s.products.length}").join(", ")}',
+      tag: 'ProgramProvider',
+    );
     _slots = _slots.map((s) {
       if (s.id == slotId) {
         // Aynı ürün zaten varsa ekleme
@@ -217,9 +217,15 @@ class ProgramProvider with ChangeNotifier {
     List<ProductModel> allProducts, {
     bool scheduleNotifications = true,
   }) async {
-    debugPrint('[ProgramProvider] saveProgram başlıyor: userId=$userId, slots=${_slots.length}, goal=$_selectedGoal');
+    AppLogger.debug(
+      'Program kaydı başlıyor: slots=${_slots.length}, goal=$_selectedGoal',
+      tag: 'ProgramProvider',
+    );
     for (final s in _slots) {
-      debugPrint('  slot: ${s.id} | ${s.label} | products=${s.products.length} | normalMeal=${s.isNormalMeal}');
+      AppLogger.debug(
+        'Slot: ${s.id} | ${s.label} | products=${s.products.length} | normalMeal=${s.isNormalMeal}',
+        tag: 'ProgramProvider',
+      );
     }
     _isLoading = true;
     _errorMessage = null;
@@ -253,7 +259,11 @@ class ProgramProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('[ProgramProvider] saveProgram HATA: $e');
+      AppLogger.error(
+        'Program kaydedilemedi',
+        tag: 'ProgramProvider',
+        error: e,
+      );
       _errorMessage = 'Program kaydedilemedi: $e';
       _isLoading = false;
       notifyListeners();
@@ -282,7 +292,9 @@ class ProgramProvider with ChangeNotifier {
       _currentWeight = currentWeight;
       _targetWeight = targetWeight;
 
-      if (userGoal == 'weight_loss' && currentWeight != null && targetWeight != null) {
+      if (userGoal == 'weight_loss' &&
+          currentWeight != null &&
+          targetWeight != null) {
         try {
           _durationMonths = calculateMinDuration(currentWeight, targetWeight);
         } catch (_) {
@@ -307,7 +319,11 @@ class ProgramProvider with ChangeNotifier {
       );
       return result;
     } catch (e) {
-      debugPrint('[ProgramProvider] createAutomaticProgram HATA: $e');
+      AppLogger.error(
+        'Otomatik program oluşturulamadı',
+        tag: 'ProgramProvider',
+        error: e,
+      );
       _errorMessage = 'Otomatik program oluşturulamadı: $e';
       _isLoading = false;
       notifyListeners();
@@ -317,13 +333,13 @@ class ProgramProvider with ChangeNotifier {
 
   Future<void> _scheduleNotifications(ProgramModel program) async {
     await _notificationService.initialize();
-    
+
     for (final slot in program.slots) {
       // 1. Ana Slot için bildirim (Ürün, Normal Öğün veya Ara Öğün fark etmeksizin)
       final id = getMealNotificationId(slot.id);
       String title = '⏰ ${slot.label} Zamanı!';
       String body = 'Öğününüzü/Ürününüzü almayı unutmayın.';
-      
+
       if (slot.products.isNotEmpty) {
         final productNames = slot.products.map((p) => p.productName).join(', ');
         title = '🥤 ${slot.label} Zamanı!';
@@ -335,7 +351,7 @@ class ProgramProvider with ChangeNotifier {
         title = '🍎 ${slot.label} Zamanı!';
         body = 'Ara öğün zamanı geldi, atıştırmalığınızı unutmayın.';
       }
-      
+
       await _notificationService.scheduleMealNotification(
         notificationId: id,
         title: title,
@@ -352,17 +368,25 @@ class ProgramProvider with ChangeNotifier {
           final mealHour = int.tryParse(timeParts[0]) ?? 0;
           final mealMinute = int.tryParse(timeParts[1]) ?? 0;
           final now = DateTime.now();
-          final mealTime = DateTime(now.year, now.month, now.day, mealHour, mealMinute);
+          final mealTime = DateTime(
+            now.year,
+            now.month,
+            now.day,
+            mealHour,
+            mealMinute,
+          );
           final waterTime = mealTime.subtract(const Duration(minutes: 30));
-          
-          final waterScheduledTime = '${waterTime.hour.toString().padLeft(2, '0')}:${waterTime.minute.toString().padLeft(2, '0')}';
+
+          final waterScheduledTime =
+              '${waterTime.hour.toString().padLeft(2, '0')}:${waterTime.minute.toString().padLeft(2, '0')}';
           // Su bildirimi için slot id'sine özel benzersiz bir ID (100000 ekleyerek çakışmayı önlüyoruz)
           final waterId = id + 100000;
-          
+
           await _notificationService.scheduleMealNotification(
             notificationId: waterId,
             title: '💧 Su Hatırlatıcısı',
-            body: '${slot.label} öncesinde 1 büyük bardak (500ml) su içmeyi unutmayın.',
+            body:
+                '${slot.label} öncesinde 1 büyük bardak (500ml) su içmeyi unutmayın.',
             scheduledTime: waterScheduledTime,
             slotId: slot.id,
             isWater: true,
@@ -406,10 +430,16 @@ class ProgramProvider with ChangeNotifier {
   }) async {
     // _activeProgram null ise Firestore'dan çek
     if (_activeProgram == null) {
-      debugPrint('[ProgramProvider] _activeProgram null, Firestore\'dan çekiliyor...');
+      AppLogger.debug(
+        'Aktif program Firestore\'dan yükleniyor',
+        tag: 'ProgramProvider',
+      );
       _activeProgram = await _programService.getActiveProgram(userId);
       if (_activeProgram == null) {
-        debugPrint('[ProgramProvider] Firestore\'da da aktif program yok!');
+        AppLogger.warning(
+          'Firestore\'da aktif program bulunamadı',
+          tag: 'ProgramProvider',
+        );
         return false;
       }
     }
@@ -420,7 +450,7 @@ class ProgramProvider with ChangeNotifier {
         slots: [..._activeProgram!.slots, newSlot],
       );
       await _programService.saveProgram(userId, updated, allProducts);
-      
+
       if (scheduleNotifications) {
         await _notificationService.cancelAllProgramNotifications();
         await _scheduleNotifications(updated);
@@ -429,10 +459,17 @@ class ProgramProvider with ChangeNotifier {
       _activeProgram = updated;
       _isLoading = false;
       notifyListeners();
-      debugPrint('[ProgramProvider] Slot eklendi ve bildirimler yeniden zamanlandı.');
+      AppLogger.info(
+        'Slot eklendi ve bildirimler yeniden zamanlandı',
+        tag: 'ProgramProvider',
+      );
       return true;
     } catch (e) {
-      debugPrint('[ProgramProvider] addSlotToActiveProgram hatası: $e');
+      AppLogger.error(
+        'Aktif programa slot eklenemedi',
+        tag: 'ProgramProvider',
+        error: e,
+      );
       _isLoading = false;
       notifyListeners();
       return false;
@@ -454,11 +491,13 @@ class ProgramProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final updatedSlots = _activeProgram!.slots.where((s) => s.id != slotId).toList();
+      final updatedSlots = _activeProgram!.slots
+          .where((s) => s.id != slotId)
+          .toList();
       final updated = _activeProgram!.copyWith(slots: updatedSlots);
-      
+
       await _programService.saveProgram(userId, updated, allProducts);
-      
+
       if (scheduleNotifications) {
         await _notificationService.cancelAllProgramNotifications();
         await _scheduleNotifications(updated);
@@ -469,7 +508,11 @@ class ProgramProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('[ProgramProvider] removeSlotFromActiveProgram hatası: $e');
+      AppLogger.error(
+        'Aktif programdan slot silinemedi',
+        tag: 'ProgramProvider',
+        error: e,
+      );
       _errorMessage = 'Öğün silinirken hata oluştu: $e';
       _isLoading = false;
       notifyListeners();
@@ -517,9 +560,13 @@ class ProgramProvider with ChangeNotifier {
     }
 
     final goal = profile.userGoal;
-    final isGoalSelected = goal != null &&
-        (goal == 'weight_loss' || goal == 'healthy_living' || goal == 'weight_gain');
-    final isPhysicalInfoEntered = profile.weight != null && profile.targetWeight != null;
+    final isGoalSelected =
+        goal != null &&
+        (goal == 'weight_loss' ||
+            goal == 'healthy_living' ||
+            goal == 'weight_gain');
+    final isPhysicalInfoEntered =
+        profile.weight != null && profile.targetWeight != null;
 
     // Profildeki kilo bilgilerini her durumda provider'a aktar
     if (profile.weight != null) {
@@ -531,7 +578,10 @@ class ProgramProvider with ChangeNotifier {
 
     if (profile.weight != null && profile.targetWeight != null) {
       try {
-        _durationMonths = calculateMinDuration(profile.weight!, profile.targetWeight!);
+        _durationMonths = calculateMinDuration(
+          profile.weight!,
+          profile.targetWeight!,
+        );
       } catch (_) {
         _durationMonths = 1;
       }
@@ -539,7 +589,7 @@ class ProgramProvider with ChangeNotifier {
 
     if (isGoalSelected) {
       _selectedGoal = goal;
-      
+
       if (isPhysicalInfoEntered) {
         // Bilgiler tamsa direkt Öğün Planı adımına geç
         _currentStep = ProgramWizardStep.mealPlan;
@@ -555,7 +605,7 @@ class ProgramProvider with ChangeNotifier {
       // Hiçbir şey seçilmemişse baştan başla
       _currentStep = ProgramWizardStep.goalSelection;
     }
-    
+
     _errorMessage = null;
     notifyListeners();
   }

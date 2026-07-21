@@ -17,6 +17,7 @@ import {
   updateDoc,
   deleteDoc,
   deleteField,
+  writeBatch,
   Timestamp,
 } from 'firebase/firestore';
 
@@ -92,6 +93,50 @@ function orderDocument(overrides = {}) {
     totalVpEarned: 10,
     notes: '',
     shippingAddress: '',
+    ...overrides,
+  };
+}
+
+function appNotification(overrides = {}) {
+  return {
+    type: 'program',
+    title: 'Yeni program',
+    body: 'Programiniz hazir.',
+    createdAt: Timestamp.fromDate(new Date('2026-07-17T09:00:00Z')),
+    isRead: false,
+    readAt: null,
+    actionPath: '/home',
+    sourceId: 'program-1',
+    ...overrides,
+  };
+}
+
+function inviteCodeDocument(overrides = {}) {
+  return {
+    code: 'AB12CD34',
+    distributorId: consultantUid,
+    createdAt: Timestamp.fromDate(new Date('2026-07-19T09:00:00Z')),
+    expiresAt: Timestamp.fromDate(new Date('2030-07-26T09:00:00Z')),
+    status: 'pending',
+    isUsed: false,
+    customerRecordId: customerDocId,
+    customerName: 'Ayse Yilmaz',
+    customerPhone: '+905551112233',
+    customerEmail: 'ayse@example.com',
+    ...overrides,
+  };
+}
+
+function inviteCodeLookup(overrides = {}) {
+  const privateDocument = inviteCodeDocument();
+  return {
+    code: privateDocument.code,
+    distributorId: privateDocument.distributorId,
+    createdAt: privateDocument.createdAt,
+    expiresAt: privateDocument.expiresAt,
+    status: privateDocument.status,
+    isUsed: privateDocument.isUsed,
+    customerRecordId: privateDocument.customerRecordId,
     ...overrides,
   };
 }
@@ -318,6 +363,113 @@ await runTest('assigned consultant can disconnect linked customer profile', asyn
   );
 });
 
+await runTest('customer can only submit a pending request to an assigned active distributor', async () => {
+  await assertSucceeds(
+    updateDoc(doc(authDb(linkedCustomerUid), 'userProfiles', linkedCustomerUid), {
+      distributorRequestStatus: 'pending',
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(authDb(linkedCustomerUid), 'userProfiles', linkedCustomerUid), {
+      distributorRequestStatus: 'approved',
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(authDb(unlinkedCustomerUid), 'userProfiles', unlinkedCustomerUid), {
+      distributorRequestStatus: 'pending',
+    }),
+  );
+});
+
+await runTest('only assigned distributor can create a valid promotion command', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), 'userProfiles', linkedCustomerUid), {
+      distributorRequestStatus: 'pending',
+    });
+  });
+
+  const validAction = {
+    requestedBy: consultantUid,
+    customerId: linkedCustomerUid,
+    action: 'promote',
+    createdAt: Timestamp.now(),
+  };
+  const actionId = `${consultantUid}_${linkedCustomerUid}`;
+  await assertSucceeds(
+    setDoc(doc(authDb(consultantUid), 'roleChangeActions', actionId), validAction),
+  );
+  await assertFails(
+    getDoc(doc(authDb(consultantUid), 'roleChangeActions', actionId)),
+  );
+  await assertFails(
+    setDoc(
+      doc(authDb(otherConsultantUid), 'roleChangeActions', `other_${linkedCustomerUid}`),
+      {...validAction, requestedBy: otherConsultantUid},
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(authDb(linkedCustomerUid), 'roleChangeActions', `customer_${linkedCustomerUid}`),
+      {...validAction, requestedBy: linkedCustomerUid},
+    ),
+  );
+});
+
+await runTest('assigned distributor can promote a customer without an application', async () => {
+  const actionId = `${consultantUid}_${linkedCustomerUid}`;
+  await assertSucceeds(
+    setDoc(doc(authDb(consultantUid), 'roleChangeActions', actionId), {
+      requestedBy: consultantUid,
+      customerId: linkedCustomerUid,
+      action: 'promote',
+      createdAt: Timestamp.now(),
+    }),
+  );
+  await assertFails(
+    setDoc(
+      doc(
+        authDb(otherConsultantUid),
+        'roleChangeActions',
+        `${otherConsultantUid}_${linkedCustomerUid}`,
+      ),
+      {
+        requestedBy: otherConsultantUid,
+        customerId: linkedCustomerUid,
+        action: 'promote',
+        createdAt: Timestamp.now(),
+      },
+    ),
+  );
+});
+
+await runTest('demotion command only accepts a previously approved distributor', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), 'userProfiles', linkedCustomerUid), {
+      role: 'distributor',
+      distributorRequestStatus: 'approved',
+    });
+  });
+
+  const actionId = `${consultantUid}_${linkedCustomerUid}`;
+  await assertSucceeds(
+    setDoc(doc(authDb(consultantUid), 'roleChangeActions', actionId), {
+      requestedBy: consultantUid,
+      customerId: linkedCustomerUid,
+      action: 'demote',
+      createdAt: Timestamp.now(),
+    }),
+  );
+  await assertFails(
+    setDoc(doc(authDb(consultantUid), 'roleChangeActions', `${actionId}_bad`), {
+      requestedBy: consultantUid,
+      customerId: linkedCustomerUid,
+      action: 'promote',
+      createdAt: Timestamp.now(),
+      extraData: 'schema-pollution',
+    }),
+  );
+});
+
 await runTest('linked customer can create a pending order only for an active assigned coach', async () => {
   await assertSucceeds(
     setDoc(
@@ -356,6 +508,175 @@ await runTest('customer cannot send an order to a missing coach profile', async 
       orderDocument({ userId: 'missing-coach' }),
     ),
   );
+});
+
+await runTest('invite lookup is readable by exact id but private PII is owner-only', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'inviteCodes', 'AB12CD34'), inviteCodeDocument());
+    await setDoc(doc(db, 'inviteCodeLookups', 'AB12CD34'), inviteCodeLookup());
+  });
+
+  await assertFails(getDoc(doc(unauthDb(), 'inviteCodeLookups', 'AB12CD34')));
+  await assertSucceeds(
+    getDoc(doc(authDb(linkedCustomerUid), 'inviteCodeLookups', 'AB12CD34')),
+  );
+  await assertFails(
+    getDocs(collection(authDb(linkedCustomerUid), 'inviteCodeLookups')),
+  );
+  await assertFails(
+    getDoc(doc(authDb(linkedCustomerUid), 'inviteCodes', 'AB12CD34')),
+  );
+  await assertSucceeds(
+    getDoc(doc(authDb(consultantUid), 'inviteCodes', 'AB12CD34')),
+  );
+});
+
+await runTest('distributor must create private invite and PII-free lookup atomically', async () => {
+  const db = authDb(consultantUid);
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'inviteCodes', 'AB12CD34'), inviteCodeDocument());
+  batch.set(doc(db, 'inviteCodeLookups', 'AB12CD34'), inviteCodeLookup());
+  await assertSucceeds(batch.commit());
+
+  await assertFails(
+    setDoc(doc(db, 'inviteCodes', 'ZX98YU76'), inviteCodeDocument({code: 'ZX98YU76'})),
+  );
+  await assertFails(
+    setDoc(
+      doc(db, 'inviteCodeLookups', 'ZX98YU76'),
+      inviteCodeLookup({code: 'ZX98YU76', customerEmail: 'leak@example.com'}),
+    ),
+  );
+});
+
+await runTest('customer must claim private invite and lookup atomically', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'inviteCodes', 'AB12CD34'), inviteCodeDocument());
+    await setDoc(doc(db, 'inviteCodeLookups', 'AB12CD34'), inviteCodeLookup());
+  });
+
+  const db = authDb(linkedCustomerUid);
+  const batch = writeBatch(db);
+  const claimed = {
+    status: 'used',
+    isUsed: true,
+    usedByUserId: linkedCustomerUid,
+  };
+  batch.update(doc(db, 'inviteCodes', 'AB12CD34'), claimed);
+  batch.update(doc(db, 'inviteCodeLookups', 'AB12CD34'), claimed);
+  await assertSucceeds(batch.commit());
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const adminDb = context.firestore();
+    await setDoc(doc(adminDb, 'inviteCodes', 'ZX98YU76'),
+      inviteCodeDocument({code: 'ZX98YU76'}));
+    await setDoc(doc(adminDb, 'inviteCodeLookups', 'ZX98YU76'),
+      inviteCodeLookup({code: 'ZX98YU76'}));
+  });
+  await assertFails(
+    updateDoc(doc(db, 'inviteCodes', 'ZX98YU76'), claimed),
+  );
+});
+
+await runTest('invite claim rejects identity hijacking and schema pollution', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'inviteCodes', 'AB12CD34'), inviteCodeDocument());
+    await setDoc(doc(db, 'inviteCodeLookups', 'AB12CD34'), inviteCodeLookup());
+  });
+
+  const db = authDb(linkedCustomerUid);
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'inviteCodes', 'AB12CD34'), {
+    status: 'used', isUsed: true, usedByUserId: unlinkedCustomerUid,
+  });
+  batch.update(doc(db, 'inviteCodeLookups', 'AB12CD34'), {
+    status: 'used', isUsed: true, usedByUserId: unlinkedCustomerUid,
+  });
+  await assertFails(batch.commit());
+
+  await assertFails(
+    updateDoc(doc(db, 'inviteCodeLookups', 'AB12CD34'), {extraData: 'pollution'}),
+  );
+});
+
+await runTest('notification inbox is private to its owner', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), 'users', linkedCustomerUid, 'notifications', 'private'),
+      appNotification(),
+    );
+  });
+
+  await assertSucceeds(
+    getDocs(collection(authDb(linkedCustomerUid), 'users', linkedCustomerUid, 'notifications')),
+  );
+  await assertFails(
+    getDoc(doc(authDb(unlinkedCustomerUid), 'users', linkedCustomerUid, 'notifications', 'private')),
+  );
+  await assertFails(
+    getDocs(collection(unauthDb(), 'users', linkedCustomerUid, 'notifications')),
+  );
+});
+
+await runTest('client cannot create inbox notifications', async () => {
+  await assertFails(
+    setDoc(
+      doc(authDb(linkedCustomerUid), 'users', linkedCustomerUid, 'notifications', 'forged'),
+      appNotification(),
+    ),
+  );
+});
+
+await runTest('owner can only transition notification to read', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), 'users', linkedCustomerUid, 'notifications', 'readable'),
+      appNotification(),
+    );
+  });
+  const reference = doc(
+    authDb(linkedCustomerUid),
+    'users',
+    linkedCustomerUid,
+    'notifications',
+    'readable',
+  );
+
+  await assertSucceeds(updateDoc(reference, {
+    isRead: true,
+    readAt: Timestamp.now(),
+  }));
+  await assertFails(updateDoc(reference, {title: 'Ele gecirildi'}));
+});
+
+await runTest('notification update rejects schema pollution and oversized text', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), 'users', linkedCustomerUid, 'notifications', 'locked'),
+      appNotification(),
+    );
+  });
+  const reference = doc(
+    authDb(linkedCustomerUid),
+    'users',
+    linkedCustomerUid,
+    'notifications',
+    'locked',
+  );
+
+  await assertFails(updateDoc(reference, {
+    isRead: true,
+    readAt: Timestamp.now(),
+    extraData: 'pollution',
+  }));
+  await assertFails(updateDoc(reference, {
+    isRead: true,
+    readAt: Timestamp.now(),
+    body: 'x'.repeat(3000),
+  }));
 });
 
 await testEnv.cleanup();

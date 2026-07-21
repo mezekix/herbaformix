@@ -33,7 +33,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
       duration: const Duration(seconds: 2),
     );
     // Rozet kazanıldığında snackbar göster
-    ProgressProvider.onBadgeEarned = _onBadgeEarned;
+    context.read<ProgressProvider>().onBadgeEarned = _onBadgeEarned;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -90,7 +90,7 @@ class _CustomerProgressScreenState extends State<CustomerProgressScreen> {
 
   @override
   void dispose() {
-    ProgressProvider.onBadgeEarned = null;
+    context.read<ProgressProvider>().onBadgeEarned = null;
     _badgeConfettiController.dispose();
     context.read<ProgressProvider>().stopListening();
     super.dispose();

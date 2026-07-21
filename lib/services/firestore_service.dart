@@ -9,11 +9,13 @@ import '../models/product_model.dart';
 import '../models/progress_entry_model.dart';
 import '../models/scheduled_follow_up_model.dart';
 import '../models/user_profile_model.dart';
+import '../models/user_role.dart';
 import '../models/water_log_model.dart';
 import '../models/water_summary_model.dart';
 import 'repositories/customer_insights_service.dart';
 import 'repositories/customer_repository.dart';
 import 'repositories/invite_code_repository.dart';
+import 'repositories/inventory_repository.dart';
 import 'repositories/motivation_repository.dart';
 import 'repositories/order_repository.dart';
 import 'repositories/product_repository.dart';
@@ -41,22 +43,24 @@ import 'package:herbaformix/core/logger.dart';
 /// `@Deprecated` ile işaretlenebilir.
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
-      : _db = firestore ?? FirebaseFirestore.instance,
-        _userProfileRepo = UserProfileRepository(firestore: firestore),
-        _productRepo = ProductRepository(firestore: firestore),
-        _customerRepo = CustomerRepository(firestore: firestore),
-        _orderRepo = OrderRepository(firestore: firestore),
-        _inviteCodeRepo = InviteCodeRepository(firestore: firestore),
-        _progressRepo = ProgressRepository(firestore: firestore),
-        _waterRepo = WaterRepository(firestore: firestore),
-        _motivationRepo = MotivationRepository(firestore: firestore),
-        _insightsService = CustomerInsightsService(firestore: firestore);
+    : _db = firestore ?? FirebaseFirestore.instance,
+      _userProfileRepo = UserProfileRepository(firestore: firestore),
+      _productRepo = ProductRepository(firestore: firestore),
+      _customerRepo = CustomerRepository(firestore: firestore),
+      _orderRepo = OrderRepository(firestore: firestore),
+      _inventoryRepo = InventoryRepository(firestore: firestore),
+      _inviteCodeRepo = InviteCodeRepository(firestore: firestore),
+      _progressRepo = ProgressRepository(firestore: firestore),
+      _waterRepo = WaterRepository(firestore: firestore),
+      _motivationRepo = MotivationRepository(firestore: firestore),
+      _insightsService = CustomerInsightsService(firestore: firestore);
 
   final FirebaseFirestore _db;
   final UserProfileRepository _userProfileRepo;
   final ProductRepository _productRepo;
   final CustomerRepository _customerRepo;
   final OrderRepository _orderRepo;
+  final InventoryRepository _inventoryRepo;
   final InviteCodeRepository _inviteCodeRepo;
   final ProgressRepository _progressRepo;
   final WaterRepository _waterRepo;
@@ -68,6 +72,7 @@ class FirestoreService {
   ProductRepository get products => _productRepo;
   CustomerRepository get customers => _customerRepo;
   OrderRepository get orders => _orderRepo;
+  InventoryRepository get inventory => _inventoryRepo;
   InviteCodeRepository get inviteCodes => _inviteCodeRepo;
   ProgressRepository get progress => _progressRepo;
   WaterRepository get water => _waterRepo;
@@ -99,6 +104,42 @@ class FirestoreService {
   Future<void> setWaterDailyGoal(String userId, int goal) =>
       _userProfileRepo.setWaterDailyGoal(userId, goal);
 
+  /// Sunucu tarafında işlenecek güvenli rol değişikliği komutunu oluşturur.
+  ///
+  /// İstemci yalnızca komut oluşturabilir; `userProfiles.role` alanını doğrudan
+  /// değiştiremez. Firestore kuralları ve Cloud Function ilişkiyi tekrar
+  /// doğrular, ardından komut belgesini siler.
+  Future<void> requestCustomerRoleChange({
+    required String requestedBy,
+    required String customerId,
+    required String action,
+  }) {
+    if (action != 'promote' && action != 'demote') {
+      throw ArgumentError.value(action, 'action', 'promote veya demote olmalı');
+    }
+    final actionId = '${requestedBy}_$customerId';
+    return _db.collection('roleChangeActions').doc(actionId).set({
+      'requestedBy': requestedBy,
+      'customerId': customerId,
+      'action': action,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Rol komutunun Cloud Function tarafında gerçekten tamamlanmasını bekler.
+  /// Komut belgesinin yazılması tek başına başarı sayılmaz; hedef profilin
+  /// beklenen role geçtiği canlı profil akışından doğrulanır.
+  Future<UserProfileModel> waitForCustomerRole({
+    required String customerId,
+    required UserRole expectedRole,
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
+    final profile = await watchUserProfile(
+      customerId,
+    ).firstWhere((value) => value?.role == expectedRole).timeout(timeout);
+    return profile!;
+  }
+
   // ── ProductRepository delegate ─────────────────────────────────────────
 
   CollectionReference<ProductModel> get productsRef => _productRepo.ref;
@@ -114,8 +155,9 @@ class FirestoreService {
   CollectionReference<CustomerModel> customersRef(String userId) =>
       _customerRepo.customersRef(userId);
   Future<DocumentReference<CustomerModel>> addCustomer(
-          String userId, CustomerModel c) =>
-      _customerRepo.addCustomer(userId, c);
+    String userId,
+    CustomerModel c,
+  ) => _customerRepo.addCustomer(userId, c);
   Stream<List<CustomerModel>> getCustomers(String userId) =>
       _customerRepo.getCustomers(userId);
   Future<List<CustomerModel>> fetchAllCustomers(String userId) =>
@@ -123,51 +165,55 @@ class FirestoreService {
   Future<CustomerModel?> getCustomer(String userId, String customerId) =>
       _customerRepo.getCustomer(userId, customerId);
   Future<CustomerModel?> getCustomerByLinkedUserId(
-          String distributorId, String linkedUserId) =>
-      _customerRepo.getCustomerByLinkedUserId(distributorId, linkedUserId);
+    String distributorId,
+    String linkedUserId,
+  ) => _customerRepo.getCustomerByLinkedUserId(distributorId, linkedUserId);
   Future<CustomerModel> createCustomerRecordFromUserProfile({
     required String distributorId,
     required UserProfileModel profile,
-  }) =>
-      _customerRepo.createCustomerRecordFromUserProfile(
-        distributorId: distributorId,
-        profile: profile,
-      );
+  }) => _customerRepo.createCustomerRecordFromUserProfile(
+    distributorId: distributorId,
+    profile: profile,
+  );
   Future<void> updateCustomer(String userId, CustomerModel c) =>
       _customerRepo.updateCustomer(userId, c);
   Future<void> deleteCustomer(String userId, String customerId) =>
       _customerRepo.deleteCustomer(userId, customerId);
 
   CollectionReference<FollowUpModel> followUpsRef(
-          String userId, String customerId) =>
-      _customerRepo.followUpsRef(userId, customerId);
+    String userId,
+    String customerId,
+  ) => _customerRepo.followUpsRef(userId, customerId);
   Stream<List<FollowUpModel>> getFollowUps(String userId, String customerId) =>
       _customerRepo.getFollowUps(userId, customerId);
-  Future<void> addFollowUp(
-          String userId, String customerId, FollowUpModel f) =>
+  Future<void> addFollowUp(String userId, String customerId, FollowUpModel f) =>
       _customerRepo.addFollowUp(userId, customerId, f);
   Future<void> updateFollowUp(
-          String userId, String customerId, FollowUpModel f) =>
-      _customerRepo.updateFollowUp(userId, customerId, f);
+    String userId,
+    String customerId,
+    FollowUpModel f,
+  ) => _customerRepo.updateFollowUp(userId, customerId, f);
   Future<void> deleteFollowUp(
-          String userId, String customerId, String followUpId) =>
-      _customerRepo.deleteFollowUp(userId, customerId, followUpId);
+    String userId,
+    String customerId,
+    String followUpId,
+  ) => _customerRepo.deleteFollowUp(userId, customerId, followUpId);
 
   CollectionReference<ScheduledFollowUpModel> scheduledFollowUpsRef() =>
       _customerRepo.scheduledFollowUpsRef();
   Stream<List<ScheduledFollowUpModel>> getUpcomingFollowUpsForConsultant(
-          String consultantId, DateTime inTheNext) =>
-      _customerRepo.getUpcomingFollowUpsForConsultant(consultantId, inTheNext);
+    String consultantId,
+    DateTime inTheNext,
+  ) => _customerRepo.getUpcomingFollowUpsForConsultant(consultantId, inTheNext);
   Stream<List<ScheduledFollowUpModel>> getScheduledFollowUpsForCustomer(
     String userId,
     String customerId, {
     String? linkedUserId,
-  }) =>
-      _customerRepo.getScheduledFollowUpsForCustomer(
-        userId,
-        customerId,
-        linkedUserId: linkedUserId,
-      );
+  }) => _customerRepo.getScheduledFollowUpsForCustomer(
+    userId,
+    customerId,
+    linkedUserId: linkedUserId,
+  );
   Future<void> addScheduledFollowUpBatch(List<ScheduledFollowUpModel> f) =>
       _customerRepo.addScheduledFollowUpBatch(f);
   Future<void> markScheduledFollowUpAsCompleted(String id) =>
@@ -181,8 +227,8 @@ class FirestoreService {
   Future<void> updateScheduledFollowUp(ScheduledFollowUpModel f) =>
       _customerRepo.updateScheduledFollowUp(f);
   Stream<List<ScheduledFollowUpModel>> getAllScheduledFollowUpsForConsultant(
-          String consultantId) =>
-      _customerRepo.getAllScheduledFollowUpsForConsultant(consultantId);
+    String consultantId,
+  ) => _customerRepo.getAllScheduledFollowUpsForConsultant(consultantId);
 
   // ── OrderRepository delegate ───────────────────────────────────────────
 
@@ -211,24 +257,22 @@ class FirestoreService {
     String? customerName,
     String? customerPhone,
     String? customerEmail,
-  }) =>
-      _inviteCodeRepo.createInviteCode(
-        distributorId,
-        customerRecordId: customerRecordId,
-        customerName: customerName,
-        customerPhone: customerPhone,
-        customerEmail: customerEmail,
-      );
+  }) => _inviteCodeRepo.createInviteCode(
+    distributorId,
+    customerRecordId: customerRecordId,
+    customerName: customerName,
+    customerPhone: customerPhone,
+    customerEmail: customerEmail,
+  );
 
   Future<({CustomerModel customer, InviteCodeModel inviteCode})>
-      addCustomerWithInviteCode({
+  addCustomerWithInviteCode({
     required String distributorId,
     required CustomerModel customer,
-  }) =>
-          _inviteCodeRepo.addCustomerWithInviteCode(
-            distributorId: distributorId,
-            customer: customer,
-          );
+  }) => _inviteCodeRepo.addCustomerWithInviteCode(
+    distributorId: distributorId,
+    customer: customer,
+  );
 
   Future<InviteCodeModel> regenerateInviteCode({
     required String distributorId,
@@ -237,15 +281,14 @@ class FirestoreService {
     required String customerName,
     required String customerPhone,
     String? customerEmail,
-  }) =>
-      _inviteCodeRepo.regenerateInviteCode(
-        distributorId: distributorId,
-        customerRecordId: customerRecordId,
-        oldInviteCodeId: oldInviteCodeId,
-        customerName: customerName,
-        customerPhone: customerPhone,
-        customerEmail: customerEmail,
-      );
+  }) => _inviteCodeRepo.regenerateInviteCode(
+    distributorId: distributorId,
+    customerRecordId: customerRecordId,
+    oldInviteCodeId: oldInviteCodeId,
+    customerName: customerName,
+    customerPhone: customerPhone,
+    customerEmail: customerEmail,
+  );
 
   Future<InviteCodeModel?> validateInviteCode(String code) =>
       _inviteCodeRepo.validateInviteCode(code);
@@ -255,13 +298,12 @@ class FirestoreService {
     required InviteCodeModel inviteCode,
     required String newUserId,
     bool existingUser = false,
-  }) =>
-      _inviteCodeRepo.signUpWithInviteCodeBatch(
-        userProfile: userProfile,
-        inviteCode: inviteCode,
-        newUserId: newUserId,
-        existingUser: existingUser,
-      );
+  }) => _inviteCodeRepo.signUpWithInviteCodeBatch(
+    userProfile: userProfile,
+    inviteCode: inviteCode,
+    newUserId: newUserId,
+    existingUser: existingUser,
+  );
 
   Stream<List<InviteCodeModel>> getInviteCodesForDistributor(String id) =>
       _inviteCodeRepo.getInviteCodesForDistributor(id);
@@ -279,11 +321,11 @@ class FirestoreService {
   Stream<List<ProgressEntryModel>> getProgressEntries(
     String userId, {
     int limitDays = 90,
-  }) =>
-      _progressRepo.getProgressEntries(userId, limitDays: limitDays);
+  }) => _progressRepo.getProgressEntries(userId, limitDays: limitDays);
   Future<DocumentReference<ProgressEntryModel>> addProgressEntry(
-          String userId, ProgressEntryModel e) =>
-      _progressRepo.addProgressEntry(userId, e);
+    String userId,
+    ProgressEntryModel e,
+  ) => _progressRepo.addProgressEntry(userId, e);
   Future<void> updateProgressEntry(String userId, ProgressEntryModel e) =>
       _progressRepo.updateProgressEntry(userId, e);
   Future<void> deleteProgressEntry(String userId, String entryId) =>
@@ -315,8 +357,9 @@ class FirestoreService {
   Stream<String?> watchDistributorMotivationMessage(String customerId) =>
       _motivationRepo.watchDistributorMotivationMessage(customerId);
   Future<void> saveDistributorMotivationMessage(
-          String customerId, String message) =>
-      _motivationRepo.saveDistributorMotivationMessage(customerId, message);
+    String customerId,
+    String message,
+  ) => _motivationRepo.saveDistributorMotivationMessage(customerId, message);
   Future<void> saveMotivationScore(String customerId, int score) =>
       _motivationRepo.saveMotivationScore(customerId, score);
   Future<List<int>> getMotivationScoresLastDays(String customerId, int days) =>
@@ -325,8 +368,8 @@ class FirestoreService {
   // ── CustomerInsightsService delegate ───────────────────────────────────
 
   Future<DistributorCustomerInsights> getDistributorCustomerInsights(
-          String customerUserId) =>
-      _insightsService.getDistributorCustomerInsights(customerUserId);
+    String customerUserId,
+  ) => _insightsService.getDistributorCustomerInsights(customerUserId);
   Future<int> getAtRiskCustomerCount(String distributorId) =>
       _insightsService.getAtRiskCustomerCount(distributorId);
 
@@ -371,11 +414,13 @@ class FirestoreService {
           'users/$assignedDistributorId/customers/${crmRecord.id}/follow_ups',
         );
         // Sonra CRM müşteri kaydını sil
-        await _safeDeleteDoc(_db
-            .collection('users')
-            .doc(assignedDistributorId)
-            .collection('customers')
-            .doc(crmRecord.id));
+        await _safeDeleteDoc(
+          _db
+              .collection('users')
+              .doc(assignedDistributorId)
+              .collection('customers')
+              .doc(crmRecord.id),
+        );
       }
     }
 
@@ -396,6 +441,7 @@ class FirestoreService {
     await _deleteSubcollection('users/$uid/dailyRoutines');
     await _deleteSubcollection('users/$uid/daily_exercise');
     await _deleteSubcollection('users/$uid/program');
+    await _deleteSubcollection('users/$uid/notifications');
     await _deleteSubcollection('motivations/$uid/daily_messages');
 
     // Davet kodlarını temizle (eğer distribütör ise)
@@ -462,7 +508,11 @@ class FirestoreService {
       await _db.terminate();
       await _db.clearPersistence();
     } catch (e) {
-      AppLogger.error('Firestore clearLocalCache hatası: $e', tag: 'FirestoreService', error: e);
+      AppLogger.error(
+        'Firestore clearLocalCache hatası: $e',
+        tag: 'FirestoreService',
+        error: e,
+      );
     }
   }
 }

@@ -1,7 +1,31 @@
 rules_version = '2';
 
 // ===============================================================
-// Assumed Data Model - recipes
+// Assumed Data Model - recipes and user notifications
+// ===============================================================
+// Collection: users/{userId}/notifications
+// Document ID: server-generated id (Cloud Functions/Admin SDK)
+// Fields:
+//   type: string (required; one of eleven supported categories)
+//   title: string (required; 1..160 characters)
+//   body: string (required; 1..2000 characters)
+//   createdAt: timestamp (required, immutable)
+//   isRead: bool (required; client may only transition false -> true)
+//   readAt: timestamp/null (optional)
+//   actionPath: string (optional; /home scoped, max 300 characters)
+//   sourceId: string (optional; max 160 characters)
+// Clients cannot create notifications. Owners can read/delete their own items
+// and update only the read-state fields.
+// ===============================================================
+// Collection: roleChangeActions
+// Document ID: {requestedBy}_{customerId}
+// Fields:
+//   requestedBy: string (required, authenticated distributor UID, max 128)
+//   customerId: string (required, assigned customer UID, max 128)
+//   action: string (required; promote/demote)
+//   createdAt: timestamp (required; within five minutes)
+// Clients can only create a relationship-scoped, state-valid command. Cloud
+// Functions/Admin SDK performs the role update and deletes the command.
 // ===============================================================
 // Collection: recipes
 // Document ID: stable recipe id (1..160 characters)
@@ -68,7 +92,6 @@ service cloud.firestore {
         'waterDailyGoal',
         'waterMinLimit',
         'waterMaxLimit',
-        'distributorRequestStatus',
         'fcmToken',
         'fcmTokenUpdatedAt',
         'notificationSettings'
@@ -79,6 +102,87 @@ service cloud.firestore {
       return signedIn() &&
         exists(/databases/$(database)/documents/userProfiles/$(customerUserId)) &&
         get(/databases/$(database)/documents/userProfiles/$(customerUserId)).data.assignedDistributorId == request.auth.uid;
+    }
+
+    function isValidInviteCode(data, codeId) {
+      return data.keys().hasOnly([
+          'code', 'distributorId', 'createdAt', 'expiresAt', 'status',
+          'isUsed', 'usedByUserId', 'customerRecordId', 'customerName',
+          'customerPhone', 'customerEmail'
+        ]) &&
+        data.keys().hasAll([
+          'code', 'distributorId', 'createdAt', 'expiresAt', 'status', 'isUsed'
+        ]) &&
+        data.code == codeId &&
+        data.code is string && data.code.matches('^[A-Z0-9]{8}$') &&
+        data.distributorId is string && data.distributorId.size() > 0 &&
+        data.distributorId.size() <= 128 &&
+        data.createdAt is timestamp &&
+        data.expiresAt is timestamp && data.expiresAt > data.createdAt &&
+        data.status in ['pending', 'used', 'expired'] &&
+        data.isUsed is bool &&
+        ((data.status == 'used' && data.isUsed == true &&
+          data.usedByUserId is string && data.usedByUserId.size() > 0 &&
+          data.usedByUserId.size() <= 128) ||
+         (data.status != 'used' && data.isUsed == false &&
+          !('usedByUserId' in data))) &&
+        (!('customerRecordId' in data) ||
+          (data.customerRecordId is string &&
+            data.customerRecordId.size() > 0 && data.customerRecordId.size() <= 128)) &&
+        (!('customerName' in data) ||
+          (data.customerName is string && data.customerName.size() <= 160)) &&
+        (!('customerPhone' in data) ||
+          (data.customerPhone is string && data.customerPhone.size() <= 40)) &&
+        (!('customerEmail' in data) ||
+          (data.customerEmail is string && data.customerEmail.size() <= 254));
+    }
+
+    function isValidInviteCodeLookup(data, codeId) {
+      return data.keys().hasOnly([
+          'code', 'distributorId', 'createdAt', 'expiresAt', 'status',
+          'isUsed', 'usedByUserId', 'customerRecordId'
+        ]) &&
+        data.keys().hasAll([
+          'code', 'distributorId', 'createdAt', 'expiresAt', 'status', 'isUsed'
+        ]) &&
+        data.code == codeId &&
+        data.code is string && data.code.matches('^[A-Z0-9]{8}$') &&
+        data.distributorId is string && data.distributorId.size() > 0 &&
+        data.distributorId.size() <= 128 &&
+        data.createdAt is timestamp &&
+        data.expiresAt is timestamp && data.expiresAt > data.createdAt &&
+        data.status in ['pending', 'used', 'expired'] &&
+        data.isUsed is bool &&
+        ((data.status == 'used' && data.isUsed == true &&
+          data.usedByUserId is string && data.usedByUserId.size() > 0 &&
+          data.usedByUserId.size() <= 128) ||
+         (data.status != 'used' && data.isUsed == false &&
+          !('usedByUserId' in data))) &&
+        (!('customerRecordId' in data) ||
+          (data.customerRecordId is string &&
+            data.customerRecordId.size() > 0 && data.customerRecordId.size() <= 128));
+    }
+
+    function inviteLookupMatchesPrivate(codeId, lookupData) {
+      let privateData = getAfter(
+        /databases/$(database)/documents/inviteCodes/$(codeId)
+      ).data;
+      return lookupData.code == privateData.code &&
+        lookupData.distributorId == privateData.distributorId &&
+        lookupData.createdAt == privateData.createdAt &&
+        lookupData.expiresAt == privateData.expiresAt &&
+        lookupData.status == privateData.status &&
+        lookupData.isUsed == privateData.isUsed &&
+        lookupData.get('usedByUserId', null) == privateData.get('usedByUserId', null) &&
+        lookupData.get('customerRecordId', null) == privateData.get('customerRecordId', null);
+    }
+
+    function privateInviteMatchesLookup(codeId, privateData) {
+      let lookupData = getAfter(
+        /databases/$(database)/documents/inviteCodeLookups/$(codeId)
+      ).data;
+      return inviteLookupMatchesPrivate(codeId, lookupData) &&
+        lookupData.distributorId == privateData.distributorId;
     }
 
     function isCustomerVisibleProduct() {
@@ -135,6 +239,71 @@ service cloud.firestore {
           (data.notes is string && data.notes.size() <= 2000)) &&
         (!('shippingAddress' in data) || data.shippingAddress == null ||
           (data.shippingAddress is string && data.shippingAddress.size() <= 1000));
+    }
+
+    function isValidAppNotification(data) {
+      return data.keys().hasOnly([
+          'type',
+          'title',
+          'body',
+          'createdAt',
+          'isRead',
+          'readAt',
+          'actionPath',
+          'sourceId'
+        ]) &&
+        data.keys().hasAll([
+          'type', 'title', 'body', 'createdAt', 'isRead'
+        ]) &&
+        data.type in [
+          'program',
+          'water',
+          'measurement',
+          'badge',
+          'follow_up',
+          'order',
+          'message',
+          'challenge',
+          'motivation',
+          'distributor_request',
+          'role_change'
+        ] &&
+        data.title is string &&
+        data.title.size() > 0 &&
+        data.title.size() <= 160 &&
+        data.body is string &&
+        data.body.size() > 0 &&
+        data.body.size() <= 2000 &&
+        data.createdAt is timestamp &&
+        data.isRead is bool &&
+        (!('readAt' in data) || data.readAt == null ||
+          data.readAt is timestamp) &&
+        (!('actionPath' in data) || data.actionPath == null ||
+          (data.actionPath is string &&
+            data.actionPath.size() <= 300 &&
+            data.actionPath.matches('^/home(/.*)?$'))) &&
+        (!('sourceId' in data) || data.sourceId == null ||
+          (data.sourceId is string && data.sourceId.size() <= 160));
+    }
+
+    function isValidRoleChangeAction(data, actionId) {
+      return data.keys().hasOnly([
+          'requestedBy', 'customerId', 'action', 'createdAt'
+        ]) &&
+        data.keys().hasAll([
+          'requestedBy', 'customerId', 'action', 'createdAt'
+        ]) &&
+        data.requestedBy is string &&
+        data.requestedBy.size() > 0 &&
+        data.requestedBy.size() <= 128 &&
+        data.customerId is string &&
+        data.customerId.size() > 0 &&
+        data.customerId.size() <= 128 &&
+        actionId == data.requestedBy + '_' + data.customerId &&
+        data.action in ['promote', 'demote'] &&
+        data.createdAt is timestamp &&
+        data.createdAt <= request.time &&
+        data.createdAt > request.time - duration.value(5, 'm');
     }
 
     function isAssignedCustomerOrder(distributorId, data) {
@@ -579,6 +748,26 @@ service cloud.firestore {
             !('assignedDistributorId' in request.resource.data) ||
             request.resource.data.assignedDistributorId == resource.data.assignedDistributorId
           ))
+        // Müşteri yalnızca atanmış ve aktif distribütörüne başvurabilir.
+        // Rol değişikliği bu yazımla yapılmaz; Cloud Function tarafından
+        // ayrı, yetkili bir komut üzerinden gerçekleştirilir.
+        || (
+          isOwner(userId)
+          && resource.data.role == 'customer'
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['distributorRequestStatus'])
+          && request.resource.data.distributorRequestStatus == 'pending'
+          && resource.data.get('distributorRequestStatus', 'none') in [
+            'none', 'cancelled', 'rejected', 'reverted'
+          ]
+          && resource.data.assignedDistributorId is string
+          && resource.data.assignedDistributorId.size() > 0
+          && resource.data.assignedDistributorId.size() <= 128
+          && exists(/databases/$(database)/documents/userProfiles/$(resource.data.assignedDistributorId))
+          && get(/databases/$(database)/documents/userProfiles/$(resource.data.assignedDistributorId)).data.role
+              in ['distributor', 'supervisor', 'successCreator']
+        )
         || (
           isOwner(userId)
           && resource.data.role == 'customer'
@@ -629,58 +818,107 @@ service cloud.firestore {
       }
     }
 
+    match /roleChangeActions/{actionId} {
+      // İstemci yalnızca tek kullanımlık komut oluşturur. Okuma, değiştirme,
+      // silme ve asıl rol güncellemesi yalnızca Admin SDK sorumluluğundadır.
+      allow create: if isDistributor() &&
+        isValidRoleChangeAction(request.resource.data, actionId) &&
+        request.resource.data.requestedBy == request.auth.uid &&
+        exists(/databases/$(database)/documents/userProfiles/$(request.resource.data.customerId)) &&
+        get(/databases/$(database)/documents/userProfiles/$(request.resource.data.customerId)).data.assignedDistributorId == request.auth.uid &&
+        (
+          (
+            request.resource.data.action == 'promote' &&
+            get(/databases/$(database)/documents/userProfiles/$(request.resource.data.customerId)).data.role == 'customer'
+          ) ||
+          (
+            request.resource.data.action == 'demote' &&
+            get(/databases/$(database)/documents/userProfiles/$(request.resource.data.customerId)).data.role == 'distributor' &&
+            get(/databases/$(database)/documents/userProfiles/$(request.resource.data.customerId)).data.distributorRequestStatus == 'approved'
+          )
+        );
+      allow read, update, delete: if false;
+    }
+
     match /inviteCodes/{codeId} {
-      allow get: if signedIn();
-      allow list: if signedIn() && (
+      // Bu belgeler isim/telefon/e-posta içerebilir. Yalnızca kodun sahibi
+      // veya kodu kullanmış müşteri özel belgeyi okuyabilir.
+      allow get, list: if signedIn() && (
         resource.data.distributorId == request.auth.uid ||
         resource.data.usedByUserId == request.auth.uid
       );
 
       allow create: if isDistributor() &&
-        request.resource.data.keys().hasOnly([
-          'code',
-          'distributorId',
-          'createdAt',
-          'expiresAt',
-          'status',
-          'isUsed',
-          'customerRecordId',
-          'customerName',
-          'customerPhone',
-          'customerEmail'
-        ]) &&
-        request.resource.data.code == codeId &&
+        isValidInviteCode(request.resource.data, codeId) &&
         request.resource.data.distributorId == request.auth.uid &&
         request.resource.data.status == 'pending' &&
         request.resource.data.isUsed == false &&
         request.resource.data.expiresAt > request.time &&
-        !('usedByUserId' in request.resource.data);
+        privateInviteMatchesLookup(codeId, request.resource.data);
 
-      allow update: if signedIn() &&
-        resource.data.isUsed == false &&
-        (!('status' in resource.data) || resource.data.status == 'pending') &&
-        (
+      allow update: if isValidInviteCode(request.resource.data, codeId) &&
+        privateInviteMatchesLookup(codeId, request.resource.data) &&
+        resource.data.isUsed == false && resource.data.status == 'pending' && (
           (
-            ('expiresAt' in resource.data) &&
-            resource.data.expiresAt is timestamp &&
-            resource.data.expiresAt > request.time
+            signedIn() && resource.data.expiresAt > request.time &&
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['isUsed', 'status', 'usedByUserId']) &&
+            request.resource.data.status == 'used' &&
+            request.resource.data.usedByUserId == request.auth.uid
           ) ||
           (
-            !('expiresAt' in resource.data) &&
-            resource.data.createdAt is timestamp &&
-            resource.data.createdAt + duration.value(7, 'd') > request.time
+            isDistributor() && resource.data.distributorId == request.auth.uid &&
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status']) &&
+            request.resource.data.status == 'expired'
           )
-        ) &&
-        request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['isUsed', 'status', 'usedByUserId']) &&
-        request.resource.data.isUsed == true &&
-        request.resource.data.status == 'used' &&
-        request.resource.data.usedByUserId == request.auth.uid;
+        );
 
-      // Sadece kodu üreten distribütör (veya kullanan müşterinin kendisi) silebilir.
+      // Özel ve lookup belgeleri aynı batch içinde silinmek zorundadır.
       allow delete: if signedIn() && (
         resource.data.distributorId == request.auth.uid ||
         resource.data.usedByUserId == request.auth.uid
+      ) && !existsAfter(
+        /databases/$(database)/documents/inviteCodeLookups/$(codeId)
+      );
+    }
+
+    match /inviteCodeLookups/{codeId} {
+      // PII içermez; yalnızca tam kodu bilen giriş yapmış kullanıcı okuyabilir.
+      allow get: if signedIn();
+      allow list: if false;
+
+      allow create: if isDistributor() &&
+        isValidInviteCodeLookup(request.resource.data, codeId) &&
+        request.resource.data.distributorId == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.isUsed == false &&
+        request.resource.data.expiresAt > request.time &&
+        inviteLookupMatchesPrivate(codeId, request.resource.data);
+
+      allow update: if isValidInviteCodeLookup(request.resource.data, codeId) &&
+        inviteLookupMatchesPrivate(codeId, request.resource.data) &&
+        resource.data.isUsed == false && resource.data.status == 'pending' && (
+          (
+            signedIn() && resource.data.expiresAt > request.time &&
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['isUsed', 'status', 'usedByUserId']) &&
+            request.resource.data.status == 'used' &&
+            request.resource.data.usedByUserId == request.auth.uid
+          ) ||
+          (
+            isDistributor() && resource.data.distributorId == request.auth.uid &&
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status']) &&
+            request.resource.data.status == 'expired'
+          )
+        );
+
+      allow delete: if signedIn() && (
+        resource.data.distributorId == request.auth.uid ||
+        resource.data.usedByUserId == request.auth.uid
+      ) && !existsAfter(
+        /databases/$(database)/documents/inviteCodes/$(codeId)
       );
     }
 
@@ -755,6 +993,19 @@ service cloud.firestore {
           isValidOrder(request.resource.data, userId)
         );
         allow delete: if isOwner(userId) && isDistributor();
+      }
+
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow create: if false;
+        allow update: if isOwner(userId) &&
+          isValidAppNotification(request.resource.data) &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['isRead', 'readAt']) &&
+          resource.data.isRead == false &&
+          request.resource.data.isRead == true &&
+          request.resource.data.readAt is timestamp;
+        allow delete: if isOwner(userId);
       }
 
       match /progressEntries/{entryId} {

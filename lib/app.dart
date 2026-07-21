@@ -13,6 +13,7 @@ import 'features/customers/providers/customer_provider.dart';
 import 'features/home/providers/home_provider.dart';
 import 'features/orders/providers/cart_provider.dart';
 import 'features/orders/providers/order_provider.dart';
+import 'features/inventory/providers/inventory_provider.dart';
 import 'features/products/providers/product_provider.dart';
 import 'features/products/providers/recipe_provider.dart';
 import 'features/program/providers/program_provider.dart';
@@ -21,7 +22,7 @@ import 'features/program/services/notification_service.dart';
 import 'features/progress/providers/progress_provider.dart';
 import 'features/follow_ups/providers/follow_up_dashboard_provider.dart';
 import 'features/favorites/providers/favorites_provider.dart';
-import 'models/user_role.dart';
+import 'features/notifications/providers/app_notification_provider.dart';
 import 'features/water_tracker/providers/water_provider.dart';
 import 'features/step_tracker/providers/step_tracker_provider.dart';
 import 'services/exercise_service.dart';
@@ -329,6 +330,12 @@ class _AppState extends State<App> {
                 context.read<CustomerProvider>(),
               ),
             ),
+            ChangeNotifierProvider<InventoryProvider>(
+              create: (context) => InventoryProvider(
+                context.read<FirestoreService>().inventory,
+                context.read<AuthProvider>(),
+              ),
+            ),
             ChangeNotifierProvider<CartProvider>(
               create: (context) => CartProvider(),
             ),
@@ -383,12 +390,26 @@ class _AppState extends State<App> {
               update: (_, auth, provider) {
                 final favorites = provider ?? FavoritesProvider();
                 favorites.updateUser(
-                  auth.status == AuthStatus.authenticated &&
-                          auth.userProfile?.role == UserRole.customer
+                  auth.status == AuthStatus.authenticated
                       ? auth.firebaseUser?.uid
                       : null,
                 );
                 return favorites;
+              },
+            ),
+            ChangeNotifierProxyProvider<AuthProvider, AppNotificationProvider>(
+              create: (_) => AppNotificationProvider(),
+              update: (_, auth, previous) {
+                final provider = previous ?? AppNotificationProvider();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  provider.updateUser(
+                    auth.status == AuthStatus.authenticated &&
+                            !auth.isDeletingAccount
+                        ? auth.firebaseUser?.uid
+                        : null,
+                  );
+                });
+                return provider;
               },
             ),
             // Adım sensörü giriş akışında başlatılmaz. Kullanıcı Adım Sayar

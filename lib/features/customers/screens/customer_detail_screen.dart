@@ -43,7 +43,9 @@ class CustomerDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final customerProvider = context.watch<CustomerProvider>();
     final currentCustomer = customerProvider.customers.firstWhere(
-      (c) => c.id == customer.id || (c.linkedUserId != null && c.linkedUserId == customer.id),
+      (c) =>
+          c.id == customer.id ||
+          (c.linkedUserId != null && c.linkedUserId == customer.id),
       orElse: () => customer,
     );
 
@@ -307,7 +309,11 @@ class _FollowUpTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1) Planlanmış takipler (en önemli — en üstte)
-          _sectionTitle(context, 'Planlanmış Takipler', Icons.calendar_today_outlined),
+          _sectionTitle(
+            context,
+            'Planlanmış Takipler',
+            Icons.calendar_today_outlined,
+          ),
           const SizedBox(height: 8),
           _buildScheduledFollowUps(context),
           const SizedBox(height: 24),
@@ -378,8 +384,9 @@ class _FollowUpTab extends StatelessWidget {
       itemBuilder: (context, index) {
         final scheduledFollowUp =
             followUpProvider.pendingScheduledFollowUps[index];
-        final isOverdue =
-            scheduledFollowUp.dueDate.toDate().isBefore(DateTime.now());
+        final isOverdue = scheduledFollowUp.dueDate.toDate().isBefore(
+          DateTime.now(),
+        );
 
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -532,8 +539,8 @@ class _FollowUpTab extends StatelessWidget {
                 Text(
                   'Son 7 Gün Özeti',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -551,8 +558,8 @@ class _FollowUpTab extends StatelessWidget {
                       value: latestProgress != null
                           ? '${latestProgress.weight.toStringAsFixed(1)} kg'
                           : (profile?.weight != null
-                              ? '${profile!.weight!.toStringAsFixed(1)} kg'
-                              : 'Yok'),
+                                ? '${profile!.weight!.toStringAsFixed(1)} kg'
+                                : 'Yok'),
                       subtitle: latestProgress != null
                           ? DateFormat('dd.MM').format(latestProgress.date)
                           : 'Kayıt yok',
@@ -561,7 +568,8 @@ class _FollowUpTab extends StatelessWidget {
                     _buildMetricCard(
                       context,
                       title: 'Su Takibi',
-                      value: '${insights.todayWaterMl}/${insights.waterGoalMl} ml',
+                      value:
+                          '${insights.todayWaterMl}/${insights.waterGoalMl} ml',
                       subtitle:
                           '%${(waterPercent * 100).clamp(0, 100).round()}',
                       width: itemWidth,
@@ -611,14 +619,17 @@ class _FollowUpTab extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.trending_down,
-                    color: AppColors.primary, size: 20),
+                const Icon(
+                  Icons.trending_down,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Gelişim Takibi',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -649,16 +660,28 @@ class _FollowUpTab extends StatelessWidget {
                     _buildChangeChip('Kilo', insights.totalWeightChange, 'kg'),
                     if (entries.any((e) => e.waist != null))
                       _buildChangeChip(
-                          'Bel', _calcChange(entries, (e) => e.waist), 'cm'),
+                        'Bel',
+                        _calcChange(entries, (e) => e.waist),
+                        'cm',
+                      ),
                     if (entries.any((e) => e.belly != null))
                       _buildChangeChip(
-                          'Göbek', _calcChange(entries, (e) => e.belly), 'cm'),
+                        'Göbek',
+                        _calcChange(entries, (e) => e.belly),
+                        'cm',
+                      ),
                     if (entries.any((e) => e.hip != null))
                       _buildChangeChip(
-                          'Kalça', _calcChange(entries, (e) => e.hip), 'cm'),
+                        'Kalça',
+                        _calcChange(entries, (e) => e.hip),
+                        'cm',
+                      ),
                     if (entries.any((e) => e.chest != null))
                       _buildChangeChip(
-                          'Göğüs', _calcChange(entries, (e) => e.chest), 'cm'),
+                        'Göğüs',
+                        _calcChange(entries, (e) => e.chest),
+                        'cm',
+                      ),
                   ],
                 ),
               ],
@@ -707,8 +730,21 @@ class _ProfileHealthTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Distribütör başvuru kartı — pending ise en üstte (aksiyon gerektirir)
-          if (hasLinkedUser && profile?.distributorRequestStatus == 'pending') ...[
+          if (hasLinkedUser &&
+              profile?.distributorRequestStatus == 'pending') ...[
             _buildDistributorRequestCard(context, profile!),
+            const SizedBox(height: 16),
+          ],
+          if (hasLinkedUser &&
+              profile?.role == UserRole.customer &&
+              profile?.distributorRequestStatus != 'pending') ...[
+            _buildDirectDistributorRoleCard(context, profile!),
+            const SizedBox(height: 16),
+          ],
+          if (hasLinkedUser &&
+              profile?.role == UserRole.distributor &&
+              profile?.distributorRequestStatus == 'approved') ...[
+            _buildRestoreCustomerRoleCard(context, profile!),
             const SizedBox(height: 16),
           ],
 
@@ -732,8 +768,11 @@ class _ProfileHealthTab extends StatelessWidget {
               const SizedBox(height: 8),
               _buildPersonalCard(context, profile!),
               const SizedBox(height: 20),
-              _sectionTitle(context, 'Sağlık Bilgileri',
-                  Icons.medical_information_outlined),
+              _sectionTitle(
+                context,
+                'Sağlık Bilgileri',
+                Icons.medical_information_outlined,
+              ),
               const SizedBox(height: 8),
               _buildHealthCard(context, profile!),
               const SizedBox(height: 20),
@@ -770,22 +809,29 @@ class _ProfileHealthTab extends StatelessWidget {
           children: [
             _infoRow(Icons.phone_outlined, 'Telefon', customer.phoneNumber),
             const SizedBox(height: 10),
-            _infoRow(Icons.email_outlined, 'E-posta',
-                customer.email ?? 'Belirtilmemiş'),
+            _infoRow(
+              Icons.email_outlined,
+              'E-posta',
+              customer.email ?? 'Belirtilmemiş',
+            ),
             const SizedBox(height: 10),
             _infoRow(
               Icons.calendar_today_outlined,
               'İlk Temas',
-              DateFormat('dd MMMM yyyy', 'tr_TR')
-                  .format(customer.firstContactDate.toDate()),
+              DateFormat(
+                'dd MMMM yyyy',
+                'tr_TR',
+              ).format(customer.firstContactDate.toDate()),
             ),
             if (customer.activatedAt != null) ...[
               const SizedBox(height: 10),
               _infoRow(
                 Icons.verified_user_outlined,
                 'Aktive Olduğu Tarih',
-                DateFormat('dd MMMM yyyy HH:mm', 'tr_TR')
-                    .format(customer.activatedAt!.toDate()),
+                DateFormat(
+                  'dd MMMM yyyy HH:mm',
+                  'tr_TR',
+                ).format(customer.activatedAt!.toDate()),
               ),
             ],
           ],
@@ -948,8 +994,12 @@ class _ProfileHealthTab extends StatelessWidget {
               _labeledBlock('Sağlık Notu', notes, Icons.note_alt_outlined),
             if (allergies.isNotEmpty) ...[
               if (notes.isNotEmpty) const SizedBox(height: 14),
-              _labeledBlock('Alerjiler', allergies, Icons.warning_amber_outlined,
-                  color: Colors.orange.shade700),
+              _labeledBlock(
+                'Alerjiler',
+                allergies,
+                Icons.warning_amber_outlined,
+                color: Colors.orange.shade700,
+              ),
             ],
             if (meds.isNotEmpty) ...[
               if (notes.isNotEmpty || allergies.isNotEmpty)
@@ -967,8 +1017,12 @@ class _ProfileHealthTab extends StatelessWidget {
     );
   }
 
-  Widget _labeledBlock(String label, String value, IconData icon,
-      {Color? color}) {
+  Widget _labeledBlock(
+    String label,
+    String value,
+    IconData icon, {
+    Color? color,
+  }) {
     final iconColor = color ?? AppColors.grey700;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1005,10 +1059,7 @@ class _ProfileHealthTab extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: AppColors.grey600,
-                ),
+                style: TextStyle(fontSize: 11, color: AppColors.grey600),
               ),
               const SizedBox(height: 2),
               Text(value, style: const TextStyle(fontSize: 14)),
@@ -1037,8 +1088,7 @@ class _ProfileHealthTab extends StatelessWidget {
           return _buildInfoMessage(
             icon: Icons.info_outline,
             color: Colors.blue,
-            text:
-                'Bu müşteri için oluşturulmuş bir davet kodu bulunamadı.',
+            text: 'Bu müşteri için oluşturulmuş bir davet kodu bulunamadı.',
           );
         }
 
@@ -1047,9 +1097,7 @@ class _ProfileHealthTab extends StatelessWidget {
           color: AppColors.primary.withValues(alpha: 0.08),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(
-              color: AppColors.primary.withValues(alpha: 0.3),
-            ),
+            side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -1175,8 +1223,7 @@ class _HistoryTab extends StatelessWidget {
         children: [
           // Tüm ölçümler
           if (hasLinkedUser) ...[
-            _sectionTitle(
-                context, 'Tüm Ölçümler', Icons.straighten),
+            _sectionTitle(context, 'Tüm Ölçümler', Icons.straighten),
             const SizedBox(height: 8),
             if (isInsightsLoading)
               const Center(
@@ -1291,8 +1338,9 @@ class _HistoryTab extends StatelessWidget {
                 );
 
                 if (confirmed == true && context.mounted) {
-                  final success =
-                      await followUpProvider.deleteFollowUp(followUp.id);
+                  final success = await followUpProvider.deleteFollowUp(
+                    followUp.id,
+                  );
                   if (context.mounted && !success) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -1321,9 +1369,9 @@ Widget _sectionTitle(BuildContext context, String text, IconData icon) {
       const SizedBox(width: 8),
       Text(
         text,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
       ),
     ],
   );
@@ -1377,22 +1425,19 @@ Widget _buildMetricCard(
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.grey700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: AppColors.grey700),
         ),
         const SizedBox(height: 6),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
       ],
     ),
   );
@@ -1402,10 +1447,7 @@ Widget _buildChangeChip(String label, double? change, String unit) {
   final isPositive = (change ?? 0) >= 0;
   return Column(
     children: [
-      Text(
-        label,
-        style: TextStyle(fontSize: 11, color: AppColors.grey600),
-      ),
+      Text(label, style: TextStyle(fontSize: 11, color: AppColors.grey600)),
       const SizedBox(height: 4),
       Text(
         change != null
@@ -1438,26 +1480,40 @@ Widget _buildEntryRow(ProgressEntryModel entry) {
             spacing: 12,
             runSpacing: 4,
             children: [
-              _entryChip('${entry.weight.toStringAsFixed(1)} kg',
-                  Icons.monitor_weight_outlined),
+              _entryChip(
+                '${entry.weight.toStringAsFixed(1)} kg',
+                Icons.monitor_weight_outlined,
+              ),
               if (entry.waist != null)
                 _entryChip(
-                    '${entry.waist!.toStringAsFixed(1)} cm', Icons.straighten),
+                  '${entry.waist!.toStringAsFixed(1)} cm',
+                  Icons.straighten,
+                ),
               if (entry.belly != null)
                 _entryChip(
-                    '${entry.belly!.toStringAsFixed(1)} cm', Icons.straighten),
+                  '${entry.belly!.toStringAsFixed(1)} cm',
+                  Icons.straighten,
+                ),
               if (entry.hip != null)
                 _entryChip(
-                    '${entry.hip!.toStringAsFixed(1)} cm', Icons.straighten),
+                  '${entry.hip!.toStringAsFixed(1)} cm',
+                  Icons.straighten,
+                ),
               if (entry.chest != null)
                 _entryChip(
-                    '${entry.chest!.toStringAsFixed(1)} cm', Icons.straighten),
+                  '${entry.chest!.toStringAsFixed(1)} cm',
+                  Icons.straighten,
+                ),
               if (entry.bodyFat != null)
-                _entryChip('%${entry.bodyFat!.toStringAsFixed(1)}',
-                    Icons.water_drop_outlined),
+                _entryChip(
+                  '%${entry.bodyFat!.toStringAsFixed(1)}',
+                  Icons.water_drop_outlined,
+                ),
               if (entry.muscleMass != null)
-                _entryChip('${entry.muscleMass!.toStringAsFixed(1)} kg',
-                    Icons.fitness_center),
+                _entryChip(
+                  '${entry.muscleMass!.toStringAsFixed(1)} kg',
+                  Icons.fitness_center,
+                ),
             ],
           ),
         ),
@@ -1477,12 +1533,18 @@ Widget _entryChip(String text, IconData icon) {
   );
 }
 
-double? _calcChange(List<ProgressEntryModel> entries,
-    double? Function(ProgressEntryModel) getter) {
-  final first = entries.firstWhere((e) => getter(e) != null,
-      orElse: () => entries.first);
-  final last = entries.lastWhere((e) => getter(e) != null,
-      orElse: () => entries.last);
+double? _calcChange(
+  List<ProgressEntryModel> entries,
+  double? Function(ProgressEntryModel) getter,
+) {
+  final first = entries.firstWhere(
+    (e) => getter(e) != null,
+    orElse: () => entries.first,
+  );
+  final last = entries.lastWhere(
+    (e) => getter(e) != null,
+    orElse: () => entries.last,
+  );
   final firstVal = getter(first);
   final lastVal = getter(last);
   if (firstVal == null || lastVal == null) return null;
@@ -1576,7 +1638,9 @@ void _showMotivationMessageSheet(
 }
 
 Widget _buildDistributorRequestCard(
-    BuildContext context, UserProfileModel profile) {
+  BuildContext context,
+  UserProfileModel profile,
+) {
   return Card(
     elevation: 4,
     shadowColor: AppColors.primary.withValues(alpha: 0.2),
@@ -1591,8 +1655,11 @@ Widget _buildDistributorRequestCard(
         children: [
           Row(
             children: [
-              const Icon(Icons.business_center,
-                  color: AppColors.primary, size: 28),
+              const Icon(
+                Icons.business_center,
+                color: AppColors.primary,
+                size: 28,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1609,10 +1676,7 @@ Widget _buildDistributorRequestCard(
                     const SizedBox(height: 4),
                     Text(
                       '${profile.name ?? 'Müşteri'} distribütör olmak için başvuruda bulundu.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.grey700,
-                      ),
+                      style: TextStyle(fontSize: 14, color: AppColors.grey700),
                     ),
                   ],
                 ),
@@ -1624,7 +1688,11 @@ Widget _buildDistributorRequestCard(
             width: double.infinity,
             height: 48,
             child: ElevatedButton.icon(
-              onPressed: () => _approveDistributorRequest(context, profile),
+              onPressed: () => _promoteCustomerToDistributor(
+                context,
+                profile,
+                fromRequest: true,
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -1645,15 +1713,72 @@ Widget _buildDistributorRequestCard(
   );
 }
 
-Future<void> _approveDistributorRequest(
-    BuildContext context, UserProfileModel profile) async {
+Widget _buildDirectDistributorRoleCard(
+  BuildContext context,
+  UserProfileModel profile,
+) {
+  return Card(
+    elevation: 0,
+    color: AppColors.primary.withValues(alpha: 0.05),
+    shape: RoundedRectangleBorder(
+      side: const BorderSide(color: AppColors.primary),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.admin_panel_settings_outlined,
+                color: AppColors.primary,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Rol Yönetimi',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${profile.name ?? 'Bu müşteriyi'} ayrıca uygulamadan başvuru göndermesini beklemeden distribütör yapabilirsiniz.',
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _promoteCustomerToDistributor(
+                context,
+                profile,
+                fromRequest: false,
+              ),
+              icon: const Icon(Icons.business_center_outlined),
+              label: const Text('Distribütör Yap'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _promoteCustomerToDistributor(
+  BuildContext context,
+  UserProfileModel profile, {
+  required bool fromRequest,
+}) async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Başvuruyu Onayla'),
+      title: Text(fromRequest ? 'Başvuruyu Onayla' : 'Distribütör Yap'),
       content: Text(
-        '${profile.name ?? 'Müşteri'} isimli müşteriyi distribütör olarak onaylamak istediğinizden emin misiniz? '
-        'Bu işlem geri alınamaz.',
+        '${profile.name ?? 'Müşteri'} isimli müşteriyi distribütör yapmak istediğinizden emin misiniz? '
+        'Gerekirse bu ekrandan tekrar müşteri rolüne döndürebilirsiniz.',
       ),
       actions: [
         TextButton(
@@ -1666,7 +1791,7 @@ Future<void> _approveDistributorRequest(
             backgroundColor: AppColors.primary,
             foregroundColor: Colors.white,
           ),
-          child: const Text('Onayla'),
+          child: Text(fromRequest ? 'Onayla' : 'Distribütör Yap'),
         ),
       ],
     ),
@@ -1674,33 +1799,167 @@ Future<void> _approveDistributorRequest(
 
   if (confirmed != true || !context.mounted) return;
 
+  final messenger = ScaffoldMessenger.of(context);
   try {
     final firestoreService = context.read<FirestoreService>();
-    final updatedProfile = profile.copyWith(
-      role: UserRole.distributor,
-      distributorRequestStatus: 'approved',
-    );
-    await firestoreService.setUserProfile(updatedProfile);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Müşteri başarıyla distribütör olarak onaylandı.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+    final requestedBy = context.read<AuthProvider>().firebaseUser?.uid;
+    if (requestedBy == null) {
+      throw Exception('Oturum bilgisi bulunamadı.');
     }
+    await firestoreService.requestCustomerRoleChange(
+      requestedBy: requestedBy,
+      customerId: profile.id,
+      action: 'promote',
+    );
+    await firestoreService.waitForCustomerRole(
+      customerId: profile.id,
+      expectedRole: UserRole.distributor,
+    );
+
+    _showRoleSnackBar(
+      messenger,
+      const SnackBar(
+        content: Text('Müşteri başarıyla distribütör yapıldı.'),
+        backgroundColor: Colors.green,
+      ),
+    );
   } catch (e) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
+    _showRoleSnackBar(
+      messenger,
       SnackBar(
         content: Text(
-          'Onaylama sırasında hata oluştu: ${e.toString().replaceFirst('Exception: ', '')}',
+          'Rol değişikliği sırasında hata oluştu: ${e.toString().replaceFirst('Exception: ', '')}',
         ),
         backgroundColor: Colors.red,
       ),
     );
   }
+}
+
+Widget _buildRestoreCustomerRoleCard(
+  BuildContext context,
+  UserProfileModel profile,
+) {
+  return Card(
+    elevation: 0,
+    color: Colors.orange.withValues(alpha: 0.07),
+    shape: RoundedRectangleBorder(
+      side: BorderSide(color: Colors.orange.shade700),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.manage_accounts, color: Colors.orange.shade800),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Rol Yönetimi',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${profile.name ?? 'Bu kullanıcı'} distribütör rolünde. Yanlışlıkla onaylandıysa hesabı tekrar müşteri rolüne döndürebilirsiniz.',
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _restoreCustomerRole(context, profile),
+              icon: const Icon(Icons.undo),
+              label: const Text('Tekrar Müşteri Yap'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.orange.shade900,
+                side: BorderSide(color: Colors.orange.shade700),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _restoreCustomerRole(
+  BuildContext context,
+  UserProfileModel profile,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Müşteri Rolüne Döndür'),
+      content: Text(
+        '${profile.name ?? 'Bu kullanıcı'} tekrar müşteri rolüne geçirilsin mi?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('İptal'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange.shade800,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Müşteri Yap'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed != true || !context.mounted) return;
+
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final firestoreService = context.read<FirestoreService>();
+    final requestedBy = context.read<AuthProvider>().firebaseUser?.uid;
+    if (requestedBy == null) {
+      throw Exception('Oturum bilgisi bulunamadı.');
+    }
+    await firestoreService.requestCustomerRoleChange(
+      requestedBy: requestedBy,
+      customerId: profile.id,
+      action: 'demote',
+    );
+    await firestoreService.waitForCustomerRole(
+      customerId: profile.id,
+      expectedRole: UserRole.customer,
+    );
+    _showRoleSnackBar(
+      messenger,
+      const SnackBar(
+        content: Text('Kullanıcı başarıyla müşteri rolüne döndürüldü.'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  } catch (e) {
+    _showRoleSnackBar(
+      messenger,
+      SnackBar(
+        content: Text(
+          'Rol değiştirilemedi: ${e.toString().replaceFirst('Exception: ', '')}',
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+}
+
+void _showRoleSnackBar(ScaffoldMessengerState messenger, SnackBar snackBar) {
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (!messenger.mounted) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
+  });
 }
 
 // ============================================================================
@@ -1808,9 +2067,9 @@ class _AddFollowUpSheetState extends State<_AddFollowUpSheet> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Hata: ${e.toString()}')));
       }
     } finally {
       if (mounted) {
@@ -1943,9 +2202,9 @@ class _MotivationMessageSheetState extends State<_MotivationMessageSheet> {
   Future<void> _save() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mesaj boş olamaz.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Mesaj boş olamaz.')));
       return;
     }
     setState(() => _isSaving = true);
@@ -1967,9 +2226,9 @@ class _MotivationMessageSheetState extends State<_MotivationMessageSheet> {
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Kaydetme hatası: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Kaydetme hatası: $e')));
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -1998,10 +2257,9 @@ class _MotivationMessageSheetState extends State<_MotivationMessageSheet> {
           const SizedBox(height: 4),
           Text(
             'Alıcı: ${widget.customerName}',
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(color: AppColors.grey700),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.grey700),
           ),
           const SizedBox(height: 16),
           if (_isLoadingExisting)
@@ -2028,17 +2286,18 @@ class _MotivationMessageSheetState extends State<_MotivationMessageSheet> {
             if (_hadExisting)
               Text(
                 'Bugün zaten bir mesaj göndermişsin. Kaydedersen mevcut mesajın üzerine yazılır.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.orange.shade800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.orange.shade800),
               ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed:
-                        _isSaving ? null : () => Navigator.of(context).pop(),
+                    onPressed: _isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
                     child: const Text('İptal'),
                   ),
                 ),
