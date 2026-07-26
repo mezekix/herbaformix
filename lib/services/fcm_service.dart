@@ -37,6 +37,12 @@ class FcmService {
   final FlutterLocalNotificationsPlugin _localPlugin =
       FlutterLocalNotificationsPlugin();
 
+  /// Firebase Console > Cloud Messaging > Web Push certificates alanındaki
+  /// public key release build'e bu adla verilmelidir.
+  static const String _webVapidKey = String.fromEnvironment(
+    'FIREBASE_WEB_VAPID_KEY',
+  );
+
   bool _initialized = false;
   StreamSubscription<String>? _tokenRefreshSub;
   StreamSubscription<RemoteMessage>? _foregroundSub;
@@ -111,6 +117,13 @@ class FcmService {
   /// İzin verildiyse `true`.
   Future<bool> requestPermission() async {
     try {
+      if (!await _fm.isSupported()) {
+        AppLogger.warning(
+          'Bu tarayıcı FCM bildirimlerini desteklemiyor',
+          tag: 'FcmService',
+        );
+        return false;
+      }
       final settings = await _fm.requestPermission(
         alert: true,
         badge: true,
@@ -128,17 +141,57 @@ class FcmService {
     }
   }
 
+  /// İşletim sistemi/tarayıcı bildirim izninin güncel durumunu döner.
+  ///
+  /// Web'de `flutter_local_notifications` desteği olmadığı için ayarlar
+  /// ekranı izin durumunu doğrudan FCM/browser API'sinden okumalıdır.
+  Future<bool> hasPermission() async {
+    try {
+      if (!await _fm.isSupported()) return false;
+      final settings = await _fm.getNotificationSettings();
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+    } catch (e) {
+      AppLogger.error(
+        'Bildirim izin durumu alınamadı',
+        tag: 'FcmService',
+        error: e,
+      );
+      return false;
+    }
+  }
+
   /// Cihazın güncel FCM token'ını döner.
   /// iOS'ta APNs token gelmeden FCM token üretilmez — kısaca bekler.
   /// Token alınamadıysa `null`.
   Future<String?> getToken() async {
     try {
+      if (!await hasPermission()) {
+        AppLogger.debug(
+          'Bildirim izni verilmediği için token istenmedi',
+          tag: 'FcmService',
+        );
+        return null;
+      }
       if (!kIsWeb && Platform.isIOS) {
         final apns = await _fm.getAPNSToken();
         if (apns == null) {
           // APNs token henüz hazır değil — bir defa daha dene.
           await Future.delayed(const Duration(seconds: 1));
         }
+      }
+      if (kIsWeb) {
+        if (_webVapidKey.isEmpty) {
+          AppLogger.error(
+            'FIREBASE_WEB_VAPID_KEY tanımlı değil; web push tokenı alınamaz',
+            tag: 'FcmService',
+          );
+          return null;
+        }
+        return await _fm.getToken(
+          vapidKey: _webVapidKey,
+          serviceWorkerScriptPath: 'firebase-messaging-sw.js',
+        );
       }
       return await _fm.getToken();
     } catch (e) {

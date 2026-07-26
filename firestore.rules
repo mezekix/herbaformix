@@ -70,6 +70,8 @@ service cloud.firestore {
       return [
         'email',
         'name',
+        'distributorLevel',
+        'monthlyVPTarget',
         'isOnboarded',
         'age',
         'phoneNumber',
@@ -96,6 +98,25 @@ service cloud.firestore {
         'fcmTokenUpdatedAt',
         'notificationSettings'
       ];
+    }
+
+    function hasValidDistributorSettingsUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['distributorLevel', 'monthlyVPTarget']) ||
+        (
+          resource.data.role in ['distributor', 'supervisor', 'successCreator'] &&
+          request.resource.data.role == resource.data.role &&
+          (!request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['monthlyVPTarget']) ||
+            (request.resource.data.monthlyVPTarget is int &&
+              request.resource.data.monthlyVPTarget >= 0 &&
+              request.resource.data.monthlyVPTarget <= 1000000)) &&
+          (!request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['distributorLevel']) ||
+            (request.resource.data.distributorLevel is string &&
+              request.resource.data.distributorLevel.size() > 0 &&
+              request.resource.data.distributorLevel.size() <= 80))
+        );
     }
 
     function isAssignedDistributor(customerUserId) {
@@ -200,7 +221,11 @@ service cloud.firestore {
           'totalAmount',
           'totalVpEarned',
           'notes',
-          'shippingAddress'
+          'shippingAddress',
+          'paymentStatus',
+          'paidAmount',
+          'paymentMethod',
+          'inventoryCycle'
         ]) &&
         data.keys().hasAll([
           'userId',
@@ -235,10 +260,52 @@ service cloud.firestore {
         data.totalVpEarned is number &&
         data.totalVpEarned >= 0 &&
         data.totalVpEarned <= 1000000 &&
+        (!('paymentStatus' in data) || data.paymentStatus in ['pending', 'partial', 'paid']) &&
+        (!('paidAmount' in data) || (data.paidAmount is number && data.paidAmount >= 0 && data.paidAmount <= data.totalAmount)) &&
+        (!('paymentMethod' in data) || data.paymentMethod == null ||
+          (data.paymentMethod is string && data.paymentMethod.size() <= 80)) &&
+        (!('inventoryCycle' in data) ||
+          (data.inventoryCycle is int && data.inventoryCycle >= 0 && data.inventoryCycle <= 10000)) &&
         (!('notes' in data) || data.notes == null ||
           (data.notes is string && data.notes.size() <= 2000)) &&
         (!('shippingAddress' in data) || data.shippingAddress == null ||
           (data.shippingAddress is string && data.shippingAddress.size() <= 1000));
+    }
+
+    function isValidInventoryItem(data) {
+      return data.keys().hasOnly(['productName', 'stockNo', 'onHandQuantity', 'averageUnitCost', 'updatedAt']) &&
+        data.keys().hasAll(['productName', 'onHandQuantity', 'averageUnitCost', 'updatedAt']) &&
+        data.productName is string && data.productName.size() > 0 && data.productName.size() <= 200 &&
+        (!('stockNo' in data) || data.stockNo == null || (data.stockNo is string && data.stockNo.size() <= 80)) &&
+        data.onHandQuantity is int && data.onHandQuantity >= 0 && data.onHandQuantity <= 100000 &&
+        data.averageUnitCost is number && data.averageUnitCost >= 0 && data.averageUnitCost <= 1000000 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidInventoryMovement(data) {
+      return data.keys().hasOnly(['productId', 'productName', 'stockNo', 'type', 'quantityDelta', 'unitCost', 'occurredAt', 'createdAt', 'referenceId', 'note']) &&
+        data.keys().hasAll(['productId', 'productName', 'type', 'quantityDelta', 'unitCost', 'occurredAt', 'createdAt']) &&
+        data.productId is string && data.productId.size() > 0 && data.productId.size() <= 128 &&
+        data.productName is string && data.productName.size() > 0 && data.productName.size() <= 200 &&
+        (!('stockNo' in data) || data.stockNo == null || (data.stockNo is string && data.stockNo.size() <= 80)) &&
+        data.type in ['initialCount', 'purchase', 'sale', 'personalUse', 'adjustmentIncrease', 'adjustmentDecrease', 'customerReturn'] &&
+        data.quantityDelta is int && data.quantityDelta != 0 && data.quantityDelta >= -100000 && data.quantityDelta <= 100000 &&
+        data.unitCost is number && data.unitCost >= 0 && data.unitCost <= 1000000 &&
+        data.occurredAt is timestamp && data.createdAt is timestamp &&
+        (!('referenceId' in data) || data.referenceId == null || (data.referenceId is string && data.referenceId.size() <= 200)) &&
+        (!('note' in data) || data.note == null || (data.note is string && data.note.size() <= 1000));
+    }
+
+    function isValidCustomerProductPrice(data, priceId) {
+      return data.keys().hasOnly(['customerId', 'productId', 'price', 'updatedAt']) &&
+        data.keys().hasAll(['customerId', 'productId', 'price', 'updatedAt']) &&
+        data.customerId is string && data.customerId.size() > 0 && data.customerId.size() <= 128 &&
+        data.productId is string && data.productId.size() > 0 && data.productId.size() <= 128 &&
+        priceId == data.customerId + '_' + data.productId &&
+        data.price is number && data.price >= 0 && data.price <= 1000000 &&
+        data.updatedAt is timestamp &&
+        data.updatedAt <= request.time &&
+        data.updatedAt > request.time - duration.value(5, 'm');
     }
 
     function isValidAppNotification(data) {
@@ -573,6 +640,21 @@ service cloud.firestore {
           (data.notes is string && data.notes.size() <= 3000));
     }
 
+    // 3 Temmuz 2026'dan önce oluşturulan takiplerde createdAt ve
+    // isAutoGenerated alanları bulunmayabilir. Bu belgelerin yalnızca
+    // tamamlanma durumu veya tarihi değiştirilebilir; eksik şema başka bir
+    // alanı değiştirmek ya da yeni alan eklemek için kullanılamaz.
+    function isValidLegacyScheduledFollowUpAction() {
+      return (
+          !('createdAt' in resource.data) ||
+          !('isAutoGenerated' in resource.data)
+        ) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['isCompleted', 'dueDate']) &&
+        request.resource.data.isCompleted is bool &&
+        request.resource.data.dueDate is timestamp;
+    }
+
     function isScheduledFollowUpLinkedCustomer(data) {
       return signedIn() && (
         data.customerId == request.auth.uid ||
@@ -744,6 +826,7 @@ service cloud.firestore {
       allow update: if (isOwner(userId) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(profileOwnerMutableKeys()) &&
           request.resource.data.role == resource.data.role &&
+          hasValidDistributorSettingsUpdate() &&
           (
             !('assignedDistributorId' in request.resource.data) ||
             request.resource.data.assignedDistributorId == resource.data.assignedDistributorId
@@ -970,6 +1053,27 @@ service cloud.firestore {
         }
       }
 
+      match /inventory/{productId} {
+        allow read: if isOwner(userId) && isDistributor();
+        allow create, update: if isOwner(userId) && isDistributor() &&
+          isValidInventoryItem(request.resource.data);
+        allow delete: if false;
+      }
+
+      match /inventoryMovements/{movementId} {
+        allow read: if isOwner(userId) && isDistributor();
+        allow create: if isOwner(userId) && isDistributor() &&
+          isValidInventoryMovement(request.resource.data);
+        allow update, delete: if false;
+      }
+
+      match /customerProductPrices/{priceId} {
+        allow read: if isOwner(userId) && isDistributor();
+        allow create, update: if isOwner(userId) && isDistributor() &&
+          isValidCustomerProductPrice(request.resource.data, priceId);
+        allow delete: if isOwner(userId) && isDistributor();
+      }
+
       match /orders/{orderId} {
         allow read: if isOwner(userId) ||
           isAssignedCustomerOrder(userId, resource.data);
@@ -979,7 +1083,11 @@ service cloud.firestore {
         ) || (
           isAssignedCustomerOrder(userId, request.resource.data) &&
           isValidOrder(request.resource.data, userId) &&
-          request.resource.data.status == 'OrderStatus.pending'
+          request.resource.data.status == 'OrderStatus.pending' &&
+          request.resource.data.paymentStatus == 'pending' &&
+          request.resource.data.paidAmount == 0 &&
+          request.resource.data.paymentMethod == null &&
+          request.resource.data.inventoryCycle == 0
         );
         allow update: if (
           isOwner(userId) && isDistributor() &&
@@ -992,7 +1100,8 @@ service cloud.firestore {
             .hasOnly(['notes', 'shippingAddress']) &&
           isValidOrder(request.resource.data, userId)
         );
-        allow delete: if isOwner(userId) && isDistributor();
+        allow delete: if isOwner(userId) && isDistributor() &&
+          resource.data.status != 'OrderStatus.delivered';
       }
 
       match /notifications/{notificationId} {
@@ -1089,11 +1198,16 @@ service cloud.firestore {
       // Sadece kaydı oluşturan consultant güncelleyebilir/silebilir.
       allow update: if signedIn() &&
         resource.data.consultantId == request.auth.uid &&
-        request.resource.data.consultantId == resource.data.consultantId &&
-        request.resource.data.customerId == resource.data.customerId &&
-        request.resource.data.createdAt == resource.data.createdAt &&
-        request.resource.data.isAutoGenerated == resource.data.isAutoGenerated &&
-        isValidScheduledFollowUp(request.resource.data);
+        (
+          (
+            request.resource.data.consultantId == resource.data.consultantId &&
+            request.resource.data.customerId == resource.data.customerId &&
+            request.resource.data.createdAt == resource.data.createdAt &&
+            request.resource.data.isAutoGenerated == resource.data.isAutoGenerated &&
+            isValidScheduledFollowUp(request.resource.data)
+          ) ||
+          isValidLegacyScheduledFollowUpAction()
+        );
       allow delete: if signedIn() && resource.data.consultantId == request.auth.uid;
     }
 

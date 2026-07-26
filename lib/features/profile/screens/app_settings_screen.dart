@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -83,7 +84,9 @@ class AppSettingsScreen extends StatelessWidget {
               side: BorderSide(color: AppColors.backgroundMuted),
             ),
             child: FutureBuilder<bool>(
-              future: NotificationService().hasPermission(),
+              future: kIsWeb
+                  ? FcmService().hasPermission()
+                  : NotificationService().hasPermission(),
               builder: (context, snapshot) {
                 final hasPermission = snapshot.data ?? false;
                 final isLoading =
@@ -121,13 +124,18 @@ class AppSettingsScreen extends StatelessWidget {
                     color: AppColors.textMuted,
                   ),
                   onTap: () async {
-                    final service = NotificationService();
-                    final localGranted = await service.requestPermission();
+                    // Yerel bildirim eklentisi web'i desteklemez. Web'de izin
+                    // ve durum doğrudan tarayıcı/FCM üzerinden yönetilir.
+                    final localGranted = kIsWeb
+                        ? false
+                        : await NotificationService().requestPermission();
                     final fcmGranted = await FcmService().requestPermission();
                     if (fcmGranted && context.mounted) {
                       await context.read<AuthProvider>().syncFcmToken();
                     }
-                    final granted = localGranted || fcmGranted;
+                    final granted = kIsWeb
+                        ? fcmGranted
+                        : localGranted || fcmGranted;
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
@@ -144,36 +152,37 @@ class AppSettingsScreen extends StatelessWidget {
               },
             ),
           ),
-          Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: AppColors.backgroundMuted),
+          if (!kIsWeb)
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: AppColors.backgroundMuted),
+              ),
+              child: ListTile(
+                leading: const Icon(
+                  Icons.notifications_active_outlined,
+                  color: Colors.green,
+                ),
+                title: Text(
+                  l.appSettingsSendTestNotification,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                trailing: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppColors.textMuted,
+                ),
+                onTap: () async {
+                  final service = NotificationService();
+                  await service.showTestNotification();
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l.appSettingsTestNotificationSent)),
+                  );
+                },
+              ),
             ),
-            child: ListTile(
-              leading: const Icon(
-                Icons.notifications_active_outlined,
-                color: Colors.green,
-              ),
-              title: Text(
-                l.appSettingsSendTestNotification,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              trailing: const Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: AppColors.textMuted,
-              ),
-              onTap: () async {
-                final service = NotificationService();
-                await service.showTestNotification();
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(l.appSettingsTestNotificationSent)),
-                );
-              },
-            ),
-          ),
           if (profile != null) ...[
             const SizedBox(height: 24),
             _sectionLabel("Bildirim Tercihleri"),

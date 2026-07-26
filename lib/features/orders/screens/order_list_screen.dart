@@ -110,8 +110,9 @@ class OrderListScreen extends StatelessWidget {
             content: const Text('Sipariş başarıyla silindi.'),
             backgroundColor: AppColors.grass,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       } catch (e) {
@@ -121,8 +122,9 @@ class OrderListScreen extends StatelessWidget {
             content: Text('Hata: ${e.toString()}'),
             backgroundColor: AppColors.papaya,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -156,8 +158,8 @@ class OrderListScreen extends StatelessWidget {
       body: orderProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : orders.isEmpty
-              ? _buildEmptyState(context, isCustomer)
-              : _buildOrderList(context, orders, orderProvider, isCustomer),
+          ? _buildEmptyState(context, isCustomer)
+          : _buildOrderList(context, orders, orderProvider, isCustomer),
     );
   }
 
@@ -186,16 +188,16 @@ class OrderListScreen extends StatelessWidget {
             Text(
               'Henüz siparişiniz yok',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               'Yeni bir sipariş oluşturarak başlayın.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -206,13 +208,15 @@ class OrderListScreen extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 14,
+                  ),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                onPressed: () =>
-                    context.goNamed(AddEditOrderScreen.routeName),
+                onPressed: () => context.goNamed(AddEditOrderScreen.routeName),
               ),
           ],
         ),
@@ -247,8 +251,10 @@ class OrderListScreen extends StatelessWidget {
     bool isCustomer,
   ) {
     final statusColor = _getStatusColor(order.status);
-    final formattedDate =
-        DateFormat('dd MMM yyyy, HH:mm', 'tr_TR').format(order.orderDate.toDate());
+    final formattedDate = DateFormat(
+      'dd MMM yyyy, HH:mm',
+      'tr_TR',
+    ).format(order.orderDate.toDate());
     final itemCount = order.items.length;
     final productSummary = order.items
         .take(3)
@@ -278,10 +284,7 @@ class OrderListScreen extends StatelessWidget {
           onTap: isCustomer
               ? null
               : () {
-                  context.goNamed(
-                    AddEditOrderScreen.routeName,
-                    extra: order,
-                  );
+                  context.goNamed(AddEditOrderScreen.routeName, extra: order);
                 },
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -337,8 +340,9 @@ class OrderListScreen extends StatelessWidget {
                                   formattedDate,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color:
-                                        AppColors.textSecondary.withAlpha(180),
+                                    color: AppColors.textSecondary.withAlpha(
+                                      180,
+                                    ),
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -353,7 +357,9 @@ class OrderListScreen extends StatelessWidget {
                     // Durum chip
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColor.withAlpha(20),
                         borderRadius: BorderRadius.circular(20),
@@ -389,8 +395,10 @@ class OrderListScreen extends StatelessWidget {
                 // ── Ürün özeti ──
                 Container(
                   width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.background,
                     borderRadius: BorderRadius.circular(10),
@@ -425,16 +433,14 @@ class OrderListScreen extends StatelessWidget {
                     // Tutar
                     _buildInfoChip(
                       icon: Icons.payments_outlined,
-                      label:
-                          '${order.totalAmount.toStringAsFixed(2)} ₺',
+                      label: '${order.totalAmount.toStringAsFixed(2)} ₺',
                       color: AppColors.primary,
                     ),
                     const SizedBox(width: 10),
                     // VP
                     _buildInfoChip(
                       icon: Icons.star_outline_rounded,
-                      label:
-                          '${order.totalVpEarned.toStringAsFixed(1)} VP',
+                      label: '${order.totalVpEarned.toStringAsFixed(1)} VP',
                       color: AppColors.mango,
                       textColor: AppColors.mangoDeep,
                     ),
@@ -458,6 +464,31 @@ class OrderListScreen extends StatelessWidget {
                     ],
                   ],
                 ),
+                if (!isCustomer) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        order.paymentStatus == PaymentStatus.paid
+                            ? Icons.check_circle_outline
+                            : Icons.account_balance_wallet_outlined,
+                        size: 16,
+                        color: order.paymentStatus == PaymentStatus.paid
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '${_paymentStatusText(order.paymentStatus)} • '
+                          'Tahsil: ${order.paidAmount.toStringAsFixed(2)} ₺ • '
+                          'Kalan: ${(order.totalAmount - order.paidAmount).toStringAsFixed(2)} ₺',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -537,4 +568,10 @@ class OrderListScreen extends StatelessWidget {
       ),
     );
   }
+
+  String _paymentStatusText(PaymentStatus status) => switch (status) {
+    PaymentStatus.pending => 'Ödeme bekliyor',
+    PaymentStatus.partial => 'Kısmi ödeme',
+    PaymentStatus.paid => 'Ödendi',
+  };
 }

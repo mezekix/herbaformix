@@ -3,9 +3,12 @@ import './order_item_model.dart'; // OrderItemModel'i import et
 
 enum OrderStatus { pending, processing, shipped, delivered, cancelled }
 
+enum PaymentStatus { pending, partial, paid }
+
 class OrderModel {
   final String id; // Firestore doküman ID'si
-  final String userId; // Bu siparişin hangi distribütöre ait olduğu (Auth User ID)
+  final String
+  userId; // Bu siparişin hangi distribütöre ait olduğu (Auth User ID)
   final String customerId; // Siparişi veren müşteri ID'si
   final String customerName; // Müşteri adı (denormalized)
   final List<OrderItemModel> items; // Siparişteki ürünler
@@ -15,6 +18,11 @@ class OrderModel {
   final double totalVpEarned; // Siparişten kazanılan toplam VP
   String? notes; // Siparişle ilgili notlar
   String? shippingAddress; // Teslimat adresi (müşteriden farklı olabilir)
+
+  final PaymentStatus paymentStatus;
+  final double paidAmount;
+  final String? paymentMethod;
+  final int inventoryCycle;
 
   OrderModel({
     required this.id,
@@ -27,12 +35,20 @@ class OrderModel {
     required this.totalAmount,
     required this.totalVpEarned,
     this.notes,
+    this.paymentStatus = PaymentStatus.pending,
+    this.paidAmount = 0,
+    this.paymentMethod,
+    this.inventoryCycle = 0,
     this.shippingAddress,
   });
 
   factory OrderModel.fromMap(Map<String, dynamic> map, String documentId) {
-    var itemsList = (map['items'] as List<dynamic>?)
-            ?.map((itemMap) => OrderItemModel.fromMap(itemMap as Map<String, dynamic>))
+    var itemsList =
+        (map['items'] as List<dynamic>?)
+            ?.map(
+              (itemMap) =>
+                  OrderItemModel.fromMap(itemMap as Map<String, dynamic>),
+            )
             .toList() ??
         [];
 
@@ -44,12 +60,20 @@ class OrderModel {
       items: itemsList,
       orderDate: map['orderDate'] as Timestamp? ?? Timestamp.now(),
       status: OrderStatus.values.firstWhere(
-          (e) => e.toString() == map['status'],
-          orElse: () => OrderStatus.pending),
+        (e) => e.toString() == map['status'],
+        orElse: () => OrderStatus.pending,
+      ),
       totalAmount: (map['totalAmount'] ?? 0.0).toDouble(),
       totalVpEarned: (map['totalVpEarned'] ?? 0.0).toDouble(),
       notes: map['notes'] as String?,
       shippingAddress: map['shippingAddress'] as String?,
+      paymentStatus: PaymentStatus.values.firstWhere(
+        (value) => value.name == map['paymentStatus'],
+        orElse: () => PaymentStatus.pending,
+      ),
+      paidAmount: (map['paidAmount'] ?? 0.0).toDouble(),
+      paymentMethod: map['paymentMethod'] as String?,
+      inventoryCycle: (map['inventoryCycle'] as num? ?? 0).toInt(),
     );
   }
 
@@ -65,6 +89,10 @@ class OrderModel {
       'totalVpEarned': totalVpEarned,
       'notes': notes,
       'shippingAddress': shippingAddress,
+      'paymentStatus': paymentStatus.name,
+      'paidAmount': paidAmount,
+      'paymentMethod': paymentMethod,
+      'inventoryCycle': inventoryCycle,
     };
   }
 }

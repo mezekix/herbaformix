@@ -61,6 +61,19 @@ function scheduledFollowUp(overrides = {}) {
   };
 }
 
+function legacyScheduledFollowUp(overrides = {}) {
+  return {
+    consultantId: consultantUid,
+    customerId: customerDocId,
+    customerFirstName: 'Ayse',
+    customerLastName: 'Yilmaz',
+    dueDate: Timestamp.fromDate(new Date('2026-06-20T09:00:00Z')),
+    title: 'Eski Takip',
+    isCompleted: false,
+    ...overrides,
+  };
+}
+
 function recipeDocument(overrides = {}) {
   return {
     productId: 'formul1_id',
@@ -93,6 +106,10 @@ function orderDocument(overrides = {}) {
     totalVpEarned: 10,
     notes: '',
     shippingAddress: '',
+    paymentStatus: 'pending',
+    paidAmount: 0,
+    paymentMethod: null,
+    inventoryCycle: 0,
     ...overrides,
   };
 }
@@ -235,6 +252,56 @@ await runTest('consultant can complete and snooze own scheduled follow-up', asyn
   await assertSucceeds(
     updateDoc(doc(db, 'scheduled_follow_ups', 'own-follow-up'), {
       dueDate: Timestamp.fromDate(new Date('2026-07-21T09:00:00Z')),
+    }),
+  );
+});
+
+await runTest('consultant can complete and snooze a legacy overdue scheduled follow-up', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), 'scheduled_follow_ups', 'legacy-overdue'),
+      legacyScheduledFollowUp(),
+    );
+  });
+
+  const db = authDb(consultantUid);
+  await assertSucceeds(
+    updateDoc(doc(db, 'scheduled_follow_ups', 'legacy-overdue'), {
+      isCompleted: true,
+    }),
+  );
+  await assertSucceeds(
+    updateDoc(doc(db, 'scheduled_follow_ups', 'legacy-overdue'), {
+      dueDate: Timestamp.fromDate(new Date('2026-07-25T09:00:00Z')),
+    }),
+  );
+});
+
+await runTest('legacy scheduled follow-up compatibility cannot change protected fields', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), 'scheduled_follow_ups', 'legacy-locked'),
+      legacyScheduledFollowUp(),
+    );
+  });
+
+  const db = authDb(consultantUid);
+  await assertFails(
+    updateDoc(doc(db, 'scheduled_follow_ups', 'legacy-locked'), {
+      consultantId: otherConsultantUid,
+      isCompleted: true,
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(db, 'scheduled_follow_ups', 'legacy-locked'), {
+      title: 'Degistirilmis eski takip',
+      isCompleted: true,
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(db, 'scheduled_follow_ups', 'legacy-locked'), {
+      injectedField: 'not-allowed',
+      isCompleted: true,
     }),
   );
 });
@@ -677,6 +744,162 @@ await runTest('notification update rejects schema pollution and oversized text',
     readAt: Timestamp.now(),
     body: 'x'.repeat(3000),
   }));
+});
+
+await runTest('inventory and movement ledger are private to the distributor', async () => {
+  const inventory = {
+    productName: 'Formula 1',
+    stockNo: 'SKU-1',
+    onHandQuantity: 5,
+    averageUnitCost: 250,
+    updatedAt: Timestamp.now(),
+  };
+  const movement = {
+    productId: 'formula-1',
+    productName: 'Formula 1',
+    stockNo: 'SKU-1',
+    type: 'purchase',
+    quantityDelta: 5,
+    unitCost: 250,
+    occurredAt: Timestamp.now(),
+    createdAt: Timestamp.now(),
+    referenceId: null,
+    note: null,
+  };
+  const ownerDb = authDb(consultantUid);
+  await assertSucceeds(setDoc(
+    doc(ownerDb, 'users', consultantUid, 'inventory', 'formula-1'),
+    inventory,
+  ));
+  await assertSucceeds(setDoc(
+    doc(ownerDb, 'users', consultantUid, 'inventoryMovements', 'move-1'),
+    movement,
+  ));
+  await assertFails(getDoc(
+    doc(authDb(otherConsultantUid), 'users', consultantUid, 'inventory', 'formula-1'),
+  ));
+  await assertFails(getDoc(
+    doc(authDb(linkedCustomerUid), 'users', consultantUid, 'inventoryMovements', 'move-1'),
+  ));
+  await assertFails(updateDoc(
+    doc(ownerDb, 'users', consultantUid, 'inventoryMovements', 'move-1'),
+    {quantityDelta: 99},
+  ));
+});
+
+await runTest('inventory rejects negative stock and polluted movement schemas', async () => {
+  const db = authDb(consultantUid);
+  await assertFails(setDoc(
+    doc(db, 'users', consultantUid, 'inventory', 'negative'),
+    {
+      productName: 'Negative',
+      onHandQuantity: -1,
+      averageUnitCost: 10,
+      updatedAt: Timestamp.now(),
+    },
+  ));
+  await assertFails(setDoc(
+    doc(db, 'users', consultantUid, 'inventoryMovements', 'polluted'),
+    {
+      productId: 'formula-1',
+      productName: 'Formula 1',
+      type: 'purchase',
+      quantityDelta: 1,
+      unitCost: 10,
+      occurredAt: Timestamp.now(),
+      createdAt: Timestamp.now(),
+      admin: true,
+    },
+  ));
+});
+
+await runTest('special customer prices are coach-private and schema-bound', async () => {
+  const db = authDb(consultantUid);
+  const priceRef = doc(
+    db,
+    'users',
+    consultantUid,
+    'customerProductPrices',
+    `${linkedCustomerUid}_formula-1`,
+  );
+  await assertSucceeds(setDoc(priceRef, {
+    customerId: linkedCustomerUid,
+    productId: 'formula-1',
+    price: 475,
+    updatedAt: Timestamp.now(),
+  }));
+  await assertSucceeds(getDoc(priceRef));
+  await assertFails(getDoc(doc(
+    authDb(linkedCustomerUid),
+    'users',
+    consultantUid,
+    'customerProductPrices',
+    `${linkedCustomerUid}_formula-1`,
+  )));
+  await assertFails(setDoc(
+    doc(db, 'users', consultantUid, 'customerProductPrices', 'wrong-id'),
+    {
+      customerId: linkedCustomerUid,
+      productId: 'formula-1',
+      price: 475,
+      updatedAt: Timestamp.now(),
+    },
+  ));
+});
+
+await runTest('customer cannot forge payment or inventory state on a request', async () => {
+  await assertFails(setDoc(
+    doc(authDb(linkedCustomerUid), 'users', consultantUid, 'orders', 'forged-payment'),
+    orderDocument({
+      paymentStatus: 'paid',
+      paidAmount: 500,
+      paymentMethod: 'cash',
+      inventoryCycle: 2,
+    }),
+  ));
+});
+
+await runTest('delivered order must be cancelled before deletion', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), 'users', consultantUid, 'orders', 'delivered-order'),
+      orderDocument({status: 'OrderStatus.delivered', inventoryCycle: 1}),
+    );
+  });
+  const reference = doc(
+    authDb(consultantUid),
+    'users',
+    consultantUid,
+    'orders',
+    'delivered-order',
+  );
+  await assertFails(deleteDoc(reference));
+  await assertSucceeds(updateDoc(reference, {status: 'OrderStatus.cancelled'}));
+  await assertSucceeds(deleteDoc(reference));
+});
+
+await runTest('promoted distributor can save a validated monthly VP target', async () => {
+  const profileRef = (db) => doc(db, 'userProfiles', consultantUid);
+  await assertSucceeds(updateDoc(profileRef(authDb(consultantUid)), {
+    monthlyVPTarget: 2500,
+    distributorLevel: 'Supervisor',
+  }));
+  await assertFails(updateDoc(profileRef(authDb(consultantUid)), {
+    monthlyVPTarget: -1,
+  }));
+  await assertFails(updateDoc(profileRef(authDb(consultantUid)), {
+    monthlyVPTarget: 1000001,
+  }));
+});
+
+await runTest('customer cannot forge distributor VP settings', async () => {
+  await assertFails(updateDoc(
+    doc(authDb(linkedCustomerUid), 'userProfiles', linkedCustomerUid),
+    {
+      monthlyVPTarget: 2500,
+      distributorLevel: 'Supervisor',
+    },
+  ));
 });
 
 await testEnv.cleanup();

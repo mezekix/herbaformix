@@ -14,6 +14,7 @@ import '../models/water_log_model.dart';
 import '../models/water_summary_model.dart';
 import 'repositories/customer_insights_service.dart';
 import 'repositories/customer_repository.dart';
+import 'repositories/customer_product_price_repository.dart';
 import 'repositories/invite_code_repository.dart';
 import 'repositories/inventory_repository.dart';
 import 'repositories/motivation_repository.dart';
@@ -47,6 +48,9 @@ class FirestoreService {
       _userProfileRepo = UserProfileRepository(firestore: firestore),
       _productRepo = ProductRepository(firestore: firestore),
       _customerRepo = CustomerRepository(firestore: firestore),
+      _customerProductPriceRepo = CustomerProductPriceRepository(
+        firestore: firestore,
+      ),
       _orderRepo = OrderRepository(firestore: firestore),
       _inventoryRepo = InventoryRepository(firestore: firestore),
       _inviteCodeRepo = InviteCodeRepository(firestore: firestore),
@@ -59,6 +63,7 @@ class FirestoreService {
   final UserProfileRepository _userProfileRepo;
   final ProductRepository _productRepo;
   final CustomerRepository _customerRepo;
+  final CustomerProductPriceRepository _customerProductPriceRepo;
   final OrderRepository _orderRepo;
   final InventoryRepository _inventoryRepo;
   final InviteCodeRepository _inviteCodeRepo;
@@ -71,6 +76,8 @@ class FirestoreService {
   UserProfileRepository get userProfile => _userProfileRepo;
   ProductRepository get products => _productRepo;
   CustomerRepository get customers => _customerRepo;
+  CustomerProductPriceRepository get customerProductPrices =>
+      _customerProductPriceRepo;
   OrderRepository get orders => _orderRepo;
   InventoryRepository get inventory => _inventoryRepo;
   InviteCodeRepository get inviteCodes => _inviteCodeRepo;

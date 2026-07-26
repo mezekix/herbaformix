@@ -38,11 +38,9 @@ class InventoryMovementModel {
   final String? referenceId;
   final String? note;
 
-  factory InventoryMovementModel.fromMap(
-    Map<String, dynamic> map,
-    String id,
-  ) {
-    final typeName = map['type'] as String? ?? InventoryMovementType.purchase.name;
+  factory InventoryMovementModel.fromMap(Map<String, dynamic> map, String id) {
+    final typeName =
+        map['type'] as String? ?? InventoryMovementType.purchase.name;
     return InventoryMovementModel(
       id: id,
       productId: map['productId'] as String? ?? '',
@@ -62,15 +60,15 @@ class InventoryMovementModel {
   }
 
   Map<String, dynamic> toMap() => {
-        'productId': productId,
-        'productName': productName,
-        'stockNo': stockNo,
-        'type': type.name,
-        'quantityDelta': quantityDelta,
-        'unitCost': unitCost,
-        'occurredAt': occurredAt,
-        'createdAt': createdAt,
-        'referenceId': referenceId,
-        'note': note,
-      };
+    'productId': productId,
+    'productName': productName,
+    'stockNo': stockNo,
+    'type': type.name,
+    'quantityDelta': quantityDelta,
+    'unitCost': unitCost,
+    'occurredAt': occurredAt,
+    'createdAt': createdAt,
+    'referenceId': referenceId,
+    'note': note,
+  };
 }

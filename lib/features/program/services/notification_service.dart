@@ -11,12 +11,19 @@ import 'package:herbaformix/core/logger.dart';
 import 'package:herbaformix/services/routine_service.dart';
 
 @pragma('vm:entry-point')
-void notificationTapBackground(NotificationResponse notificationResponse) async {
+void notificationTapBackground(
+  NotificationResponse notificationResponse,
+) async {
   if (notificationResponse.actionId == 'actionSnooze') {
     final plugin = FlutterLocalNotificationsPlugin();
-    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
+    const androidSettings = AndroidInitializationSettings(
+      '@drawable/ic_notification',
+    );
     const iosSettings = DarwinInitializationSettings();
-    const initSettings = InitializationSettings(android: androidSettings, iOS: iosSettings);
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
     await plugin.initialize(settings: initSettings);
 
     final payload = notificationResponse.payload;
@@ -33,7 +40,9 @@ void notificationTapBackground(NotificationResponse notificationResponse) async 
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
     // Şimdilik sabit 15 dk erteleme
-    final scheduledDate = tz.TZDateTime.now(tz.local).add(const Duration(minutes: 15));
+    final scheduledDate = tz.TZDateTime.now(
+      tz.local,
+    ).add(const Duration(minutes: 15));
 
     final androidDetails = const AndroidNotificationDetails(
       'meal_reminders_v4',
@@ -131,8 +140,9 @@ class NotificationService {
     try {
       tz.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
-      const androidSettings =
-          AndroidInitializationSettings('@drawable/ic_notification');
+      const androidSettings = AndroidInitializationSettings(
+        '@drawable/ic_notification',
+      );
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -155,7 +165,11 @@ class NotificationService {
       }
       return _initialized;
     } catch (e) {
-      AppLogger.error('initialize hatası', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'initialize hatası',
+        tag: 'NotificationService',
+        error: e,
+      );
       return false;
     }
   }
@@ -168,13 +182,18 @@ class NotificationService {
     try {
       final androidImpl = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidImpl == null) return;
 
       // 1) Eski sessiz kanalları temizle (varsa).
       await androidImpl.deleteNotificationChannel(channelId: 'meal_reminders');
-      await androidImpl.deleteNotificationChannel(channelId: 'meal_reminders_v2');
-      await androidImpl.deleteNotificationChannel(channelId: 'meal_reminders_v3');
+      await androidImpl.deleteNotificationChannel(
+        channelId: 'meal_reminders_v2',
+      );
+      await androidImpl.deleteNotificationChannel(
+        channelId: 'meal_reminders_v3',
+      );
       await androidImpl.deleteNotificationChannel(channelId: 'test_channel');
       await androidImpl.deleteNotificationChannel(channelId: 'test_channel_v2');
       await androidImpl.deleteNotificationChannel(channelId: 'test_channel_v3');
@@ -205,9 +224,16 @@ class NotificationService {
           audioAttributesUsage: AudioAttributesUsage.alarm,
         ),
       );
-      AppLogger.debug('Android kanalları kuruldu (özel ses aktif)', tag: 'NotificationService');
+      AppLogger.debug(
+        'Android kanalları kuruldu (özel ses aktif)',
+        tag: 'NotificationService',
+      );
     } catch (e) {
-      AppLogger.error('_setupAndroidChannels hatası', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        '_setupAndroidChannels hatası',
+        tag: 'NotificationService',
+        error: e,
+      );
     }
   }
 
@@ -218,7 +244,9 @@ class NotificationService {
       tag: 'NotificationService',
     );
 
-    if (response.actionId == 'actionConsume' || response.actionId == null || response.actionId!.isEmpty) {
+    if (response.actionId == 'actionConsume' ||
+        response.actionId == null ||
+        response.actionId!.isEmpty) {
       try {
         final payload = response.payload;
         if (payload != null && payload.isNotEmpty) {
@@ -238,26 +266,42 @@ class NotificationService {
                 .collection('users')
                 .doc(uid)
                 .collection('dailyRoutines')
-                .where('scheduledTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-                .where('scheduledTime', isLessThan: Timestamp.fromDate(endOfDay))
+                .where(
+                  'scheduledTime',
+                  isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+                )
+                .where(
+                  'scheduledTime',
+                  isLessThan: Timestamp.fromDate(endOfDay),
+                )
                 .get();
 
             for (var doc in snapshot.docs) {
               if (doc.data()['slotId'] != slotId) continue;
 
               final stepType = doc.data()['stepType'] as String?;
-              final isRoutineWater = stepType == 'RoutineStepType.water' || stepType == 'water' || doc.data()['productId'] == 'water_step';
+              final isRoutineWater =
+                  stepType == 'RoutineStepType.water' ||
+                  stepType == 'water' ||
+                  doc.data()['productId'] == 'water_step';
 
               if (isWater == isRoutineWater) {
                 final routineService = RoutineService();
                 await routineService.updateRoutineStatus(uid, doc.id, true);
-                AppLogger.info('Öğün/Su otomatik tamamlandı: ${doc.id}', tag: 'NotificationService');
+                AppLogger.info(
+                  'Öğün/Su otomatik tamamlandı: ${doc.id}',
+                  tag: 'NotificationService',
+                );
               }
             }
           }
         }
       } catch (e) {
-        AppLogger.error('Otomatik işaretleme hatası', tag: 'NotificationService', error: e);
+        AppLogger.error(
+          'Otomatik işaretleme hatası',
+          tag: 'NotificationService',
+          error: e,
+        );
       }
     }
   }
@@ -266,11 +310,11 @@ class NotificationService {
   // Future<void> _scheduleReminderFromPayload(int? originalId, String? payload) async {
   //   try {
   //     if (!_initialized) await initialize();
-  // 
+  //
   //     final reminderId = (originalId ?? 0) + _reminderIdOffset;
   //     String title = '🔔 Hatırlatma';
   //     String body = 'Öğününüzü/Ürününüzü almayı unutmayın!';
-  // 
+  //
   //     // Payload'dan orijinal başlık ve mesajı al
   //     if (payload != null && payload.isNotEmpty) {
   //       try {
@@ -281,9 +325,9 @@ class NotificationService {
   //         // JSON parse hatası → varsayılan mesaj kullan
   //       }
   //     }
-  // 
+  //
   //     final scheduledDate = tz.TZDateTime.now(tz.local).add(_reminderDelay);
-  // 
+  //
   //     final androidDetails = AndroidNotificationDetails(
   //       'meal_reminders',
   //       'Öğün Hatırlatıcıları',
@@ -314,10 +358,10 @@ class NotificationService {
   //       android: androidDetails,
   //       iOS: iosDetails,
   //     );
-  // 
+  //
   //     // Android 12+ exact alarm izin kontrolü
   //     await _ensureExactAlarmPermission();
-  // 
+  //
   //     await _plugin.zonedSchedule(
   //       id: reminderId,
   //       title: title,
@@ -327,7 +371,7 @@ class NotificationService {
   //       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
   //       // 1 defalık — matchDateTimeComponents null
   //     );
-  // 
+  //
   //     debugPrint(
   //       '[NotificationService] ⏰ Hatırlatma zamanlandı: id=$reminderId, '
   //       'hedef=$scheduledDate (15 dk sonra)',
@@ -342,14 +386,19 @@ class NotificationService {
     try {
       final androidImpl = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidImpl != null) {
         final granted = await androidImpl.areNotificationsEnabled();
         return granted ?? false;
       }
       return false;
     } catch (e) {
-      AppLogger.error('hasPermission hatası', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'hasPermission hatası',
+        tag: 'NotificationService',
+        error: e,
+      );
       return false;
     }
   }
@@ -359,14 +408,16 @@ class NotificationService {
     try {
       final androidImpl = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidImpl != null) {
         final granted = await androidImpl.requestNotificationsPermission();
         return granted ?? false;
       }
       final iosImpl = _plugin
           .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>();
+            IOSFlutterLocalNotificationsPlugin
+          >();
       if (iosImpl != null) {
         final granted = await iosImpl.requestPermissions(
           alert: true,
@@ -377,7 +428,11 @@ class NotificationService {
       }
       return false;
     } catch (e) {
-      AppLogger.error('requestPermission hatası', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'requestPermission hatası',
+        tag: 'NotificationService',
+        error: e,
+      );
       return false;
     }
   }
@@ -387,18 +442,29 @@ class NotificationService {
     try {
       final androidImpl = _plugin
           .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidImpl == null) return true; // iOS veya bilinmeyen platform
 
       final canSchedule = await androidImpl.canScheduleExactNotifications();
       if (canSchedule == true) return true;
 
-      AppLogger.warning('Exact alarm izni yok, isteniyor...', tag: 'NotificationService');
+      AppLogger.warning(
+        'Exact alarm izni yok, isteniyor...',
+        tag: 'NotificationService',
+      );
       final granted = await androidImpl.requestExactAlarmsPermission();
-      AppLogger.debug('Exact alarm izni sonucu: $granted', tag: 'NotificationService');
+      AppLogger.debug(
+        'Exact alarm izni sonucu: $granted',
+        tag: 'NotificationService',
+      );
       return granted ?? false;
     } catch (e) {
-      AppLogger.error('Exact alarm izin kontrolü hatası', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'Exact alarm izin kontrolü hatası',
+        tag: 'NotificationService',
+        error: e,
+      );
       return false;
     }
   }
@@ -406,7 +472,7 @@ class NotificationService {
   /// Öğün bildirimi gösterir (her gün tekrarlayacak şekilde zamanlanır).
   /// Bildirimde "Tamam" ve "Daha Sonra" butonları yer alır.
   /// Hata durumunda sessizce devam eder (graceful degradation).
-  Future<void> scheduleMealNotification({
+  Future<bool> scheduleMealNotification({
     required int notificationId,
     required String title,
     required String body,
@@ -416,17 +482,26 @@ class NotificationService {
     bool isOneTime = false,
   }) async {
     try {
-      if (!_initialized) await initialize();
+      if (!_initialized && !await initialize()) {
+        AppLogger.error(
+          'Bildirim servisi başlatılamadı',
+          tag: 'NotificationService',
+        );
+        return false;
+      }
 
       // Android 12+ exact alarm izin kontrolü
       final hasExactAlarm = await _ensureExactAlarmPermission();
       if (!hasExactAlarm) {
-        AppLogger.warning('Exact alarm izni verilmedi, bildirim zamanlanamayabilir', tag: 'NotificationService');
+        AppLogger.warning(
+          'Exact alarm izni yok; bildirim yaklaşık zamanda planlanacak',
+          tag: 'NotificationService',
+        );
       }
 
       // Payload'a orijinal başlık, body ve aksiyonlar için gerekenleri kaydet
       final payload = jsonEncode({
-        'title': title, 
+        'title': title,
         'body': body,
         'slotId': slotId,
         'isWater': isWater,
@@ -465,7 +540,8 @@ class NotificationService {
         presentBadge: true,
         presentSound: true,
         sound: 'notification_sound.wav', // Özel ses
-        interruptionLevel: InterruptionLevel.timeSensitive, // iOS 15+ kilit ekranında uyandırma
+        interruptionLevel: InterruptionLevel
+            .timeSensitive, // iOS 15+ kilit ekranında uyandırma
       );
       final details = NotificationDetails(
         android: androidDetails,
@@ -474,13 +550,20 @@ class NotificationService {
 
       // Saat ve dakikayı ayrıştır ("09:30" gibi)
       final parts = scheduledTime.split(':');
-      if (parts.length != 2) return;
+      if (parts.length != 2) return false;
       final hour = int.tryParse(parts[0]) ?? 9;
       final minute = int.tryParse(parts[1]) ?? 0;
 
       final now = tz.TZDateTime.now(tz.local);
-      var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-      
+      var scheduledDate = tz.TZDateTime(
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        hour,
+        minute,
+      );
+
       // Eğer saat geçtiyse yarına planla (1 dakikalık tolerans ile)
       if (scheduledDate.isBefore(now.subtract(const Duration(minutes: 1)))) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
@@ -493,16 +576,34 @@ class NotificationService {
         scheduledDate: scheduledDate,
         notificationDetails: details,
         payload: payload,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: hasExactAlarm
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: isOneTime ? null : DateTimeComponents.time,
       );
+
+      final pending = await _plugin.pendingNotificationRequests();
+      final isPending = pending.any((request) => request.id == notificationId);
+      if (!isPending) {
+        AppLogger.error(
+          'Bildirim işletim sistemi kuyruğunda bulunamadı: id=$notificationId',
+          tag: 'NotificationService',
+        );
+        return false;
+      }
 
       AppLogger.debug(
         'Bildirim zamanlandı: id=$notificationId, hedef=$scheduledDate, oneTime=$isOneTime',
         tag: 'NotificationService',
       );
+      return true;
     } catch (e) {
-      AppLogger.error('scheduleMealNotification hatası', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'scheduleMealNotification hatası',
+        tag: 'NotificationService',
+        error: e,
+      );
+      return false;
     }
   }
 
@@ -510,9 +611,16 @@ class NotificationService {
   Future<void> cancelAllProgramNotifications() async {
     try {
       await _plugin.cancelAll();
-      AppLogger.debug('Tüm program bildirimleri iptal edildi', tag: 'NotificationService');
+      AppLogger.debug(
+        'Tüm program bildirimleri iptal edildi',
+        tag: 'NotificationService',
+      );
     } catch (e) {
-      AppLogger.error('cancelAllProgramNotifications hatası', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'cancelAllProgramNotifications hatası',
+        tag: 'NotificationService',
+        error: e,
+      );
     }
   }
 
@@ -572,7 +680,8 @@ class NotificationService {
         presentBadge: true,
         presentSound: true,
         sound: 'notification_sound.wav', // Özel ses
-        interruptionLevel: InterruptionLevel.timeSensitive, // iOS 15+ kilit ekranında uyandırma
+        interruptionLevel: InterruptionLevel
+            .timeSensitive, // iOS 15+ kilit ekranında uyandırma
       );
       const details = NotificationDetails(
         android: androidDetails,
@@ -588,7 +697,11 @@ class NotificationService {
       );
       AppLogger.debug('Test bildirimi gönderildi', tag: 'NotificationService');
     } catch (e) {
-      AppLogger.error('showTestNotification hatası', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'showTestNotification hatası',
+        tag: 'NotificationService',
+        error: e,
+      );
     }
   }
 }

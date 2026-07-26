@@ -433,27 +433,27 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 | Stok farkı | Fiziksel sayım farklıysa neden/not ile stok düzeltmesi yapılabilir; satış ya da kişisel kullanım olarak sayılmaz. |
 | Düşük stok | Bildirim yoktur. Stoğu 3 adetten az olan ürün, stok ekranında düşük stok etiketi taşır. |
 
-### 9.5.2 — İlk sürüm: alış, stok, satış ve kişisel kullanım
+### 9.5.2 — İlk sürüm: alış, stok, satış ve kişisel kullanım ✅
 
-- [ ] Distribütöre ait ürün bazlı stok bakiyesi, ortalama maliyet, son hareket tarihi ve düşük stok etiketi.
-- [ ] Başlangıç stok sayımı, alış ekleme ve notlu stok düzeltme ekranları.
+- [x] Distribütöre ait ürün bazlı stok bakiyesi, ortalama maliyet, son hareket tarihi ve düşük stok etiketi.
+- [x] Başlangıç stok sayımı, alış ekleme ve notlu stok düzeltme ekranları.
 - [ ] Alışta ürün, adet, süpervizör maliyeti, gerçek maliyet, tarih ve isteğe bağlı not kaydı.
-- [ ] **Kişisel Ürün Kullanımım**: ürün, adet, tarih ve not girişi; ilgili maliyetin ve geçmiş kullanımın görüntülenmesi.
-- [ ] Müşteri için çok ürünlü talep sepeti; talebin bekleyen sipariş olarak distribütöre ulaşması.
-- [ ] Distribütörün doğrudan satış oluşturması; talebi/satışı ürün, adet ve müşteri özel fiyatıyla düzenleyebilmesi.
-- [ ] Teslimde stok düşümü; iptal veya müşteri iadesinde stok iadesi; durum değişikliklerinde çift stok hareketini önleyen koruma.
-- [ ] Ödeme durumu, tahsil edilen tutar, kalan alacak ve ödeme yöntemi kaydı.
-- [ ] Müşteri özel fiyatlarının ürün bazında yönetimi; müşteri arayüzünde fiyat gösterilmemesi.
-- [ ] Teslim edilmiş satış, tahsil edilen tutar, kalan alacak, ürün bazlı stok, kişisel kullanım maliyeti ve ağırlıklı ortalama maliyet/kâr raporları.
-- [ ] Stok ekranında 3 adetten az olan ürün için düşük stok etiketi; push bildirim/eşik ayarı yok.
+- [x] **Kişisel Ürün Kullanımım**: ürün, adet, tarih ve not girişi; ilgili maliyetin ve geçmiş kullanımın görüntülenmesi.
+- [x] Müşteri için çok ürünlü talep sepeti; talebin bekleyen sipariş olarak distribütöre ulaşması.
+- [x] Distribütörün doğrudan satış oluşturması; talebi/satışı ürün, adet ve müşteri özel fiyatıyla düzenleyebilmesi.
+- [x] Teslimde stok düşümü; iptal veya müşteri iadesinde stok iadesi; durum değişikliklerinde çift stok hareketini önleyen koruma.
+- [x] Ödeme durumu, tahsil edilen tutar, kalan alacak ve ödeme yöntemi kaydı.
+- [x] Müşteri özel fiyatlarının ürün bazında yönetimi; müşteri arayüzünde fiyat gösterilmemesi.
+- [x] Teslim edilmiş satış, tahsil edilen tutar, kalan alacak, ürün bazlı stok, kişisel kullanım maliyeti ve ağırlıklı ortalama maliyet/kâr raporları.
+- [x] Stok ekranında 3 adetten az olan ürün için düşük stok etiketi; push bildirim/eşik ayarı yok.
 
 ### 9.5.3 — Fiyat listesi ve veri ilkeleri
 
 - [ ] `original.pdf` içindeki **Mart 2025 Distribütör Fiyat Listesi** referans alınarak; ürün stok numarası, VP, önerilen müşteri fiyatı ve süpervizör maliyeti kataloğa aktarılacak/doğrulanacak.
 - [ ] Fiyat listesi sürüm/tarih bilgisi saklanacak; geçmiş alış ve satışlar, işlem anındaki fiyat/maliyet üzerinden değişmeden raporlanacak.
 - [ ] İlk sürümde yeni fiyat listesi güncellemesi manuel yapılacak; PDF’den otomatik ürün-fiyat aktarımı ikinci faza bırakılacak.
-- [ ] Envanter ve hareketler her distribütörün kendi verisidir; başka distribütörler erişemez.
-- [ ] Stok sıfırın altına düşemez. Satış, kişisel kullanım, iade ve düzeltme işlemleri atomik olarak stok bakiyesiyle birlikte kaydedilir.
+- [x] Envanter ve hareketler her distribütörün kendi verisidir; başka distribütörler erişemez.
+- [x] Stok sıfırın altına düşemez. Satış, kişisel kullanım, iade ve düzeltme işlemleri atomik olarak stok bakiyesiyle birlikte kaydedilir.
 
 ### 9.5.4 — Sonraki faza bırakılanlar
 
@@ -464,11 +464,11 @@ Faz takibi dışında, kod kalitesi için yürütülen seriler:
 
 ### 9.5.5 — Kabul senaryoları
 
-- [ ] 10 adet başlangıç/alış stoğu bulunan üründen, teslim edilen 3 adetlik satış ve 2 adet kişisel kullanım sonrası stok 5 görünür.
-- [ ] Aynı satış iptal edilirse veya ürün iade alınırsa stok doğru miktarda geri gelir; teslimat tekrar işlendiğinde çift düşüm oluşmaz.
-- [ ] Teslim edilmiş ama ödemesi bekleyen satış stoktan düşer, alacakta görünür; kısmi tahsilat kalan alacağı doğru günceller.
-- [ ] Aynı ürün için farklı maliyetli alışlardan sonra satış/kullanım maliyeti ağırlıklı ortalamayla hesaplanır.
-- [ ] Stoğu 3 adetten az olan ürün, bildirim göndermeden stok ekranında düşük stok olarak görünür.
+- [x] 10 adet başlangıç/alış stoğu bulunan üründen, teslim edilen 3 adetlik satış ve 2 adet kişisel kullanım sonrası stok 5 görünür.
+- [x] Aynı satış iptal edilirse veya ürün iade alınırsa stok doğru miktarda geri gelir; teslimat tekrar işlendiğinde çift düşüm oluşmaz.
+- [x] Teslim edilmiş ama ödemesi bekleyen satış stoktan düşer, alacakta görünür; kısmi tahsilat kalan alacağı doğru günceller.
+- [x] Aynı ürün için farklı maliyetli alışlardan sonra satış/kullanım maliyeti ağırlıklı ortalamayla hesaplanır.
+- [x] Stoğu 3 adetten az olan ürün, bildirim göndermeden stok ekranında düşük stok olarak görünür.
 
 ---
 
@@ -1054,7 +1054,7 @@ Mevcut durum: **187/187 passing**, ~10 sn.
 | 07 | Rozet ve Oyunlaştırma | — | ✅ | %95 |
 | 08 | CRM ve Müşteri Yönetimi | — | ⚠️ | %95 |
 | 09 | Ürün, Sipariş ve Tarifler | — | ⚠️ | %98 |
-| **9.5** | **Distribütör Alış, Stok ve Satış Takibi** | **Planlandı** | **📋** | **%0** |
+| **9.5** | **Distribütör Alış, Stok ve Satış Takibi** | **İlk sürüm tamamlandı; PDF fiyat aktarımı Faz 2** | ✅ | **%90** |
 | 10 | Güvenlik Kuralları | — | ✅ | %95 |
 | **11** | **Performans Optimizasyonu** | **v1.0** | ✅ | %90 |
 | **12** | **Erişilebilirlik** | **v1.0** | ✅ | %95 |

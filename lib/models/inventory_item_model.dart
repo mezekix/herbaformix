@@ -32,10 +32,10 @@ class InventoryItemModel {
   }
 
   Map<String, dynamic> toMap() => {
-        'productName': productName,
-        'stockNo': stockNo,
-        'onHandQuantity': onHandQuantity,
-        'averageUnitCost': averageUnitCost,
-        'updatedAt': updatedAt,
-      };
+    'productName': productName,
+    'stockNo': stockNo,
+    'onHandQuantity': onHandQuantity,
+    'averageUnitCost': averageUnitCost,
+    'updatedAt': updatedAt,
+  };
 }

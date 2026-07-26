@@ -22,18 +22,23 @@ class ProgramTemplatesScreen extends StatefulWidget {
 }
 
 class _ProgramTemplatesScreenState extends State<ProgramTemplatesScreen> {
+  bool _watchScheduled = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_watchScheduled) return;
+    _watchScheduled = true;
+
+    // Callback çalıştığında bu sayfanın context'i route geçişi nedeniyle
+    // deaktif olmuş olabilir. Gerekli bağımlılıkları context aktifken al.
+    final distributorId = context.read<AuthProvider>().firebaseUser?.uid;
+    final templateProvider = context.read<ProgramTemplateProvider>();
+    if (distributorId == null) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final auth = context.read<AuthProvider>();
-      final distributorId = auth.firebaseUser?.uid;
-      if (distributorId != null) {
-        context
-            .read<ProgramTemplateProvider>()
-            .watchForDistributor(distributorId);
-      }
+      templateProvider.watchForDistributor(distributorId);
     });
   }
 
@@ -173,8 +178,11 @@ class _TemplateCard extends StatelessWidget {
                     color: goalColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.assignment_outlined,
-                      color: goalColor, size: 22),
+                  child: Icon(
+                    Icons.assignment_outlined,
+                    color: goalColor,
+                    size: 22,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -229,8 +237,10 @@ class _TemplateCard extends StatelessWidget {
                     PopupMenuItem<String>(
                       value: 'delete',
                       child: ListTile(
-                        leading: Icon(Icons.delete_outline,
-                            color: AppColors.error),
+                        leading: Icon(
+                          Icons.delete_outline,
+                          color: AppColors.error,
+                        ),
                         title: Text('Sil'),
                         contentPadding: EdgeInsets.zero,
                         dense: true,
@@ -306,8 +316,11 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.assignment_outlined,
-                size: 64, color: AppColors.textMutedLight),
+            Icon(
+              Icons.assignment_outlined,
+              size: 64,
+              color: AppColors.textMutedLight,
+            ),
             const SizedBox(height: 16),
             const Text(
               'Henüz Şablon Yok',
@@ -322,10 +335,7 @@ class _EmptyState extends StatelessWidget {
               'Sık kullandığın program yapılarını şablon olarak kaydet, '
               'müşterilere uygularken zaman kazan.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.grey600,
-              ),
+              style: TextStyle(fontSize: 13, color: AppColors.grey600),
             ),
           ],
         ),
@@ -346,8 +356,7 @@ class _ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline,
-                size: 64, color: AppColors.error),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
             Text(
               message,

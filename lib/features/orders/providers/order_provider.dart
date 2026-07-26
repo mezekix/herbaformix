@@ -173,7 +173,6 @@ class OrderProvider with ChangeNotifier {
               assignedDistributorId.isNotEmpty)
           ? assignedDistributorId
           : _currentUserId!;
-
       final orderWithTotals = OrderModel(
         id: order.id,
         userId: targetUserId,
@@ -238,13 +237,20 @@ class OrderProvider with ChangeNotifier {
               assignedDistributorId.isNotEmpty)
           ? assignedDistributorId
           : _currentUserId!;
+      final wasDelivered = _orders.any(
+        (existing) =>
+            existing.id == order.id && existing.status == OrderStatus.delivered,
+      );
 
       // Önce veritabanını güncelle.
-      await _firestoreService.updateOrder(targetUserId, order);
+      await _firestoreService.inventory.updateOrderWithInventory(
+        targetUserId,
+        order,
+      );
 
       // --- OTOMATİK TAKİP OLUŞTURMA MANTIĞI ---
       // Eğer yeni durum "Teslim Edildi" ise, planı oluştur.
-      if (order.status == OrderStatus.delivered) {
+      if (!wasDelivered && order.status == OrderStatus.delivered) {
         AppLogger.info(
           'Sipariş Teslim Edildi olarak güncellendi. Takip planı oluşturuluyor...',
           tag: 'OrderProvider',
@@ -287,8 +293,24 @@ class OrderProvider with ChangeNotifier {
   Future<bool> updateOrderStatus(String orderId, OrderStatus newStatus) async {
     final orderIndex = _orders.indexWhere((o) => o.id == orderId);
     if (orderIndex != -1) {
-      OrderModel orderToUpdate = _orders[orderIndex];
-      orderToUpdate.status = newStatus;
+      final current = _orders[orderIndex];
+      final orderToUpdate = OrderModel(
+        id: current.id,
+        userId: current.userId,
+        customerId: current.customerId,
+        customerName: current.customerName,
+        items: current.items,
+        orderDate: current.orderDate,
+        status: newStatus,
+        totalAmount: current.totalAmount,
+        totalVpEarned: current.totalVpEarned,
+        notes: current.notes,
+        shippingAddress: current.shippingAddress,
+        paymentStatus: current.paymentStatus,
+        paidAmount: current.paidAmount,
+        paymentMethod: current.paymentMethod,
+        inventoryCycle: current.inventoryCycle,
+      );
       // Artık tüm güncelleme mantığı updateOrder'da olduğu için onu çağırıyoruz.
       return await updateOrder(orderToUpdate);
     }
@@ -361,6 +383,15 @@ class OrderProvider with ChangeNotifier {
   /// Bir siparişi siler.
   Future<bool> deleteOrder(String orderId) async {
     if (_currentUserId == null) return false;
+    final matchingOrders = _orders.where((order) => order.id == orderId);
+    if (matchingOrders.isNotEmpty &&
+        matchingOrders.first.status == OrderStatus.delivered) {
+      AppLogger.error(
+        'Teslim edilmiş sipariş doğrudan silinemez. Önce iptal edilmelidir.',
+        tag: 'OrderProvider',
+      );
+      return false;
+    }
     _isLoading = true;
     notifyListeners();
 

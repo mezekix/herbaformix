@@ -251,7 +251,16 @@ class ProgramProvider with ChangeNotifier {
 
       await _programService.saveProgram(userId, program, allProducts);
       if (scheduleNotifications) {
-        await _scheduleNotifications(program);
+        final notificationsScheduled = await _scheduleNotifications(program);
+        if (!notificationsScheduled) {
+          _errorMessage =
+              'Program kaydedildi ancak bildirimler telefonda planlanamadı. '
+              'Bildirim iznini kontrol edip tekrar kaydet.';
+          _activeProgram = program;
+          _isLoading = false;
+          notifyListeners();
+          return false;
+        }
       }
 
       _activeProgram = program;
@@ -331,8 +340,9 @@ class ProgramProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _scheduleNotifications(ProgramModel program) async {
-    await _notificationService.initialize();
+  Future<bool> _scheduleNotifications(ProgramModel program) async {
+    if (!await _notificationService.initialize()) return false;
+    var allScheduled = true;
 
     for (final slot in program.slots) {
       // 1. Ana Slot için bildirim (Ürün, Normal Öğün veya Ara Öğün fark etmeksizin)
@@ -352,7 +362,7 @@ class ProgramProvider with ChangeNotifier {
         body = 'Ara öğün zamanı geldi, atıştırmalığınızı unutmayın.';
       }
 
-      await _notificationService.scheduleMealNotification(
+      final mealScheduled = await _notificationService.scheduleMealNotification(
         notificationId: id,
         title: title,
         body: body,
@@ -360,6 +370,7 @@ class ProgramProvider with ChangeNotifier {
         slotId: slot.id,
         isWater: false,
       );
+      allScheduled = mealScheduled && allScheduled;
 
       // 2. Öğün (snack değilse) için 30 dk öncesine SU bildirimi
       if (slot.kind != MealSlotKind.snack) {
@@ -382,18 +393,21 @@ class ProgramProvider with ChangeNotifier {
           // Su bildirimi için slot id'sine özel benzersiz bir ID (100000 ekleyerek çakışmayı önlüyoruz)
           final waterId = id + 100000;
 
-          await _notificationService.scheduleMealNotification(
-            notificationId: waterId,
-            title: '💧 Su Hatırlatıcısı',
-            body:
-                '${slot.label} öncesinde 1 büyük bardak (500ml) su içmeyi unutmayın.',
-            scheduledTime: waterScheduledTime,
-            slotId: slot.id,
-            isWater: true,
-          );
+          final waterScheduled = await _notificationService
+              .scheduleMealNotification(
+                notificationId: waterId,
+                title: '💧 Su Hatırlatıcısı',
+                body:
+                    '${slot.label} öncesinde 1 büyük bardak (500ml) su içmeyi unutmayın.',
+                scheduledTime: waterScheduledTime,
+                slotId: slot.id,
+                isWater: true,
+              );
+          allScheduled = waterScheduled && allScheduled;
         }
       }
     }
+    return allScheduled;
   }
 
   // ── Aktif Program ─────────────────────────────────────────────────────────
